@@ -1,0 +1,313 @@
+/* ============================================================
+   VerifyOTPPage.module.css — OTP Page Styles (CSS Module)
+   ============================================================ */
+
+/* Center the page content */
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 20px;
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* OTP card */
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 40px 36px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Floating logo */
+.logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 14px rgba(0,212,255,0.45));
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Step indicator dots */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+
+.dot.done {
+  background: var(--color-success);
+}
+
+.dot.active {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  transform: scale(1.35);
+}
+
+/* Step label */
+.stepLabel {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  letter-spacing: 0.3px;
+}
+
+/* Heading */
+.heading {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 0.89rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  max-width: 340px;
+}
+
+/* Masked email display */
+.emailPreview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.86rem;
+  margin-bottom: 18px;
+  width: 100%;
+  justify-content: center;
+}
+
+.emailText {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* Alert box */
+.alert {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 14px;
+  animation: fadeInDown 0.3s ease;
+}
+
+.alert_error {
+  background: rgba(255,77,109,0.1);
+  border-color: rgba(255,77,109,0.3);
+  color: #ff8fa3;
+}
+
+.alert_success {
+  background: rgba(0,255,136,0.08);
+  border-color: rgba(0,255,136,0.25);
+  color: var(--color-success);
+}
+
+.alert_warning {
+  background: rgba(255,179,71,0.08);
+  border-color: rgba(255,179,71,0.25);
+  color: var(--color-warning);
+}
+
+/* ── OTP boxes row ── */
+.otpRow {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 4px 0 18px;
+}
+
+/* Individual OTP digit box */
+.otpBox {
+  width: 52px;
+  height: 60px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  caret-color: var(--accent-cyan); /* Cursor color */
+}
+
+.otpBox:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+  transform: scale(1.06); /* Slight zoom on focused box */
+}
+
+/* Filled state — digit present */
+.otpBox.filled {
+  border-color: var(--accent-purple);
+  background: rgba(123,94,167,0.12);
+}
+
+/* Error flash */
+.otpBox.otpError {
+  border-color: var(--color-error) !important;
+  background: rgba(255,77,109,0.1) !important;
+  animation: shake 0.4s ease;
+}
+
+/* Verified / success state */
+.otpBox.otpVerified {
+  border-color: var(--color-success) !important;
+  background: rgba(0,255,136,0.08) !important;
+  color: var(--color-success);
+}
+
+/* ── Countdown timer ── */
+.timer {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.timerCount {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* Turns red in last 60 seconds */
+.timerCount.urgent {
+  color: var(--color-error);
+  animation: pulseGlow 1s ease-in-out infinite;
+}
+
+/* ── Verify button ── */
+.verifyBtn {
+  width: 100%;
+  padding: 13px;
+  background: var(--gradient-main);
+  border: none;
+  border-radius: 12px;
+  color: #0a0f1e;
+  font-family: var(--font-base);
+  font-size: 0.96rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0,212,255,0.25);
+}
+
+.verifyBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0,212,255,0.4);
+}
+
+.verifyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Resend row ── */
+.resendRow {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.resendBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-family: var(--font-base);
+  cursor: not-allowed;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.resendBtn.resendActive {
+  color: var(--accent-cyan);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.resendBtn.resendActive:hover {
+  color: #fff;
+}
+
+/* Back link */
+.backLink {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  transition: color 0.15s ease;
+}
+
+.backLink:hover {
+  color: var(--accent-cyan);
+}
+
+/* Security note */
+.securityNote {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #0a0f1e;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card { padding: 28px 18px; }
+  .otpBox { width: 42px; height: 52px; font-size: 1.2rem; }
+}

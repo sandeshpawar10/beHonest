@@ -1,0 +1,251 @@
+/* ============================================================
+   AuthPages.module.css — Shared styles for Login & Register pages
+   Used by: LoginPage.jsx, RegisterPage.jsx
+   ============================================================ */
+
+/* ── Auth card — the white/dark form box ── */
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 36px 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: fadeInUp 0.5s ease 0.1s both;
+  transition: border-color 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(0,212,255,0.25);
+}
+
+/* Shake animation class (added temporarily on login failure) */
+.shake {
+  animation: shake 0.5s ease;
+}
+
+/* Page heading */
+.heading {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+/* Subtitle below heading */
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+/* Form: stacks fields vertically */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px; /* Space between each input group */
+}
+
+/* Forgot password link */
+.forgotLink {
+  display: block;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  transition: color 0.15s ease;
+}
+
+.forgotLink:hover {
+  color: var(--accent-cyan);
+}
+
+/* Global alert box */
+.alert {
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 16px;
+  animation: fadeInDown 0.3s ease;
+}
+
+.alert_error {
+  background: rgba(255,77,109,0.1);
+  border-color: rgba(255,77,109,0.3);
+  color: #ff8fa3;
+}
+
+.alert_success {
+  background: rgba(0,255,136,0.08);
+  border-color: rgba(0,255,136,0.25);
+  color: var(--color-success);
+}
+
+.alert_warning {
+  background: rgba(255,179,71,0.08);
+  border-color: rgba(255,179,71,0.25);
+  color: var(--color-warning);
+}
+
+/* Primary gradient submit button */
+.submitBtn {
+  width: 100%;
+  padding: 13px;
+  background: var(--gradient-main);
+  border: none;
+  border-radius: 12px;
+  color: #0a0f1e;           /* Dark text on bright gradient */
+  font-family: var(--font-base);
+  font-size: 0.96rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0,212,255,0.25);
+  margin-top: 4px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0,212,255,0.4);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner inside button */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #0a0f1e;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Divider line with "or" text */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin: 18px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* "Already have an account?" text */
+.altLink {
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.altLink a, .link {
+  color: var(--accent-cyan);
+  font-weight: 600;
+  transition: text-decoration 0.15s ease;
+}
+
+.altLink a:hover, .link:hover {
+  text-decoration: underline;
+}
+
+/* ── College email verified badge ── */
+.collegeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.22);
+  border-radius: 999px;
+  font-size: 0.77rem;
+  color: var(--color-success);
+  font-weight: 500;
+  margin-top: 7px;
+  animation: fadeInDown 0.3s ease;
+}
+
+/* ── Password strength meter ── */
+.strengthMeter {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The grey track */
+.strengthTrack {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+/* The animated fill */
+.strengthFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+/* Strength text label */
+.strengthLabel {
+  font-size: 0.77rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+/* ── Terms checkbox row ── */
+.termsRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-cyan); /* Native browser checkbox color */
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card { padding: 24px 18px; }
+  .heading { font-size: 1.6rem; }
+}
