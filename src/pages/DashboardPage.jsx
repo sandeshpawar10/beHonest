@@ -6,7 +6,9 @@
    ============================================================ */
 
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
+import { getAllFoundItems } from '../utils/itemUtils'; // Get real count of found items
 import styles from './DashboardPage.module.css';
 
 // ── Action cards data ──────────────────────────────────────────
@@ -18,16 +20,27 @@ const ACTION_CARDS = [
     icon: '🔍',
     title: 'Report Lost Item',
     desc: 'Describe what you lost, when and where. Upload a photo if available. AI matches it against found listings.',
-    ready: false,
+    ready: false,          // Not built yet
     comingLabel: 'Coming Next',
+    route: null,           // No route yet
   },
   {
     id: 'card-found',
     icon: '📦',
     title: 'Report Found Item',
-    desc: 'Found something on campus? Upload a photo, description, and location. AI validates your image.',
-    ready: false,
-    comingLabel: 'Coming Next',
+    desc: 'Found something on campus? Upload a photo, description, and location. Mark blur zones to protect private details.',
+    ready: true,           // ✅ Built in Feature 2!
+    comingLabel: null,
+    route: '/report-found', // Navigate here on click
+  },
+  {
+    id: 'card-browse',
+    icon: '🔎',
+    title: 'Browse Found Items',
+    desc: 'See all found items reported on campus. Sensitive areas are blurred — only the real owner can recognise their item.',
+    ready: true,           // ✅ Built in Feature 2!
+    comingLabel: null,
+    route: '/found-items', // Navigate here on click
   },
   {
     id: 'card-verify',
@@ -36,14 +49,7 @@ const ACTION_CARDS = [
     desc: 'Claim an item by answering AI-generated questions. Confidence score determines ownership.',
     ready: false,
     comingLabel: 'Coming Soon',
-  },
-  {
-    id: 'card-reward',
-    icon: '💰',
-    title: 'Smart Reward System',
-    desc: 'AI recommends a fair reward based on item value. Deposited in escrow — released after handover.',
-    ready: false,
-    comingLabel: 'Coming Soon',
+    route: null,
   },
 ];
 
@@ -100,10 +106,14 @@ function StatCard({ target, label }) {
 
 // ── DashboardPage component ────────────────────────────────────
 function DashboardPage() {
-  const { session, logout } = useAuth(); // Get current session and logout function
+  const { session, logout } = useAuth();
+  const navigate = useNavigate(); // Hook for programmatic navigation
 
   // Extract user's first name for the personalized greeting
   const firstName = session?.fullName?.split(' ')[0] || 'Student';
+
+  // Get the real count of found items from localStorage
+  const foundItemsCount = getAllFoundItems().length;
 
   return (
     <div className={styles.page}>
@@ -170,10 +180,23 @@ function DashboardPage() {
 
           {/* CTA buttons */}
           <div className={styles.ctaRow}>
-            <button className={styles.ctaPrimary} id="report-lost-btn" aria-label="Report a lost item">
+            {/* Lost Something — coming in a future feature */}
+            <button
+              className={styles.ctaPrimary}
+              id="report-lost-btn"
+              aria-label="Report a lost item"
+              onClick={() => alert('Report Lost feature coming soon!')}
+            >
               🔍 I Lost Something
             </button>
-            <button className={styles.ctaGhost} id="report-found-btn" aria-label="Report a found item">
+
+            {/* Found Something — links to the new ReportFoundPage */}
+            <button
+              className={styles.ctaGhost}
+              id="report-found-btn"
+              aria-label="Report a found item"
+              onClick={() => navigate('/report-found')}
+            >
               📦 I Found Something
             </button>
           </div>
@@ -181,9 +204,10 @@ function DashboardPage() {
 
         {/* ── Stats Row ── */}
         <div className={styles.statsRow} role="region" aria-label="Platform statistics">
-          {STATS.map(stat => (
-            <StatCard key={stat.id} target={stat.target} label={stat.label} />
-          ))}
+          {/* Show real found-items count, rest are placeholder numbers */}
+          <StatCard target={foundItemsCount} label="Items Found & Reported" />
+          <StatCard target={8}   label="Active Lost Reports" />
+          <StatCard target={127} label="Verified Students" />
         </div>
 
         {/* ── Action Cards Grid ── */}
@@ -192,18 +216,25 @@ function DashboardPage() {
             <div
               key={card.id}
               id={card.id}
-              className={styles.actionCard}
-              tabIndex={0}
-              role="button"
+              // If the card has a route, make it clickable; otherwise no cursor
+              className={`${styles.actionCard} ${card.ready ? styles.readyCard : ''}`}
+              tabIndex={card.ready ? 0 : -1}
+              role={card.ready ? 'button' : 'article'}
               aria-label={card.title}
-              onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.click(); }}
+              onClick={() => card.route && navigate(card.route)}
+              onKeyDown={e => { if (e.key === 'Enter' && card.route) navigate(card.route); }}
             >
-              {/* Feature icon (emoji) */}
+              {/* Feature icon */}
               <span className={styles.cardIcon} aria-hidden="true">{card.icon}</span>
               <h3 className={styles.cardTitle}>{card.title}</h3>
               <p className={styles.cardDesc}>{card.desc}</p>
 
-              {/* "Coming Next/Soon" badge */}
+              {/* "Live" badge for built features */}
+              {card.ready && (
+                <span className={styles.liveBadge}>✅ Live</span>
+              )}
+
+              {/* "Coming Soon" badge for future features */}
               {!card.ready && (
                 <span className={styles.comingSoon}>{card.comingLabel}</span>
               )}

@@ -335,6 +335,33 @@
   text-transform: uppercase;
 }
 
+/* "Live" badge — shown on cards that are fully built */
+.liveBadge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--color-success);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+
+/*
+  readyCard: extra style for clickable "live" cards.
+  Adds a stronger glow on hover to signal it's interactive.
+*/
+.readyCard {
+  cursor: pointer;
+}
+
+.readyCard:hover {
+  box-shadow: 0 0 32px rgba(0, 212, 255, 0.25) !important;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .navbar { padding: 14px 20px; }

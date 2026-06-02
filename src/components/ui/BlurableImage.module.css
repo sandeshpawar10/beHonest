@@ -1,0 +1,81 @@
+/* ============================================================
+   BlurableImage.module.css
+   Styles for the BlurableImage component
+   ============================================================ */
+
+/* 
+  The outer wrapper.
+  position: relative is REQUIRED — it makes the blur overlay
+  divs position themselves INSIDE this box (not the whole page).
+  display: inline-block makes the wrapper only as wide as the image.
+*/
+.wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;     /* Clips blur zones that go slightly outside */
+  background: #0a0f1e;  /* Dark background shows if image has transparency */
+  line-height: 0;       /* Removes ghost space below the image */
+}
+
+/* The image itself — fills the full wrapper width */
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;     /* Crop to fill, no stretching */
+  display: block;
+}
+
+/* 
+  Each blur zone overlay.
+  position: absolute + left/top/width/height (set inline as %)
+  places each zone exactly over the right part of the image.
+  
+  backdrop-filter is set inline (not here) because it uses
+  a dynamic blurStrength prop value.
+*/
+.blurOverlay {
+  position: absolute;   /* Positioned relative to .wrapper */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 
+    A semi-transparent dark tint ON TOP of the backdrop blur.
+    This makes the blurred area clearly visible as "hidden".
+  */
+  background: rgba(10, 15, 30, 0.35);
+  border: 2px solid rgba(0, 212, 255, 0.4);  /* Subtle cyan border */
+  border-radius: 6px;
+  transition: opacity 0.2s ease;
+  cursor: default;
+}
+
+/* The lock icon shown in the center of each blur zone */
+.lockIcon {
+  font-size: 1.1rem;
+  user-select: none;   /* Can't be selected/copied */
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.6));
+  opacity: 0.9;
+}
+
+/* 
+  The small badge at the bottom of the whole image.
+  Shows "🔒 2 sensitive areas hidden"
+*/
+.badge {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);  /* Centres it horizontally */
+  background: rgba(10, 15, 30, 0.82);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  color: #8b9fc7;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 999px;   /* Pill shape */
+  white-space: nowrap;    /* Don't wrap to two lines */
+  backdrop-filter: blur(4px);
+  pointer-events: none;   /* Clicks pass through to the image below */
+}

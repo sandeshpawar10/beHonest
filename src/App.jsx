@@ -24,10 +24,12 @@ Think of it as:
 import { useAuth } from './context/AuthContext'; //Access authentication data from AuthContext
 
 // Page components (each is a separate route)
-import LoginPage    from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import VerifyOTPPage from './pages/VerifyOTPPage';
-import DashboardPage from './pages/DashboardPage';
+import LoginPage       from './pages/LoginPage';
+import RegisterPage    from './pages/RegisterPage';
+import VerifyOTPPage   from './pages/VerifyOTPPage';
+import DashboardPage   from './pages/DashboardPage';
+import ReportFoundPage from './pages/ReportFoundPage'; // Feature 2: finder uploads item
+import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public listing with blur
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -123,6 +125,26 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Report Found Item — PROTECTED (must be a verified student) */}
+        <Route
+          path="/report-found"
+          element={
+            <ProtectedRoute>
+              <ReportFoundPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Found Items Listing — PROTECTED (browse found items) */}
+        <Route
+          path="/found-items"
+          element={
+            <ProtectedRoute>
+              <FoundItemsPage />
             </ProtectedRoute>
           }
         />

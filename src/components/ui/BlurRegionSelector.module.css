@@ -1,0 +1,191 @@
+/* ============================================================
+   BlurRegionSelector.module.css
+   Styles for the blur-zone drawing interface
+   ============================================================ */
+
+/* Outer wrapper of the whole selector */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header: title + hint */
+.header {
+  padding: 14px 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 12px;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f0f4ff;
+  margin-bottom: 4px;
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: #8b9fc7;
+  line-height: 1.5;
+}
+
+/* Two-column layout: draw on left, preview on right */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Each column */
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Column label above each panel */
+.colLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #8b9fc7;
+  letter-spacing: 0.3px;
+}
+
+/* ── Drawing area (left side) ── */
+.drawArea {
+  position: relative;       /* Needed so child zones position correctly */
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: crosshair;        /* Crosshair cursor shows user they can draw */
+  border: 2px solid rgba(0, 212, 255, 0.3);
+  user-select: none;        /* Prevents text selection while dragging */
+  background: #0a0f1e;
+  line-height: 0;
+}
+
+/* The image the user draws on */
+.drawImage {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+}
+
+/* ── Saved blur zone (already confirmed rectangle) ── */
+.savedZone {
+  position: absolute;     /* Positions over the image */
+  border: 2px dashed rgba(0, 212, 255, 0.8);
+  background: rgba(0, 212, 255, 0.15);
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 3px;
+}
+
+/* ✕ delete button inside each saved zone */
+.deleteBtn {
+  background: rgba(255, 77, 109, 0.85);
+  border: none;
+  color: white;
+  font-size: 0.65rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.deleteBtn:hover {
+  background: rgba(255, 77, 109, 1);
+}
+
+/* ── Active zone (being drawn right now) ── */
+.activeZone {
+  position: absolute;
+  border: 2px solid #00d4ff;       /* Solid cyan border while drawing */
+  background: rgba(0, 212, 255, 0.2);
+  border-radius: 4px;
+  pointer-events: none;            /* Mouse events pass through to the container */
+}
+
+/* Placeholder text shown when no zones drawn yet */
+.placeholder {
+  position: absolute;
+  inset: 0;                        /* Covers the full image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.placeholder span {
+  background: rgba(10, 15, 30, 0.7);
+  color: #4a5a80;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(0, 212, 255, 0.2);
+}
+
+/* Zone count row below the draw area */
+.zoneInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zoneCount {
+  font-size: 0.8rem;
+  color: #8b9fc7;
+}
+
+/* Clear All button */
+.clearBtn {
+  background: none;
+  border: 1px solid rgba(255, 77, 109, 0.4);
+  color: #ff8fa3;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.clearBtn:hover {
+  background: rgba(255, 77, 109, 0.1);
+}
+
+/* Preview note below the label */
+.previewNote {
+  font-size: 0.78rem;
+  color: #4a5a80;
+  margin-top: -6px;
+}
+
+/* Warning when no blur zones have been added */
+.noBlurWarning {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 179, 71, 0.08);
+  border: 1px solid rgba(255, 179, 71, 0.3);
+  border-radius: 10px;
+  font-size: 0.81rem;
+  color: #ffb347;
+  line-height: 1.5;
+}
+
+/* Stack columns on mobile */
+@media (max-width: 700px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
