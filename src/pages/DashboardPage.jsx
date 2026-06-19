@@ -46,10 +46,10 @@ const ACTION_CARDS = [
     id: 'card-verify',
     icon: '🤖',
     title: 'AI Ownership Verification',
-    desc: 'Claim an item by answering AI-generated questions. Confidence score determines ownership.',
-    ready: false,
-    comingLabel: 'Coming Soon',
-    route: null,
+    desc: 'Claim a found item by answering AI-generated questions. The AI compares your answers and generates a confidence score.',
+    ready: true,           // ✅ Built in Feature 3!
+    comingLabel: null,
+    route: '/found-items', // Browse items → click Claim → AI quiz
   },
 ];
 
