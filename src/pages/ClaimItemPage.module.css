@@ -1,0 +1,608 @@
+/* ============================================================
+   ClaimItemPage.module.css — AI Verification Page Styles
+   ============================================================ */
+
+/* Page wrapper */
+.page {
+  min-height: 100vh;
+  padding: 32px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  animation: fadeInUp 0.4s ease;
+}
+
+/* Centered message (loading / error states) */
+.centerMsg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 14px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.linkBtn {
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-size: 0.88rem;
+  transition: border-color 0.15s;
+}
+
+.linkBtn:hover {
+  border-color: var(--border-active);
+}
+
+/* ── Top bar ── */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.backBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.84rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.backBtn:hover {
+  color: var(--accent-cyan);
+  border-color: var(--border-active);
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* ── Two-column layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+/* ── Left: Item preview ── */
+.itemPreview {
+  position: sticky;
+  top: 20px;
+}
+
+.previewCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.previewInfo {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  width: fit-content;
+}
+
+.previewTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.previewMeta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.reminderBox {
+  padding: 12px 16px;
+  margin: 0 14px 14px;
+  background: rgba(255, 179, 71, 0.06);
+  border: 1px solid rgba(255, 179, 71, 0.2);
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: var(--color-warning);
+  line-height: 1.5;
+}
+
+/* ── Right: Questions panel ── */
+.questionsPanel {
+  min-width: 0;
+}
+
+.quizCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px;
+}
+
+/* ── Progress bar ── */
+.progressSection {
+  margin-bottom: 20px;
+}
+
+.progressLabel {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.progressTrack {
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--gradient-main);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Error alert */
+.errorAlert {
+  padding: 10px 14px;
+  background: rgba(255, 77, 109, 0.1);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  border-radius: 10px;
+  color: #ff8fa3;
+  font-size: 0.84rem;
+  margin-bottom: 16px;
+  animation: fadeInDown 0.3s ease;
+}
+
+/* ── Question dots (numbered circles) ── */
+.questionDots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.dot:hover {
+  border-color: var(--border-active);
+}
+
+/* Current question dot */
+.dotActive {
+  border-color: var(--accent-cyan) !important;
+  background: rgba(0, 212, 255, 0.12) !important;
+  color: var(--accent-cyan) !important;
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+/* Dot for a question that has an answer */
+.dotFilled {
+  border-color: var(--color-success);
+  background: rgba(0, 255, 136, 0.08);
+  color: var(--color-success);
+}
+
+/* ── The question box ── */
+.questionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.qIcon {
+  font-size: 2rem;
+  text-align: center;
+}
+
+.qLabel {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.qInput {
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.94rem;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.qInput:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.qInput::placeholder {
+  color: var(--text-muted);
+}
+
+.charCount {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ── Navigation buttons ── */
+.navBtns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.prevBtn {
+  padding: 11px 22px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.prevBtn:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+
+.nextBtn {
+  padding: 11px 28px;
+  background: var(--gradient-main);
+  border: none;
+  border-radius: 10px;
+  color: #0a0f1e;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.2);
+}
+
+.nextBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+}
+
+.submitBtn {
+  padding: 12px 28px;
+  background: var(--gradient-main);
+  border: none;
+  border-radius: 10px;
+  color: #0a0f1e;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.2);
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.skipNote {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* Spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #0a0f1e;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULT PAGE STYLES
+   ════════════════════════════════════════════════════════════ */
+
+.resultPage {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  animation: fadeInUp 0.5s ease;
+}
+
+.resultTitle {
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Item reference line */
+.resultItemRef {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+/* ── Gauge section ── */
+.gaugeSection {
+  display: flex;
+  justify-content: center;
+}
+
+.gaugeContainer {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.gaugeSvg {
+  width: 200px;
+  height: 200px;
+}
+
+/* Score text centered inside the SVG gauge */
+.gaugeText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.scoreNumber {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.scoreLabel {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Verdict banner ── */
+.verdictBanner {
+  width: 100%;
+  padding: 20px 24px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.verdictTitle {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.verdictMsg {
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+/* Verdict color variants */
+.verdict_verified {
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--color-success);
+}
+
+.verdict_needs_review {
+  background: rgba(255, 179, 71, 0.06);
+  border: 1px solid rgba(255, 179, 71, 0.3);
+  color: var(--color-warning);
+}
+
+.verdict_rejected {
+  background: rgba(255, 77, 109, 0.06);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  color: #ff8fa3;
+}
+
+/* ── Breakdown section ── */
+.breakdownSection {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+}
+
+.breakdownTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.breakdownSubtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.breakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Individual breakdown item */
+.breakdownItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Question header row: icon + label + score */
+.bqHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bqIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.bqLabel {
+  flex: 1;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.bqScore {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Score bar track */
+.bqTrack {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+/* Score bar fill */
+.bqFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+/* Raw percentage label */
+.bqPercent {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* ── Action buttons at bottom ── */
+.resultActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.retryBtn {
+  padding: 12px 24px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 10px;
+  color: var(--accent-cyan);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.retryBtn:hover {
+  background: rgba(0, 212, 255, 0.14);
+}
+
+.backToItemsBtn {
+  padding: 12px 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.backToItemsBtn:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .itemPreview {
+    position: static;
+  }
+  .quizCard { padding: 20px; }
+}
