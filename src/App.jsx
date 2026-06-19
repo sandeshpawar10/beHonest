@@ -30,6 +30,7 @@ import VerifyOTPPage   from './pages/VerifyOTPPage';
 import DashboardPage   from './pages/DashboardPage';
 import ReportFoundPage from './pages/ReportFoundPage'; // Feature 2: finder uploads item
 import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public listing with blur
+import ClaimItemPage   from './pages/ClaimItemPage';   // Feature 3: AI ownership verification
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -145,6 +146,17 @@ function App() {
           element={
             <ProtectedRoute>
               <FoundItemsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* AI Ownership Verification — PROTECTED (claim a found item) */}
+        {/* :itemId is a URL parameter — e.g. /claim/bh_item_1234567890 */}
+        <Route
+          path="/claim/:itemId"
+          element={
+            <ProtectedRoute>
+              <ClaimItemPage />
             </ProtectedRoute>
           }
         />
