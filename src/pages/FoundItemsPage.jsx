@@ -187,6 +187,7 @@ function FoundItemsPage() {
    This is a sub-component inside this file (not exported).
    ============================================================ */
 function ItemCard({ item, formatDate }) {
+  const navigate = useNavigate(); // Need this to navigate to the claim page
 
   // Track whether we are showing the full image or the blurred one
   // (Default: blurred for public view)
@@ -269,10 +270,14 @@ function ItemCard({ item, formatDate }) {
           </div>
         )}
 
-        {/* Claim button (AI verification — will be built in a future feature) */}
-        <button className={styles.claimBtn} id={`claim-btn-${item.id}`}>
+        {/* Claim button — NOW navigates to the AI verification page! */}
+        <button
+          className={styles.claimBtn}
+          id={`claim-btn-${item.id}`}
+          onClick={() => navigate(`/claim/${item.id}`)}
+        >
           🙋 This is Mine — Claim It
-          <span className={styles.claimNote}>(AI verification coming soon)</span>
+          <span className={styles.claimNote}>AI will verify your ownership</span>
         </button>
       </div>
 
