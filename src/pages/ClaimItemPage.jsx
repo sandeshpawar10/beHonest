@@ -53,7 +53,7 @@ function ClaimItemPage() {
   const [result, setResult]     = useState(null);    // Verification result from verifyOwnership()
   const [error, setError]       = useState('');
 
-  // ── Load the item on mount ────────────────────────────────
+  // ── Load the item on mount (check whether the item reporter and item founder are same or not)────────────────────────────────
   useEffect(() => {
     const foundItem = getFoundItemById(itemId); // Look up in localStorage
 
@@ -495,3 +495,50 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
 }
 
 export default ClaimItemPage;
+
+
+/*
+🔄 Complete Data Flow Summary
+
+User clicks "Claim" on FoundItemsPage
+        │
+        ▼
+URL changes to /claim/bh_item_123
+        │
+        ▼
+ClaimItemPage mounts
+        │
+        ▼
+useEffect #1 runs:
+  └── getFoundItemById("bh_item_123")
+        └── Loads item from localStorage
+        └── Checks: item exists? not self-claim?
+        └── setItem(foundItem), setLoading(false)
+        │
+        ▼
+Quiz renders (step === 'quiz'):
+  ├── LEFT:  BlurableImage (blurred preview)
+  └── RIGHT: Current question + textarea
+                │
+                ▼ (user types answers, navigates with dots/buttons)
+                │
+        handleAnswerChange() updates answers state
+                │
+                ▼ (user clicks Submit on last question)
+                │
+        handleSubmit() runs:
+          ├── Counts answered questions (need ≥ 3)
+          ├── setVerifying(true) → shows spinner
+          ├── await 2 seconds (fake AI delay)
+          ├── verifyOwnership(item, answers) → calculates score
+          ├── saveClaim({...}) → saves to localStorage
+          ├── setResult(verificationResult)
+          └── setStep('result') → switches to result screen
+                │
+                ▼
+VerificationResult renders:
+  ├── useEffect #2: animates displayScore 0 → 72
+  ├── SVG gauge fills up
+  ├── Verdict banner (green/orange/red)
+  └── Per-question score breakdown bars
+*/
