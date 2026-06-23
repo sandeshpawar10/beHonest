@@ -336,6 +336,7 @@ function ClaimItemPage() {
    per-question breakdown, and the final verdict.
    ============================================================ */
 function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
+  const navigate = useNavigate(); // Need this for the "Proceed to Reward" button
 
   // ── Animated score counter (counts up from 0 to the score) ──
   const [displayScore, setDisplayScore] = useState(0);
@@ -480,11 +481,32 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
 
       {/* ── Action buttons ── */}
       <div className={styles.resultActions}>
+        {/* Proceed to Reward — only shown when verified */}
+        {result.verdict === 'verified' && (
+          <button
+            className={styles.rewardBtn}
+            onClick={() => navigate(`/reward/${item.id}`)}
+          >
+            💰 Proceed to Reward & Escrow
+          </button>
+        )}
+
         {result.verdict === 'rejected' && (
           <button className={styles.retryBtn} onClick={onTryAgain}>
             🔄 Try Again with Better Answers
           </button>
         )}
+
+        {/* Needs review — also allow reward, but with a note */}
+        {result.verdict === 'needs_review' && (
+          <button
+            className={styles.rewardBtn}
+            onClick={() => navigate(`/reward/${item.id}`)}
+          >
+            💰 Proceed to Reward (Pending Review)
+          </button>
+        )}
+
         <button className={styles.backToItemsBtn} onClick={onGoBack}>
           ← Back to Found Items
         </button>
