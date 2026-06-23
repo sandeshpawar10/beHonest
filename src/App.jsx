@@ -31,6 +31,7 @@ import DashboardPage   from './pages/DashboardPage';
 import ReportFoundPage from './pages/ReportFoundPage'; // Feature 2: finder uploads item
 import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public listing with blur
 import ClaimItemPage   from './pages/ClaimItemPage';   // Feature 3: AI ownership verification
+import RewardPage      from './pages/RewardPage';      // Feature 4: AI reward recommendation
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -157,6 +158,16 @@ function App() {
           element={
             <ProtectedRoute>
               <ClaimItemPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* AI Reward Recommendation — PROTECTED (set reward after verification) */}
+        <Route
+          path="/reward/:itemId"
+          element={
+            <ProtectedRoute>
+              <RewardPage />
             </ProtectedRoute>
           }
         />
