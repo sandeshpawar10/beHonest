@@ -1,0 +1,617 @@
+/* ============================================================
+   RewardPage.module.css — AI Reward System Styles
+   ============================================================ */
+
+.page {
+  min-height: 100vh;
+  padding: 32px 24px;
+  max-width: 800px;
+  margin: 0 auto;
+  animation: fadeInUp 0.4s ease;
+}
+
+/* Centered msg (loading/error) */
+.centerMsg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 14px;
+  color: var(--text-secondary);
+}
+
+.linkBtn {
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+/* Top bar */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.backBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.84rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.backBtn:hover {
+  color: var(--accent-cyan);
+  border-color: var(--border-active);
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Item summary strip */
+.itemStrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.stripIcon { font-size: 1.3rem; }
+
+.stripMeta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ── Step card (main content area) ── */
+.stepCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stepTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.stepDesc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-top: -10px;
+}
+
+/* Error alert */
+.errorAlert {
+  padding: 10px 14px;
+  background: rgba(255, 77, 109, 0.1);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  border-radius: 10px;
+  color: #ff8fa3;
+  font-size: 0.84rem;
+}
+
+/* ── Category search bar ── */
+.catSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.catSearchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 11px 0;
+  outline: none;
+}
+
+.catSearchInput::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Category grid ── */
+.catGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar styling */
+.catGrid::-webkit-scrollbar {
+  width: 4px;
+}
+.catGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.catGrid::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* Each category card */
+.catCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 8px 10px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.catCard:hover {
+  border-color: var(--border-active);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+/* Selected category card */
+.catCard.catSelected {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.catCardIcon { font-size: 1.8rem; }
+
+.catCardLabel {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.catCardRange {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Selected category detail box ── */
+.selectedDetail {
+  padding: 14px 16px;
+  background: rgba(0, 212, 255, 0.04);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 12px;
+}
+
+.selectedHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.selectedIcon { font-size: 1.8rem; }
+
+.selectedRange {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.selectedReason {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Big amount display ── */
+.bigAmount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  padding: 24px 0;
+}
+
+.rupee {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.amountValue {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 800;
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.amountLabel {
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-top: -18px;
+}
+
+/* ── Range labels (min / AI / max) ── */
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.aiMark {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* ── Slider container ── */
+.sliderContainer {
+  position: relative;
+  padding: 10px 0 24px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Slider thumb */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-cyan);
+  cursor: grab;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+  transition: box-shadow 0.15s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.5);
+}
+
+.slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-cyan);
+  cursor: grab;
+}
+
+/* AI marker line on the slider */
+.aiMarkerLine {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.aiMarkerLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Reset button */
+.resetBtn {
+  background: none;
+  border: 1px dashed rgba(0, 212, 255, 0.3);
+  color: var(--accent-cyan);
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.resetBtn:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+/* ── Reasoning box ── */
+.reasoningBox {
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.04);
+  border: 1px solid rgba(0, 212, 255, 0.12);
+  border-radius: 14px;
+}
+
+.reasoningTitle {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.reasoningList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reasoningList li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding-left: 6px;
+  border-left: 2px solid rgba(0, 212, 255, 0.2);
+}
+
+/* ── Category info card ── */
+.categoryInfoCard {
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.ciHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.92rem;
+}
+
+.ciDesc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.ciRangeBar {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.ciRangeFill {
+  height: 100%;
+  background: var(--gradient-main);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.ciRangeText {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── Action buttons row ── */
+.actionRow {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.primaryBtn {
+  padding: 12px 28px;
+  background: var(--gradient-main);
+  border: none;
+  border-radius: 10px;
+  color: #0a0f1e;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.2);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ghostBtn {
+  padding: 12px 22px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.ghostBtn:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+
+/* ── Escrow info note ── */
+.escrowNote {
+  padding: 14px 16px;
+  background: rgba(0, 255, 136, 0.04);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 12px;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.escrowNote strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-success);
+}
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,0,0,0.15);
+  border-top-color: #0a0f1e;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ══════════ DONE CARD ══════════ */
+.doneCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 48px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: fadeInUp 0.5s ease;
+}
+
+.doneIcon {
+  font-size: 4rem;
+  animation: pulse 1.5s ease infinite;
+}
+
+.doneTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.doneSubtitle {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  max-width: 440px;
+  line-height: 1.6;
+}
+
+/* ── Receipt card ── */
+.receiptCard {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: left;
+}
+
+.receiptTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.receiptRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.receiptRow:last-child {
+  border-bottom: none;
+}
+
+.receiptLabel {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.receiptValue {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.receiptAmount {
+  font-size: 1.1rem;
+  color: var(--color-success) !important;
+}
+
+.statusHeld {
+  color: var(--color-warning) !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .stepCard { padding: 20px 16px; }
+  .pageTitle { font-size: 1.2rem; }
+  .catGrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .amountValue { font-size: 3rem; }
+  .actionRow { flex-direction: column; }
+  .doneCard { padding: 32px 16px; }
+}
+
+/* Pulse animation for the done checkmark */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
