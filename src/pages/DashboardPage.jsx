@@ -51,6 +51,15 @@ const ACTION_CARDS = [
     comingLabel: null,
     route: '/found-items', // Browse items → click Claim → AI quiz
   },
+  {
+    id: 'card-reward',
+    icon: '💰',
+    title: 'Smart Reward System',
+    desc: 'AI recommends a fair reward based on item type and value. Reward is deposited into secure escrow before handover.',
+    ready: true,           // ✅ Built in Feature 4!
+    comingLabel: null,
+    route: '/found-items', // Claim item → verify → proceed to reward
+  },
 ];
 
 // ── Stat data ──────────────────────────────────────────────────
