@@ -257,7 +257,7 @@ function ItemCard({ item, formatDate }) {
         </div>
 
         {/* Description (truncated to 2 lines via CSS) */}
-        <p className={styles.description}>{item.description}</p>
+        {/* <p className={styles.description}>{item.description}</p> */}
 
         {/* Blur zones info */}
         {item.blurZones && item.blurZones.length > 0 ? (
