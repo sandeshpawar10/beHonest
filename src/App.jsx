@@ -32,6 +32,7 @@ import ReportFoundPage from './pages/ReportFoundPage'; // Feature 2: finder uplo
 import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public listing with blur
 import ClaimItemPage   from './pages/ClaimItemPage';   // Feature 3: AI ownership verification
 import RewardPage      from './pages/RewardPage';      // Feature 4: AI reward recommendation
+import EscrowPage      from './pages/EscrowPage';      // Feature 5: Escrow payment dashboard
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -168,6 +169,16 @@ function App() {
           element={
             <ProtectedRoute>
               <RewardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Escrow Dashboard — PROTECTED (view and manage escrow transactions) */}
+        <Route
+          path="/escrow"
+          element={
+            <ProtectedRoute>
+              <EscrowPage />
             </ProtectedRoute>
           }
         />
