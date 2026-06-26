@@ -24,15 +24,15 @@ const ACTION_CARDS = [
     comingLabel: 'Coming Next',
     route: null,           // No route yet
   },
-  {
-    id: 'card-found',
-    icon: '📦',
-    title: 'Report Found Item',
-    desc: 'Found something on campus? Upload a photo, description, and location. Mark blur zones to protect private details.',
-    ready: true,           // ✅ Built in Feature 2!
-    comingLabel: null,
-    route: '/report-found', // Navigate here on click
-  },
+  // {
+  //   id: 'card-found',
+  //   icon: '📦',
+  //   title: 'Report Found Item',
+  //   desc: 'Found something on campus? Upload a photo, description, and location. Mark blur zones to protect private details.',
+  //   ready: true,           // ✅ Built in Feature 2!
+  //   comingLabel: null,
+  //   route: '/report-found', // Navigate here on click
+  // },
   {
     id: 'card-browse',
     icon: '🔎',
@@ -42,23 +42,32 @@ const ACTION_CARDS = [
     comingLabel: null,
     route: '/found-items', // Navigate here on click
   },
+  // {
+  //   id: 'card-verify',
+  //   icon: '🤖',
+  //   title: 'AI Ownership Verification',
+  //   desc: 'Claim a found item by answering AI-generated questions. The AI compares your answers and generates a confidence score.',
+  //   ready: true,           // ✅ Built in Feature 3!
+  //   comingLabel: null,
+  //   // route: '/found-items', // Browse items → click Claim → AI quiz
+  // },
+  // {
+  //   id: 'card-reward',
+  //   icon: '💰',
+  //   title: 'Smart Reward System',
+  //   desc: 'AI recommends a fair reward based on item type and value. Reward is deposited into secure escrow before handover.',
+  //   ready: true,           // ✅ Built in Feature 4!
+  //   comingLabel: null,
+  //   // route: '/found-items', // Claim item → verify → proceed to reward
+  // },
   {
-    id: 'card-verify',
-    icon: '🤖',
-    title: 'AI Ownership Verification',
-    desc: 'Claim a found item by answering AI-generated questions. The AI compares your answers and generates a confidence score.',
-    ready: true,           // ✅ Built in Feature 3!
+    id: 'card-escrow',
+    icon: '🏦',
+    title: 'Escrow Payments',
+    desc: 'View and manage your reward transactions. Confirm item receipt to release payment, or request a refund.',
+    ready: true,           // ✅ Built in Feature 5!
     comingLabel: null,
-    route: '/found-items', // Browse items → click Claim → AI quiz
-  },
-  {
-    id: 'card-reward',
-    icon: '💰',
-    title: 'Smart Reward System',
-    desc: 'AI recommends a fair reward based on item type and value. Reward is deposited into secure escrow before handover.',
-    ready: true,           // ✅ Built in Feature 4!
-    comingLabel: null,
-    route: '/found-items', // Claim item → verify → proceed to reward
+    route: '/escrow',      // Direct link to escrow dashboard
   },
 ];
 
@@ -248,9 +257,12 @@ function DashboardPage() {
                 <span className={styles.comingSoon}>{card.comingLabel}</span>
               )}
             </div>
+            
           ))}
         </div>
-
+        {/* <div>
+          <h2>Features</h2>
+        </div> */}
       </main>
     </div>
   );
