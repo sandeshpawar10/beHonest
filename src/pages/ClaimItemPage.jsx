@@ -191,9 +191,9 @@ function ClaimItemPage() {
 
                 {/* Item info */}
                 <div className={styles.previewInfo}>
-                  <span className={styles.catPill}>{catConfig.icon} {catConfig.label}</span>
+                  {/* <span className={styles.catPill}>{catConfig.icon} {catConfig.label}</span> */}
                   <h3 className={styles.previewTitle}>{item.title}</h3>
-                  <p className={styles.previewMeta}>📍 {item.location}</p>
+                  {/* <p className={styles.previewMeta}>📍 {item.location}</p> */}
                 </div>
 
                 {/* Reminder */}
