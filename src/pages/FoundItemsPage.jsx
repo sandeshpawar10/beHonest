@@ -251,10 +251,10 @@ function ItemCard({ item, formatDate }) {
         <h3 className={styles.itemTitle}>{item.title}</h3>
 
         {/* Location + date row */}
-        <div className={styles.metaRow}>
+        {/* <div className={styles.metaRow}>
           <span>📍 {item.location}</span>
           <span>📅 {formatDate(item.foundAt)}</span>
-        </div>
+        </div> */}
 
         {/* Description (truncated to 2 lines via CSS) */}
         {/* <p className={styles.description}>{item.description}</p> */}
