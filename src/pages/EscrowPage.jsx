@@ -28,6 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   getEscrowsForUser,      // Get user's escrow records
   updateEscrowStatus,     // Change status (release/refund)
+  releaseEscrowWithPin,   // Release using secure PIN
   REWARD_CATEGORIES,      // Category info for display
 } from '../utils/rewardUtils';
 import styles from './EscrowPage.module.css';
@@ -45,6 +46,10 @@ function EscrowPage() {
   const [confirmModal, setConfirmModal]   = useState(null);  // The escrow being confirmed
   const [confirmAction, setConfirmAction] = useState('');     // 'release' | 'refund'
   const [processing, setProcessing]       = useState(false);
+
+  // PIN state for finders
+  const [pinInputs, setPinInputs] = useState({});
+  const [pinErrors, setPinErrors] = useState({});
 
   // ── Load escrows on mount ─────────────────────────────────
   useEffect(() => {
@@ -103,6 +108,27 @@ function EscrowPage() {
     // Refresh the list
     refreshEscrows();
     closeConfirmModal();
+  };
+
+  // ── Handle PIN Release ────────────────────────────────────
+  const handlePinRelease = async (escrowId) => {
+    const pin = pinInputs[escrowId];
+    if (!pin || pin.length !== 6) {
+      setPinErrors(prev => ({ ...prev, [escrowId]: 'PIN must be 6 digits' }));
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      await new Promise(r => setTimeout(r, 1000)); // Simulate delay
+      releaseEscrowWithPin(escrowId, pin);
+      refreshEscrows();
+      setPinErrors(prev => ({ ...prev, [escrowId]: '' }));
+    } catch (err) {
+      setPinErrors(prev => ({ ...prev, [escrowId]: err.message }));
+    } finally {
+      setProcessing(false);
+    }
   };
 
   // ── Format date helper ────────────────────────────────────
@@ -187,12 +213,12 @@ function EscrowPage() {
           <div className={styles.flowArrow}>→</div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>4</span>
-            <span>Owner confirms receipt</span>
+            <span>Finder verifies PIN</span>
           </div>
           <div className={styles.flowArrow}>→</div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>5</span>
-            <span>Reward released to finder</span>
+            <span>Reward released</span>
           </div>
         </div>
       </div>
@@ -349,12 +375,13 @@ function EscrowPage() {
                   {/* ── Action buttons (only for owner + status is "held") ── */}
                   {activeTab === 'owner' && escrow.status === 'held' && (
                     <div className={styles.ecActions}>
-                      <button
-                        className={styles.releaseBtn}
-                        onClick={() => openConfirmModal(escrow, 'release')}
-                      >
-                        ✅ Confirm Item Received — Release Reward
-                      </button>
+                      <div className={styles.pinDisplayBox}>
+                        <div className={styles.pinDisplayLabel}>Your Release PIN</div>
+                        <div className={styles.pinDisplayCode}>{escrow.releasePin || '123456'}</div>
+                        <p className={styles.pinDisplayHint}>
+                          Give this PIN to the finder <strong>only after</strong> you receive the item.
+                        </p>
+                      </div>
                       <button
                         className={styles.primaryBtn}
                         onClick={() => navigate(`/chat/${escrow.id}`)}
@@ -365,16 +392,41 @@ function EscrowPage() {
                       <button
                         className={styles.refundBtn}
                         onClick={() => openConfirmModal(escrow, 'refund')}
+                        style={{ marginTop: '10px' }}
                       >
                         ↩️ Request Refund
                       </button>
                     </div>
                   )}
 
-                  {/* Finder waiting message & chat */}
+                  {/* Finder PIN Input & chat */}
                   {activeTab === 'finder' && escrow.status === 'held' && (
                     <div className={styles.finderWaiting}>
-                      ⏳ Waiting for the owner to confirm item receipt.
+                      <p style={{ marginBottom: '10px' }}>
+                        ⏳ Meet the owner and ask for their <strong>6-digit Release PIN</strong>.
+                      </p>
+                      <div className={styles.pinInputContainer}>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="Enter 6-digit PIN"
+                          value={pinInputs[escrow.id] || ''}
+                          onChange={(e) => setPinInputs(prev => ({ ...prev, [escrow.id]: e.target.value.replace(/\D/g, '') }))}
+                          className={styles.pinInput}
+                          disabled={processing}
+                        />
+                        <button
+                          className={styles.pinSubmitBtn}
+                          onClick={() => handlePinRelease(escrow.id)}
+                          disabled={processing || (pinInputs[escrow.id]?.length !== 6)}
+                        >
+                          {processing ? '...' : 'Verify & Release'}
+                        </button>
+                      </div>
+                      {pinErrors[escrow.id] && (
+                        <div className={styles.pinError}>{pinErrors[escrow.id]}</div>
+                      )}
+
                       <button
                         className={styles.primaryBtn}
                         onClick={() => navigate(`/chat/${escrow.id}`)}
@@ -382,7 +434,6 @@ function EscrowPage() {
                       >
                         💬 Open Secure Chat
                       </button>
-                      Once confirmed, ₹{escrow.rewardAmount} will be released to you.
                     </div>
                   )}
 
