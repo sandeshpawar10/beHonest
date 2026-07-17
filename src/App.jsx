@@ -33,6 +33,7 @@ import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public list
 import ClaimItemPage   from './pages/ClaimItemPage';   // Feature 3: AI ownership verification
 import RewardPage      from './pages/RewardPage';      // Feature 4: AI reward recommendation
 import EscrowPage      from './pages/EscrowPage';      // Feature 5: Escrow payment dashboard
+import ChatPage        from './pages/ChatPage';        // Feature 6: Anonymous chat
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -179,6 +180,16 @@ function App() {
           element={
             <ProtectedRoute>
               <EscrowPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Anonymous Chat — PROTECTED */}
+        <Route
+          path="/chat/:escrowId"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
             </ProtectedRoute>
           }
         />

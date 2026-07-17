@@ -356,6 +356,13 @@ function EscrowPage() {
                         ✅ Confirm Item Received — Release Reward
                       </button>
                       <button
+                        className={styles.primaryBtn}
+                        onClick={() => navigate(`/chat/${escrow.id}`)}
+                        style={{ marginTop: '10px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        💬 Open Secure Chat
+                      </button>
+                      <button
                         className={styles.refundBtn}
                         onClick={() => openConfirmModal(escrow, 'refund')}
                       >
@@ -364,10 +371,17 @@ function EscrowPage() {
                     </div>
                   )}
 
-                  {/* Finder waiting message */}
+                  {/* Finder waiting message & chat */}
                   {activeTab === 'finder' && escrow.status === 'held' && (
                     <div className={styles.finderWaiting}>
                       ⏳ Waiting for the owner to confirm item receipt.
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={() => navigate(`/chat/${escrow.id}`)}
+                        style={{ marginTop: '15px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        💬 Open Secure Chat
+                      </button>
                       Once confirmed, ₹{escrow.rewardAmount} will be released to you.
                     </div>
                   )}
