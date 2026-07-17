@@ -15,8 +15,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
-import { saveFoundItem, CATEGORY_CONFIG } from '../utils/itemUtils';
-import { runFullFraudScan } from '../utils/fraudUtils';  // Feature 7: Fraud Detection
+import { saveFoundItem, updateItemQuestions, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { runFullFraudScan } from '../utils/fraudUtils';
+import { generateDynamicQuestions } from '../utils/geminiService';  // Feature 7: Fraud Detection
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
@@ -30,6 +31,7 @@ function ReportFoundPage() {
   const [title,       setTitle]       = useState('');       // e.g. 'Blue Wallet'
   const [description, setDescription] = useState('');       // detailed description
   const [location,    setLocation]    = useState('');       // where it was found
+  const [secretDetails, setSecretDetails] = useState('');   // hidden identifier
   const [imageData,   setImageData]   = useState(null);     // base64 image string
   const [blurZones,   setBlurZones]   = useState([]);       // list of blur rectangles
 
@@ -152,11 +154,18 @@ function ReportFoundPage() {
         title:       title.trim(),
         description: description.trim(),
         location:    location.trim(),
+        secretDetails: secretDetails.trim(),
         imageData,        
         blurZones,        
         foundBy:     session.email,
         foundByName: session.fullName, 
       });
+
+      // 5. Kick off background AI question generation
+      // We don't await this because we want the user to navigate instantly
+      generateDynamicQuestions(savedItem)
+        .then(qs => updateItemQuestions(savedItem.id, qs))
+        .catch(err => console.error('Failed background question generation', err));
 
       setLoading(false);
       navigate('/found-items');
@@ -288,6 +297,25 @@ function ReportFoundPage() {
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 maxLength={120}
+              />
+            </div>
+
+            {/* Secret Details */}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="item-secret">
+                Secret Identifier (Optional) 🤫
+              </label>
+              <p className={styles.fieldHint}>
+                Tell us something only the true owner would know. E.g. "The lock screen is a picture of a cat" or "Missing the left button." This is 100% hidden and will be used by our AI to test the owner.
+              </p>
+              <input
+                id="item-secret"
+                type="text"
+                className={styles.input}
+                placeholder="e.g. Spider-man sticker on the back"
+                value={secretDetails}
+                onChange={e => setSecretDetails(e.target.value)}
+                maxLength={200}
               />
             </div>
           </div>

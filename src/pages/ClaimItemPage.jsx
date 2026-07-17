@@ -20,11 +20,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import { getFoundItemById, CATEGORY_CONFIG } from '../utils/itemUtils';
-import {
-  VERIFICATION_QUESTIONS,  // The 5 questions to ask
-  verifyOwnership,         // The scoring function
-  saveClaim,               // Save the claim result
-} from '../utils/verificationUtils';
+import { saveClaim } from '../utils/verificationUtils';
+import { generateDynamicQuestions, verifyOwnershipWithGemini } from '../utils/geminiService';
 import styles from './ClaimItemPage.module.css';
 
 function ClaimItemPage() {
@@ -35,18 +32,10 @@ function ClaimItemPage() {
   // ── State ─────────────────────────────────────────────────
   const [item, setItem]       = useState(null);     // The found item being claimed
   const [loading, setLoading] = useState(true);     // Page loading state
+  const [generatingQs, setGeneratingQs] = useState(true);
+  const [questions, setQuestions] = useState([]);
   const [step, setStep]       = useState('quiz');   // 'quiz' | 'result'
-
-  /*
-    answers: stores the claimant's answer for each question.
-    Structure: { brand: "", color: "", uniqueMarks: "", lossLocation: "", lossDate: "" }
-    We initialize it dynamically from VERIFICATION_QUESTIONS.
-  */
-  const [answers, setAnswers] = useState(() => {
-    const initial = {};
-    VERIFICATION_QUESTIONS.forEach(q => { initial[q.id] = ''; });
-    return initial;
-  });
+  const [answers, setAnswers] = useState({});
 
   const [currentQ, setCurrentQ] = useState(0);     // Which question is currently shown (0–4)
   const [verifying, setVerifying] = useState(false); // "Analyzing..." loading state
@@ -81,7 +70,30 @@ function ClaimItemPage() {
     }
 
     setItem(foundItem);
-    setLoading(false);
+    setLoading(false); // Stop the generic "Loading item..." page
+    
+    // Feature 7 Optimization: Check if questions were pre-generated in the background
+    if (foundItem.securityQuestions && foundItem.securityQuestions.length > 0) {
+      setQuestions(foundItem.securityQuestions);
+      const initial = {};
+      foundItem.securityQuestions.forEach(q => { initial[q.id] = ''; });
+      setAnswers(initial);
+      setGeneratingQs(false);
+    } else {
+      // Fallback: Generate dynamic questions on the fly if not pre-generated
+      generateDynamicQuestions(foundItem)
+        .then((qs) => {
+          setQuestions(qs);
+          const initial = {};
+          qs.forEach(q => { initial[q.id] = ''; });
+          setAnswers(initial);
+          setGeneratingQs(false);
+        })
+        .catch(err => {
+          setError('Failed to generate AI security questions. Please try again later.');
+          setGeneratingQs(false);
+        });
+    }
   }, [itemId, session]);
 
   // ── Handle answer change ──────────────────────────────────
@@ -95,7 +107,7 @@ function ClaimItemPage() {
 
   // ── Go to next question ───────────────────────────────────
   const goNext = () => {
-    if (currentQ < VERIFICATION_QUESTIONS.length - 1) {
+    if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
     }
   };
@@ -109,37 +121,40 @@ function ClaimItemPage() {
 
   // ── Submit all answers for verification ───────────────────
   const handleSubmit = async () => {
-    // Check that at least 3 questions have answers
-    const answeredCount = VERIFICATION_QUESTIONS.filter(
+    // Check that at least 70% of questions have answers
+    const answeredCount = questions.filter(
       q => answers[q.id].trim().length > 0
     ).length;
 
-    if (answeredCount < 3) {
-      setError('Please answer at least 3 questions for the AI to verify ownership.');
+    const minimumRequired = Math.ceil(questions.length * 0.7);
+
+    if (answeredCount < minimumRequired) {
+      setError(`Please answer at least ${minimumRequired} out of ${questions.length} questions for the AI to verify ownership.`);
       return;
     }
 
     setError('');
     setVerifying(true);
 
-    // Simulate AI processing time (makes it feel real)
-    await new Promise(r => setTimeout(r, 2000));
+    try {
+      // Run the dynamic verification scoring
+      const verificationResult = await verifyOwnershipWithGemini(item, questions, answers);
 
-    // Run the verification scoring
-    const verificationResult = verifyOwnership(item, answers);
+      // Save the claim to localStorage
+      saveClaim({
+        itemId:       item.id,
+        itemTitle:    item.title,
+        claimantEmail: session.email,
+        claimantName: session.fullName,
+        answers,                             // What the claimant wrote
+        result: verificationResult,          // Score + verdict
+      });
 
-    // Save the claim to localStorage
-    saveClaim({
-      itemId:       item.id,
-      itemTitle:    item.title,
-      claimantEmail: session.email,
-      claimantName: session.fullName,
-      answers,                             // What the claimant wrote
-      result: verificationResult,          // Score + verdict
-    });
-
-    setResult(verificationResult);
-    setStep('result');
+      setResult(verificationResult);
+      setStep('result');
+    } catch (err) {
+      setError('AI verification failed. Please try again.');
+    }
     setVerifying(false);
     window.scrollTo(0, 0);
   };
@@ -166,14 +181,22 @@ function ClaimItemPage() {
   }
 
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
-  const currentQuestion = VERIFICATION_QUESTIONS[currentQ];
 
   // ── Render ────────────────────────────────────────────────
   return (
     <div className={styles.page}>
 
+      {/* ════════════════ AI GENERATING STATE ════════════════ */}
+      {generatingQs && !error && (
+        <div style={{ textAlign: 'center', marginTop: '100px' }}>
+          <div className={styles.spinner} style={{ margin: '0 auto 20px', width: '40px', height: '40px' }} />
+          <h2 style={{ color: 'var(--accent-cyan)' }}>AI Security Verification</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Analyzing image and generating dynamic questions...</p>
+        </div>
+      )}
+
       {/* ════════════════ QUIZ STEP ════════════════ */}
-      {step === 'quiz' && (
+      {step === 'quiz' && !generatingQs && questions.length > 0 && (
         <>
           {/* Top bar */}
           <div className={styles.topBar}>
@@ -240,42 +263,48 @@ function ClaimItemPage() {
 
                 {/* Question dots — shows which questions have answers */}
                 <div className={styles.questionDots}>
-                  {VERIFICATION_QUESTIONS.map((q, i) => (
+                  {questions.map((q, i) => (
                     <button
                       key={q.id}
                       className={[
                         styles.dot,
                         i === currentQ ? styles.dotActive : '',
-                        answers[q.id].trim() ? styles.dotFilled : '',
+                        answers[q.id]?.trim() ? styles.dotFilled : '',
                       ].filter(Boolean).join(' ')}
                       onClick={() => setCurrentQ(i)}
-                      title={`Question ${i + 1}: ${q.label}`}
+                      title={`Question ${i + 1}`}
                     >
                       {i + 1}
                     </button>
                   ))}
                 </div>
 
+                {/* Progress bar */}
+                <div className={styles.progressContainer}>
+                  <div 
+                    className={styles.progressBar} 
+                    style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }} 
+                  />
+                </div>
+                <div className={styles.progressText}>
+                  Question {currentQ + 1} of {questions.length}
+                </div>
+
                 {/* The current question */}
                 <div className={styles.questionBox}>
-                  <span className={styles.qIcon}>{currentQuestion.icon}</span>
-                  <label
-                    htmlFor={`q-${currentQuestion.id}`}
-                    className={styles.qLabel}
-                  >
-                    {currentQuestion.label}
-                  </label>
+                  <h3 className={styles.questionLabel}>
+                    <span className={styles.questionIcon}>🤖</span> {questions[currentQ].label}
+                  </h3>
                   <textarea
-                    id={`q-${currentQuestion.id}`}
-                    className={styles.qInput}
-                    placeholder={currentQuestion.placeholder}
-                    value={answers[currentQuestion.id]}
-                    onChange={e => handleAnswerChange(currentQuestion.id, e.target.value)}
+                    className={styles.answerInput}
+                    placeholder="Type your answer here..."
+                    value={answers[questions[currentQ].id] || ''}
+                    onChange={(e) => handleAnswerChange(questions[currentQ].id, e.target.value)}
                     rows={3}
                     maxLength={300}
                   />
                   <span className={styles.charCount}>
-                    {answers[currentQuestion.id].length}/300
+                    {answers[questions[currentQ].id]?.length || 0}/300
                   </span>
                 </div>
 
@@ -328,7 +357,7 @@ function ClaimItemPage() {
             setResult(null);
             // Reset answers
             const fresh = {};
-            VERIFICATION_QUESTIONS.forEach(q => { fresh[q.id] = ''; });
+            questions.forEach(q => { fresh[q.id] = ''; });
             setAnswers(fresh);
           }}
           onGoBack={() => navigate('/found-items')}
@@ -442,50 +471,12 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         <p className={styles.verdictMsg}>{result.verdictMessage}</p>
       </div>
 
-      {/* ── Per-question breakdown ── */}
+      {/* ── Per-question breakdown (Removed for dynamic AI scoring) ── */}
       <div className={styles.breakdownSection}>
-        <h3 className={styles.breakdownTitle}>📊 Score Breakdown</h3>
+        <h3 className={styles.breakdownTitle}>📊 AI Analysis Complete</h3>
         <p className={styles.breakdownSubtitle}>
-          Here's how each of your answers was scored by the AI:
+          The AI has processed your answers against the hidden item identifiers.
         </p>
-
-        <div className={styles.breakdownList}>
-          {result.breakdown.map(b => {
-            // Determine bar color based on raw score
-            const barColor = b.rawScore >= 70 ? '#00ff88'
-                           : b.rawScore >= 40 ? '#ffb347'
-                           : '#ff4d6d';
-
-            return (
-              <div key={b.questionId} className={styles.breakdownItem}>
-                {/* Question label */}
-                <div className={styles.bqHeader}>
-                  <span className={styles.bqIcon}>{b.icon}</span>
-                  <span className={styles.bqLabel}>{b.questionLabel}</span>
-                  <span className={styles.bqScore} style={{ color: barColor }}>
-                    {b.earned}/{b.maxScore}
-                  </span>
-                </div>
-
-                {/* Score bar */}
-                <div className={styles.bqTrack}>
-                  <div
-                    className={styles.bqFill}
-                    style={{
-                      width: `${b.rawScore}%`,
-                      background: barColor,
-                    }}
-                  />
-                </div>
-
-                {/* Raw score label */}
-                <span className={styles.bqPercent} style={{ color: barColor }}>
-                  {b.rawScore}% match
-                </span>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* ── Action buttons ── */}
