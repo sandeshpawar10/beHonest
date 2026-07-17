@@ -4,63 +4,56 @@
 
    PURPOSE:
    When a student thinks a found item belongs to them, they
-   come to this page to "claim" it. The AI asks them 5 questions
-   about the item, compares their answers with the stored data,
-   and generates a confidence score.
-
-   FLOW:
-   1. Load the item data from localStorage using the URL param
-   2. Show the item's BLURRED image (no cheating!)
-   3. Ask the 5 verification questions one by one
-   4. On submit → run verifyOwnership() → show results
+   come to this page to "claim" it. The AI conducts a conversational
+   interview to verify ownership.
    ============================================================ */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import { getFoundItemById, CATEGORY_CONFIG } from '../utils/itemUtils';
 import { saveClaim } from '../utils/verificationUtils';
-import { generateDynamicQuestions, verifyOwnershipWithGemini } from '../utils/geminiService';
+import { runInteractiveInterrogation } from '../utils/geminiService';
 import styles from './ClaimItemPage.module.css';
 
 function ClaimItemPage() {
-  const { itemId }  = useParams();  // Get the item ID from the URL (/claim/:itemId)
+  const { itemId }  = useParams();
   const navigate    = useNavigate();
   const { session } = useAuth();
 
   // ── State ─────────────────────────────────────────────────
-  const [item, setItem]       = useState(null);     // The found item being claimed
-  const [loading, setLoading] = useState(true);     // Page loading state
-  const [generatingQs, setGeneratingQs] = useState(true);
-  const [questions, setQuestions] = useState([]);
-  const [step, setStep]       = useState('quiz');   // 'quiz' | 'result'
-  const [answers, setAnswers] = useState({});
+  const [item, setItem]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep]       = useState('quiz'); // 'quiz' (chat) | 'result'
+  const [error, setError]     = useState('');
 
-  const [currentQ, setCurrentQ] = useState(0);     // Which question is currently shown (0–4)
-  const [verifying, setVerifying] = useState(false); // "Analyzing..." loading state
-  const [result, setResult]     = useState(null);    // Verification result from verifyOwnership()
-  const [error, setError]       = useState('');
+  // Chat State
+  const [chatHistory, setChatHistory] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [started, setStarted] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  // ── Load the item on mount (check whether the item reporter and item founder are same or not)────────────────────────────────
+  // Result State
+  const [result, setResult] = useState(null);
+
+  // ── Load the item on mount ────────────────────────────────
   useEffect(() => {
-    const foundItem = getFoundItemById(itemId); // Look up in localStorage
+    const foundItem = getFoundItemById(itemId);
 
     if (!foundItem) {
-      // Item doesn't exist — redirect back
       setError('Item not found.');
       setLoading(false);
       return;
     }
 
-    // Prevent the finder from claiming their OWN item
     if (foundItem.foundBy === session?.email) {
       setError('You cannot claim an item you reported yourself.');
       setLoading(false);
       return;
     }
 
-    // Prevent claiming if the claimant is from a different college domain
     const finderDomain = foundItem.foundBy ? foundItem.foundBy.split('@')[1] : null;
     const userDomain = session?.email ? session.email.split('@')[1] : null;
     if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
@@ -70,93 +63,98 @@ function ClaimItemPage() {
     }
 
     setItem(foundItem);
-    setLoading(false); // Stop the generic "Loading item..." page
-    
-    // Feature 7 Optimization: Check if questions were pre-generated in the background
-    if (foundItem.securityQuestions && foundItem.securityQuestions.length > 0) {
-      setQuestions(foundItem.securityQuestions);
-      const initial = {};
-      foundItem.securityQuestions.forEach(q => { initial[q.id] = ''; });
-      setAnswers(initial);
-      setGeneratingQs(false);
-    } else {
-      // Fallback: Generate dynamic questions on the fly if not pre-generated
-      generateDynamicQuestions(foundItem)
-        .then((qs) => {
-          setQuestions(qs);
-          const initial = {};
-          qs.forEach(q => { initial[q.id] = ''; });
-          setAnswers(initial);
-          setGeneratingQs(false);
-        })
-        .catch(err => {
-          setError('Failed to generate AI security questions. Please try again later.');
-          setGeneratingQs(false);
-        });
-    }
+    setLoading(false);
   }, [itemId, session]);
 
-  // ── Handle answer change ──────────────────────────────────
-  // Updates the answer for the current question
-  const handleAnswerChange = (questionId, value) => {
-    setAnswers(prev => ({
-      ...prev,              // Keep all other answers
-      [questionId]: value,  // Update just this one
-    }));
-  };
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory, verifying]);
 
-  // ── Go to next question ───────────────────────────────────
-  const goNext = () => {
-    if (currentQ < questions.length - 1) {
-      setCurrentQ(currentQ + 1);
-    }
-  };
-
-  // ── Go to previous question ───────────────────────────────
-  const goBack = () => {
-    if (currentQ > 0) {
-      setCurrentQ(currentQ - 1);
-    }
-  };
-
-  // ── Submit all answers for verification ───────────────────
-  const handleSubmit = async () => {
-    // Check that at least 70% of questions have answers
-    const answeredCount = questions.filter(
-      q => answers[q.id].trim().length > 0
-    ).length;
-
-    const minimumRequired = Math.ceil(questions.length * 0.7);
-
-    if (answeredCount < minimumRequired) {
-      setError(`Please answer at least ${minimumRequired} out of ${questions.length} questions for the AI to verify ownership.`);
-      return;
-    }
-
+  // ── Start Interrogation ───────────────────────────────────
+  const startInterrogation = async () => {
+    setStarted(true);
+    setVerifying(true);
     setError('');
+
+    try {
+      const response = await runInteractiveInterrogation(item, []);
+      setChatHistory([{ role: 'ai', text: response.message }]);
+      setVerifying(false);
+    } catch (err) {
+      console.error(err);
+      setError(`Failed to connect to the security AI: ${err.message || 'Unknown error'}`);
+      setStarted(false);
+      setVerifying(false);
+    }
+  };
+
+  // ── Send Message ──────────────────────────────────────────
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim() || verifying) return;
+
+    const userMessage = inputText.trim();
+    setInputText('');
+
+    const newHistory = [...chatHistory, { role: 'user', text: userMessage }];
+    setChatHistory(newHistory);
     setVerifying(true);
 
     try {
-      // Run the dynamic verification scoring
-      const verificationResult = await verifyOwnershipWithGemini(item, questions, answers);
+      const response = await runInteractiveInterrogation(item, newHistory);
+      
+      const finalHistory = [...newHistory, { role: 'ai', text: response.message }];
+      setChatHistory(finalHistory);
 
-      // Save the claim to localStorage
-      saveClaim({
-        itemId:       item.id,
-        itemTitle:    item.title,
-        claimantEmail: session.email,
-        claimantName: session.fullName,
-        answers,                             // What the claimant wrote
-        result: verificationResult,          // Score + verdict
-      });
-
-      setResult(verificationResult);
-      setStep('result');
+      if (response.status !== 'continue') {
+        // AI has reached a verdict
+        setTimeout(() => {
+          handleVerdict(response, finalHistory);
+        }, 2000); // Wait 2 seconds so user can read the final message before switching screens
+      } else {
+        setVerifying(false);
+      }
     } catch (err) {
-      setError('AI verification failed. Please try again.');
+      console.error(err);
+      setChatHistory(prev => [...prev, { role: 'ai', text: `Sorry, I encountered an error: ${err.message || 'Unknown error'}` }]);
+      setVerifying(false);
     }
+  };
+
+  // ── Handle Verdict ────────────────────────────────────────
+  const handleVerdict = (response, finalHistory) => {
+    let verdictLabel = '';
+    let finalVerdict = response.status;
+    
+    if (finalVerdict === 'verified') {
+      verdictLabel = '✅ Verified Owner';
+    } else if (finalVerdict === 'needs_review') {
+      verdictLabel = '🔍 Needs Review';
+    } else {
+      verdictLabel = '❌ Verification Failed';
+      finalVerdict = 'rejected';
+    }
+
+    const verificationResult = {
+      overallScore: response.score || 0,
+      verdict: finalVerdict,
+      verdictLabel,
+      verdictMessage: response.message
+    };
+
+    saveClaim({
+      itemId:       item.id,
+      itemTitle:    item.title,
+      claimantEmail: session.email,
+      claimantName: session.fullName,
+      answers: finalHistory, // Save the chat history as the answers
+      result: verificationResult,
+    });
+
+    setResult(verificationResult);
+    setStep('result');
     setVerifying(false);
-    window.scrollTo(0, 0);
   };
 
   // ── Loading state ─────────────────────────────────────────
@@ -185,161 +183,113 @@ function ClaimItemPage() {
   // ── Render ────────────────────────────────────────────────
   return (
     <div className={styles.page}>
-
-      {/* ════════════════ AI GENERATING STATE ════════════════ */}
-      {generatingQs && !error && (
-        <div style={{ textAlign: 'center', marginTop: '100px' }}>
-          <div className={styles.spinner} style={{ margin: '0 auto 20px', width: '40px', height: '40px' }} />
-          <h2 style={{ color: 'var(--accent-cyan)' }}>AI Security Verification</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Analyzing image and generating dynamic questions...</p>
-        </div>
-      )}
-
-      {/* ════════════════ QUIZ STEP ════════════════ */}
-      {step === 'quiz' && !generatingQs && questions.length > 0 && (
+      {/* ════════════════ QUIZ STEP (CHAT UI) ════════════════ */}
+      {step === 'quiz' && (
         <>
-          {/* Top bar */}
           <div className={styles.topBar}>
             <button className={styles.backBtn} onClick={() => navigate('/found-items')}>
               ← Back
             </button>
-            <h1 className={styles.pageTitle}>🤖 AI Ownership Verification</h1>
+            <h1 className={styles.pageTitle}>🤖 AI Ownership Interview</h1>
           </div>
 
-          {/* Two-column layout: item preview + questions */}
           <div className={styles.layout}>
-
             {/* ── LEFT: Item preview card ── */}
             <div className={styles.itemPreview}>
               <div className={styles.previewCard}>
-
-                {/* Blurred image — claimant sees the public view */}
                 <BlurableImage
                   imageSrc={item.imageData}
                   blurZones={item.blurZones}
                   alt={item.title}
                   blurStrength={14}
                 />
-
-                {/* Item info */}
                 <div className={styles.previewInfo}>
-                  {/* <span className={styles.catPill}>{catConfig.icon} {catConfig.label}</span> */}
                   <h3 className={styles.previewTitle}>{item.title}</h3>
-                  {/* <p className={styles.previewMeta}>📍 {item.location}</p> */}
                 </div>
-
-                {/* Reminder */}
                 <div className={styles.reminderBox}>
                   🔒 Sensitive areas are blurred. If this is really your item,
-                  you should be able to answer the questions without seeing them.
+                  you should be able to answer the AI's questions.
                 </div>
               </div>
             </div>
 
-            {/* ── RIGHT: Questions form ── */}
+            {/* ── RIGHT: Interactive Chat ── */}
             <div className={styles.questionsPanel}>
-
-              <div className={styles.quizCard}>
-
-                {/* Progress bar */}
-                <div className={styles.progressSection}>
-                  <p className={styles.progressLabel}>
-                    Question {currentQ + 1} of {VERIFICATION_QUESTIONS.length}
-                  </p>
-                  <div className={styles.progressTrack}>
-                    <div
-                      className={styles.progressFill}
-                      style={{
-                        width: `${((currentQ + 1) / VERIFICATION_QUESTIONS.length) * 100}%`
-                      }}
-                    />
+              <div className={styles.chatContainer}>
+                
+                {!started ? (
+                  <div className={styles.startBtnBox}>
+                    {verifying ? (
+                      <div className={styles.centerMsg}>
+                        <div className={styles.spinner} />
+                        <p>Initializing AI Interview...</p>
+                      </div>
+                    ) : (
+                      <button className={styles.startBtn} onClick={startInterrogation}>
+                        Start Verification Interview
+                      </button>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className={styles.chatHistory}>
+                      <div className={styles.msgRow + ' ' + styles.ai}>
+                        <div className={styles.msgBubble}>
+                          <em>Connection established with AI Security Guard.</em>
+                        </div>
+                      </div>
 
-                {/* Error message */}
-                {error && (
-                  <div className={styles.errorAlert}>⚠️ {error}</div>
+                      {chatHistory.map((msg, idx) => (
+                        <div key={idx} className={`${styles.msgRow} ${styles[msg.role]}`}>
+                          <div className={styles.msgBubble}>{msg.text}</div>
+                        </div>
+                      ))}
+
+                      {verifying && (
+                        <div className={`${styles.msgRow} ${styles.ai}`}>
+                          <div className={styles.msgBubble}>
+                            <div className={styles.typingIndicator}>
+                              <div className={styles.chatDot}></div>
+                              <div className={styles.chatDot}></div>
+                              <div className={styles.chatDot}></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    <div className={styles.chatInputArea}>
+                      <form className={styles.chatInputForm} onSubmit={handleSendMessage}>
+                        <input
+                          type="text"
+                          className={styles.chatInput}
+                          placeholder="Type your answer..."
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          disabled={verifying}
+                          autoFocus
+                        />
+                        <button 
+                          type="submit" 
+                          className={styles.sendBtn}
+                          disabled={verifying || !inputText.trim()}
+                        >
+                          Send
+                        </button>
+                      </form>
+                    </div>
+                  </>
                 )}
 
-                {/* Question dots — shows which questions have answers */}
-                <div className={styles.questionDots}>
-                  {questions.map((q, i) => (
-                    <button
-                      key={q.id}
-                      className={[
-                        styles.dot,
-                        i === currentQ ? styles.dotActive : '',
-                        answers[q.id]?.trim() ? styles.dotFilled : '',
-                      ].filter(Boolean).join(' ')}
-                      onClick={() => setCurrentQ(i)}
-                      title={`Question ${i + 1}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Progress bar */}
-                <div className={styles.progressContainer}>
-                  <div 
-                    className={styles.progressBar} 
-                    style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }} 
-                  />
-                </div>
-                <div className={styles.progressText}>
-                  Question {currentQ + 1} of {questions.length}
-                </div>
-
-                {/* The current question */}
-                <div className={styles.questionBox}>
-                  <h3 className={styles.questionLabel}>
-                    <span className={styles.questionIcon}>🤖</span> {questions[currentQ].label}
-                  </h3>
-                  <textarea
-                    className={styles.answerInput}
-                    placeholder="Type your answer here..."
-                    value={answers[questions[currentQ].id] || ''}
-                    onChange={(e) => handleAnswerChange(questions[currentQ].id, e.target.value)}
-                    rows={3}
-                    maxLength={300}
-                  />
-                  <span className={styles.charCount}>
-                    {answers[questions[currentQ].id]?.length || 0}/300
-                  </span>
-                </div>
-
-                {/* Navigation buttons */}
-                <div className={styles.navBtns}>
-                  {currentQ > 0 && (
-                    <button className={styles.prevBtn} onClick={goBack}>
-                      ← Previous
-                    </button>
-                  )}
-
-                  {currentQ < VERIFICATION_QUESTIONS.length - 1 ? (
-                    <button className={styles.nextBtn} onClick={goNext}>
-                      Next →
-                    </button>
-                  ) : (
-                    <button
-                      className={styles.submitBtn}
-                      onClick={handleSubmit}
-                      disabled={verifying}
-                    >
-                      {verifying
-                        ? <><span className={styles.spinner} /> AI is analyzing...</>
-                        : '🤖 Submit for AI Verification'
-                      }
-                    </button>
-                  )}
-                </div>
-
-                {/* Tip about skipping */}
-                <p className={styles.skipNote}>
-                  💡 You can skip questions, but answering more gives a higher confidence score.
-                </p>
-
               </div>
+              
+              {/* Error message */}
+              {error && (
+                <div className={styles.errorAlert} style={{ marginTop: '16px' }}>
+                  ⚠️ {error}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -353,12 +303,9 @@ function ClaimItemPage() {
           catConfig={catConfig}
           onTryAgain={() => {
             setStep('quiz');
-            setCurrentQ(0);
             setResult(null);
-            // Reset answers
-            const fresh = {};
-            questions.forEach(q => { fresh[q.id] = ''; });
-            setAnswers(fresh);
+            setChatHistory([]);
+            setStarted(false);
           }}
           onGoBack={() => navigate('/found-items')}
         />
@@ -374,7 +321,7 @@ function ClaimItemPage() {
    per-question breakdown, and the final verdict.
    ============================================================ */
 function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
-  const navigate = useNavigate(); // Need this for the "Proceed to Reward" button
+  const navigate = useNavigate();
 
   // ── Animated score counter (counts up from 0 to the score) ──
   const [displayScore, setDisplayScore] = useState(0);
@@ -382,7 +329,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
   useEffect(() => {
     let current = 0;
     const target = result.overallScore;
-    const step = Math.max(1, Math.floor(target / 40)); // Speed of counting
+    const step = Math.max(1, Math.floor(target / 40));
 
     const timer = setInterval(() => {
       current += step;
@@ -391,37 +338,31 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         clearInterval(timer);
       }
       setDisplayScore(current);
-    }, 30); // Update every 30ms
+    }, 30);
 
     return () => clearInterval(timer);
   }, [result.overallScore]);
 
   // ── Determine gauge color based on verdict ──
   const gaugeColor = {
-    verified:     '#00ff88',  // Green
-    needs_review: '#ffb347',  // Orange
-    rejected:     '#ff4d6d',  // Red
+    verified:     '#00ff88',
+    needs_review: '#ffb347',
+    rejected:     '#ff4d6d',
   }[result.verdict];
 
-  // ── Circumference math for the circular gauge (SVG) ──
-  // The gauge is a circle drawn with SVG. We animate how much of it is filled.
   const radius      = 80;
-  const circumference = 2 * Math.PI * radius;  // Total circle length
-  const fillAmount  = circumference - (circumference * displayScore / 100); // How much to "unfill"
+  const circumference = 2 * Math.PI * radius;
+  const fillAmount  = circumference - (circumference * displayScore / 100);
 
   return (
     <div className={styles.resultPage}>
-
-      {/* Title */}
       <h1 className={styles.resultTitle}>🤖 AI Verification Result</h1>
 
-      {/* Item reference */}
       <div className={styles.resultItemRef}>
         <span>{catConfig.icon}</span>
         <span><strong>{item.title}</strong> — {catConfig.label}</span>
       </div>
 
-      {/* ── Score Gauge (circular progress) ── */}
       <div className={styles.gaugeSection}>
         <div className={styles.gaugeContainer}>
           <svg
@@ -429,14 +370,12 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
             viewBox="0 0 200 200"
             aria-label={`Confidence score: ${result.overallScore}%`}
           >
-            {/* Background circle (grey track) */}
             <circle
               cx="100" cy="100" r={radius}
               fill="none"
               stroke="rgba(255,255,255,0.06)"
               strokeWidth="12"
             />
-            {/* Foreground circle (colored fill) — animated via strokeDashoffset */}
             <circle
               cx="100" cy="100" r={radius}
               fill="none"
@@ -452,7 +391,6 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
               }}
             />
           </svg>
-          {/* Score text in the center of the gauge */}
           <div className={styles.gaugeText}>
             <span className={styles.scoreNumber} style={{ color: gaugeColor }}>
               {displayScore}%
@@ -462,48 +400,43 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         </div>
       </div>
 
-      {/* ── Verdict Banner ── */}
-      <div
+      {/* <div
         className={`${styles.verdictBanner} ${styles[`verdict_${result.verdict}`]}`}
         role="alert"
       >
         <h2 className={styles.verdictTitle}>{result.verdictLabel}</h2>
         <p className={styles.verdictMsg}>{result.verdictMessage}</p>
-      </div>
+      </div> */}
 
-      {/* ── Per-question breakdown (Removed for dynamic AI scoring) ── */}
       <div className={styles.breakdownSection}>
         <h3 className={styles.breakdownTitle}>📊 AI Analysis Complete</h3>
         <p className={styles.breakdownSubtitle}>
-          The AI has processed your answers against the hidden item identifiers.
+          The AI has processed your interview answers against the hidden item identifiers.
         </p>
       </div>
 
-      {/* ── Action buttons ── */}
       <div className={styles.resultActions}>
-        {/* Proceed to Reward — only shown when verified */}
         {result.verdict === 'verified' && (
           <button
             className={styles.rewardBtn}
             onClick={() => navigate(`/reward/${item.id}`)}
           >
-            💰 Proceed to Reward & Escrow
+            💰 Proceed to Escrow
           </button>
         )}
 
         {result.verdict === 'rejected' && (
           <button className={styles.retryBtn} onClick={onTryAgain}>
-            🔄 Try Again with Better Answers
+            🔄 Try Interview Again
           </button>
         )}
 
-        {/* Needs review — also allow reward, but with a note */}
         {result.verdict === 'needs_review' && (
           <button
             className={styles.rewardBtn}
             onClick={() => navigate(`/reward/${item.id}`)}
           >
-            💰 Proceed to Reward (Pending Review)
+            💰 Proceed to Escrow (Pending Review)
           </button>
         )}
 
@@ -511,56 +444,8 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
           ← Back to Found Items
         </button>
       </div>
-
     </div>
   );
 }
 
 export default ClaimItemPage;
-
-
-/*
-🔄 Complete Data Flow Summary
-
-User clicks "Claim" on FoundItemsPage
-        │
-        ▼
-URL changes to /claim/bh_item_123
-        │
-        ▼
-ClaimItemPage mounts
-        │
-        ▼
-useEffect #1 runs:
-  └── getFoundItemById("bh_item_123")
-        └── Loads item from localStorage
-        └── Checks: item exists? not self-claim?
-        └── setItem(foundItem), setLoading(false)
-        │
-        ▼
-Quiz renders (step === 'quiz'):
-  ├── LEFT:  BlurableImage (blurred preview)
-  └── RIGHT: Current question + textarea
-                │
-                ▼ (user types answers, navigates with dots/buttons)
-                │
-        handleAnswerChange() updates answers state
-                │
-                ▼ (user clicks Submit on last question)
-                │
-        handleSubmit() runs:
-          ├── Counts answered questions (need ≥ 3)
-          ├── setVerifying(true) → shows spinner
-          ├── await 2 seconds (fake AI delay)
-          ├── verifyOwnership(item, answers) → calculates score
-          ├── saveClaim({...}) → saves to localStorage
-          ├── setResult(verificationResult)
-          └── setStep('result') → switches to result screen
-                │
-                ▼
-VerificationResult renders:
-  ├── useEffect #2: animates displayScore 0 → 72
-  ├── SVG gauge fills up
-  ├── Verdict banner (green/orange/red)
-  └── Per-question score breakdown bars
-*/

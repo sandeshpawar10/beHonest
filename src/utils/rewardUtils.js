@@ -431,6 +431,7 @@ export function createEscrow(escrowData) {
     ...escrowData,
     id: 'bh_escrow_' + Date.now(),
     status: 'held',               // Money is being held
+    releasePin: Math.floor(100000 + Math.random() * 900000).toString(), // 6-digit Secure PIN
     createdAt: now,
     // Timeline: a log of every event that happens to this escrow
     timeline: [
@@ -458,6 +459,27 @@ export function getAllEscrows() {
 // ── Get escrow for a specific item ─────────────────────────
 export function getEscrowForItem(itemId) {
   return getAllEscrows().find(e => e.itemId === itemId) || null;
+}
+
+// ── Verify PIN and Release Escrow ──────────────────────────
+export function releaseEscrowWithPin(escrowId, pin) {
+  const allEscrows = getAllEscrows();
+  const escrow = allEscrows.find(e => e.id === escrowId);
+  
+  if (!escrow) throw new Error('Escrow not found');
+  if (escrow.status !== 'held') throw new Error('Escrow is not in a held state');
+  if (escrow.releasePin !== pin) throw new Error('Invalid PIN. Please ask the owner for the correct 6-digit PIN.');
+
+  // Update status and timeline
+  escrow.status = 'released';
+  escrow.timeline.push({
+    status: 'released',
+    at: new Date().toISOString(),
+    note: `PIN Verified! ₹${escrow.rewardAmount} released to ${escrow.finderName}.`,
+  });
+
+  localStorage.setItem(ESCROW_KEY, JSON.stringify(allEscrows));
+  return escrow;
 }
 
 

@@ -76,21 +76,6 @@ export function getFoundItemById(id) {
   return items.find(item => item.id === id) || null;
 }
 
-/* ----------------------------------------------------------
-   updateItemQuestions()
-   Saves pre-generated security questions to a specific item.
-   ---------------------------------------------------------- */
-export function updateItemQuestions(itemId, questions) {
-  const items = getAllFoundItems();
-  const index = items.findIndex(item => item.id === itemId);
-  
-  if (index !== -1) {
-    items[index].securityQuestions = questions;
-    localStorage.setItem(FOUND_ITEMS_KEY, JSON.stringify(items));
-    return items[index];
-  }
-  return null;
-}
 
 /* ----------------------------------------------------------
    CATEGORY_CONFIG

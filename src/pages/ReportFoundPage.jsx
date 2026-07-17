@@ -15,9 +15,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
-import { saveFoundItem, updateItemQuestions, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { saveFoundItem, CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
-import { generateDynamicQuestions } from '../utils/geminiService';  // Feature 7: Fraud Detection
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
@@ -160,12 +159,6 @@ function ReportFoundPage() {
         foundBy:     session.email,
         foundByName: session.fullName, 
       });
-
-      // 5. Kick off background AI question generation
-      // We don't await this because we want the user to navigate instantly
-      generateDynamicQuestions(savedItem)
-        .then(qs => updateItemQuestions(savedItem.id, qs))
-        .catch(err => console.error('Failed background question generation', err));
 
       setLoading(false);
       navigate('/found-items');
