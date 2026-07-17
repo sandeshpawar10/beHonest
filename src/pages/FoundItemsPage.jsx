@@ -16,6 +16,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import BlurableImage   from '../components/ui/BlurableImage';
 import { getAllFoundItems, CATEGORY_CONFIG } from '../utils/itemUtils';
 import styles from './FoundItemsPage.module.css';
@@ -196,6 +197,12 @@ function ItemCard({ item, formatDate }) {
   // Get category config for icon display
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
 
+  // Domain matching check
+  const { session } = useAuth();
+  const finderDomain = item.foundBy ? item.foundBy.split('@')[1] : null;
+  const userDomain = session?.email ? session.email.split('@')[1] : null;
+  const isSameCollege = finderDomain && userDomain && (finderDomain.toLowerCase() === userDomain.toLowerCase());
+
   return (
     <div className={styles.card}>
 
@@ -274,10 +281,18 @@ function ItemCard({ item, formatDate }) {
         <button
           className={styles.claimBtn}
           id={`claim-btn-${item.id}`}
-          onClick={() => navigate(`/claim/${item.id}`)}
+          onClick={() => {
+            if (isSameCollege) {
+              navigate(`/claim/${item.id}`);
+            } else {
+              alert('Sorry, you can only claim items found by students from your own college domain.');
+            }
+          }}
+          disabled={!isSameCollege}
+          style={{ opacity: isSameCollege ? 1 : 0.6, cursor: isSameCollege ? 'pointer' : 'not-allowed' }}
         >
-          🙋 This is Mine — Claim It
-          <span className={styles.claimNote}>AI will verify your ownership</span>
+          {isSameCollege ? '🙋 This is Mine — Claim It' : '🚫 Not from your college'}
+          {isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
         </button>
       </div>
 

@@ -71,6 +71,15 @@ function ClaimItemPage() {
       return;
     }
 
+    // Prevent claiming if the claimant is from a different college domain
+    const finderDomain = foundItem.foundBy ? foundItem.foundBy.split('@')[1] : null;
+    const userDomain = session?.email ? session.email.split('@')[1] : null;
+    if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
+      setError('You can only claim items reported by students from your own college domain.');
+      setLoading(false);
+      return;
+    }
+
     setItem(foundItem);
     setLoading(false);
   }, [itemId, session]);
