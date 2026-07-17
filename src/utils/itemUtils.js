@@ -3,6 +3,8 @@
    Uses localStorage as our "database" (no real backend needed)
    ============================================================ */
 
+import { generateImageFingerprint } from './imageFingerprint';
+
 // The key we use to store all found items in localStorage
 const FOUND_ITEMS_KEY = 'bh_found_items';
 
@@ -34,7 +36,9 @@ export function saveFoundItem(item) {
   const newItem = {
     ...item,                          // Spread all the fields the caller passed
     id: 'bh_item_' + Date.now(),      // Unique ID using current timestamp
-    foundAt: new Date().toISOString() // Save the exact time it was reported
+    foundAt: new Date().toISOString(), // Save the exact time it was reported
+    // Generate a fingerprint of the image for duplicate detection (Feature 7)
+    imageFingerprint: generateImageFingerprint(item.imageData),
   };
 
   // Step 3: Add the new item to the list

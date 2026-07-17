@@ -450,6 +450,12 @@ function RewardPage() {
 
           <button
             className={styles.primaryBtn}
+            onClick={() => navigate('/escrow')}
+          >
+            🏦 View Escrow Dashboard
+          </button>
+          <button
+            className={styles.ghostBtn}
             onClick={() => navigate('/found-items')}
           >
             ← Back to Found Items
@@ -462,3 +468,54 @@ function RewardPage() {
 }
 
 export default RewardPage;
+
+
+
+
+
+/*
+ClaimItemPage (AI Verification)
+  └── Score ≥ 80% → verdict = "verified"
+        └── User clicks "💰 Proceed to Reward & Escrow"
+              └── navigate('/reward/bh_item_123')
+                    │
+                    ▼
+RewardPage mounts
+  │
+  ▼
+useEffect runs:
+  ├── getFoundItemById("bh_item_123") → loads item
+  ├── getEscrowForItem("bh_item_123") → checks for existing escrow
+  │     ├── If escrow exists → jump to 'done' (show receipt)
+  │     └── If no escrow → continue normally
+  └── setItem(foundItem), setLoading(false)
+  │
+  ▼
+STEP 1: 'select' renders
+  └── User searches and clicks a category card
+        └── handleCategorySelect("watch")
+              └── selectedCategory = "watch"
+  └── User clicks "Get AI Recommendation"
+        └── handleGetRecommendation()
+              ├── calculateReward(item, "watch", 80)
+              │     └── Returns { recommendedReward: 300, min: 100, max: 500, reasoning: [...] }
+              ├── setChosenReward(300) → slider starts here
+              └── setStep('recommend')
+  │
+  ▼
+STEP 2: 'recommend' renders
+  └── User drags the slider
+        └── onChange → setChosenReward(350) → big number updates live
+  └── User clicks "Confirm & Deposit"
+        └── handleConfirmReward()
+              ├── setProcessing(true) → spinner
+              ├── await 1.5s → fake payment delay
+              ├── createEscrow({...}) → saves to localStorage
+              ├── setEscrowRecord(escrow)
+              └── setStep('done')
+  │
+  ▼
+STEP 3: 'done' renders
+  └── Shows the escrow receipt with all details
+  └── User clicks "Back to Found Items" → navigate('/found-items')
+*/

@@ -404,31 +404,50 @@ export function calculateReward(item, rewardCategory, verificationScore = 70) {
    {
      id: "bh_escrow_...",
      itemId: "bh_item_...",
+     itemTitle: "Blue Nike Watch",
      rewardAmount: 350,
-     depositorEmail: "owner@college.edu",
-     finderEmail: "finder@college.edu",
-     status: "held",     // "held" | "released" | "refunded"
+     rewardCategory: "watch",
+     depositorEmail: "owner@college.edu",   ← who pays (the owner/claimant)
+     depositorName: "John Doe",
+     finderEmail: "finder@college.edu",      ← who receives (the person who found it)
+     finderName: "Jane Smith",
+     status: "held",     // "held" | "released" | "refunded" | "disputed"
      createdAt: "2024-...",
+     timeline: [         ← log of every status change
+       { status: "held", at: "2024-...", note: "Reward deposited" },
+       { status: "released", at: "2024-...", note: "Owner confirmed receipt" },
+     ]
    }
    ---------------------------------------------------------- */
 
 const ESCROW_KEY = 'bh_escrow';
 
-// Save a new escrow deposit
+// ── Save a new escrow deposit ──────────────────────────────
 export function createEscrow(escrowData) {
   const existing = getAllEscrows();
+  const now = new Date().toISOString();
+
   const newEscrow = {
     ...escrowData,
     id: 'bh_escrow_' + Date.now(),
     status: 'held',               // Money is being held
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    // Timeline: a log of every event that happens to this escrow
+    timeline: [
+      {
+        status: 'held',
+        at: now,
+        note: `₹${escrowData.rewardAmount} deposited by ${escrowData.depositorName}`,
+      }
+    ],
   };
+
   existing.push(newEscrow);
   localStorage.setItem(ESCROW_KEY, JSON.stringify(existing));
   return newEscrow;
 }
 
-// Get all escrow records
+// ── Get all escrow records ─────────────────────────────────
 export function getAllEscrows() {
   const raw = localStorage.getItem(ESCROW_KEY);
   if (!raw) return [];
@@ -436,7 +455,81 @@ export function getAllEscrows() {
   catch { return []; }
 }
 
-// Get escrow for a specific item
+// ── Get escrow for a specific item ─────────────────────────
 export function getEscrowForItem(itemId) {
   return getAllEscrows().find(e => e.itemId === itemId) || null;
 }
+
+
+/* ----------------------------------------------------------
+   updateEscrowStatus()
+   
+   Changes the status of an escrow record.
+   Used for:
+   - "released"  → Owner confirmed they got the item back.
+                    Reward is released to the finder.
+   - "refunded"  → Something went wrong. Owner gets their money back.
+   - "disputed"  → One party raised a dispute. Needs admin review.
+   
+   Also adds a timeline entry to track what happened and when.
+   ---------------------------------------------------------- */
+export function updateEscrowStatus(escrowId, newStatus, note = '') {
+  const allEscrows = getAllEscrows();
+  const now = new Date().toISOString();
+
+  // Find the escrow record by ID
+  const index = allEscrows.findIndex(e => e.id === escrowId);
+  if (index === -1) return null; // Escrow not found
+
+  // Update the status
+  allEscrows[index].status = newStatus;
+
+  // Add a timeline entry
+  if (!allEscrows[index].timeline) {
+    allEscrows[index].timeline = []; // Safety: create timeline if missing
+  }
+
+  allEscrows[index].timeline.push({
+    status: newStatus,
+    at: now,
+    note: note || `Status changed to ${newStatus}`,
+  });
+
+  // If released, record the release date
+  if (newStatus === 'released') {
+    allEscrows[index].releasedAt = now;
+  }
+
+  // If refunded, record the refund date
+  if (newStatus === 'refunded') {
+    allEscrows[index].refundedAt = now;
+  }
+
+  // Save back to localStorage
+  localStorage.setItem(ESCROW_KEY, JSON.stringify(allEscrows));
+
+  return allEscrows[index]; // Return the updated record
+}
+
+
+/* ----------------------------------------------------------
+   getEscrowsForUser()
+   
+   Returns all escrow records where the given email is involved,
+   either as the DEPOSITOR (owner) or the FINDER.
+   
+   Returns:
+   {
+     asOwner: [...]   ← escrows where user is the depositor (they paid)
+     asFinder: [...]  ← escrows where user is the finder (they receive)
+   }
+   ---------------------------------------------------------- */
+export function getEscrowsForUser(email) {
+  const all = getAllEscrows();
+
+  return {
+    asOwner:  all.filter(e => e.depositorEmail === email),
+    asFinder: all.filter(e => e.finderEmail === email),
+  };
+}
+

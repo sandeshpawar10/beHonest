@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { saveFoundItem, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { runFullFraudScan } from '../utils/fraudUtils';  // Feature 7: Fraud Detection
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
@@ -116,30 +117,55 @@ function ReportFoundPage() {
   /* ──────────────────────────────────────────────────────────
      handleSubmit()
      Save the item when the user clicks "Submit" on step 3.
+     Now runs fraud detection BEFORE saving!
   */
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
 
-    // Small delay to show loading state (simulates a real API call)
-    await new Promise(r => setTimeout(r, 800));
+    try {
+      // 1. Build a temporary item object for the scanner
+      const tempItem = {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        imageData,
+      };
 
-    // Save the item using our utility function
-    saveFoundItem({
-      category,
-      title:       title.trim(),
-      description: description.trim(),
-      location:    location.trim(),
-      imageData,        // The full base64 image
-      blurZones,        // The blur rectangle list
-      foundBy:     session.email,    // Finder's email (hidden publicly)
-      foundByName: session.fullName, // Finder's name (hidden publicly)
-    });
+      // 2. Run the fraud scan BEFORE saving
+      const report = await runFullFraudScan(tempItem, session.email);
 
-    setLoading(false);
+      // 3. If AI detects high-severity fraud (e.g., fake photo), block the upload
+      if (report.overallRisk === 'high') {
+        setLoading(false);
+        // Find the specific high-severity error message to show the user
+        const badFlag = report.aiFlags.find(f => f.severity === 'high') || 
+                        report.heuristicFlags.find(f => f.severity === 'high');
+        
+        setError(`Upload blocked: ${badFlag ? badFlag.message : 'Suspicious activity detected.'}. Please upload a genuine photo of the lost item.`);
+        return; // STOP EXECUTION HERE — DO NOT SAVE
+      }
 
-    // Go to the public listing page to see the result
-    navigate('/found-items');
+      // 4. If clean or low/medium risk, proceed to save the item
+      const savedItem = saveFoundItem({
+        category,
+        title:       title.trim(),
+        description: description.trim(),
+        location:    location.trim(),
+        imageData,        
+        blurZones,        
+        foundBy:     session.email,
+        foundByName: session.fullName, 
+      });
+
+      setLoading(false);
+      navigate('/found-items');
+      
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred while scanning the image. Please try again.');
+      setLoading(false);
+    }
   };
 
   /* ── Helper: get the blur hint for selected category ── */
