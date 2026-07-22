@@ -41,6 +41,44 @@ function RegisterPage() {
   const [confirmErr, setConfirmErr] = useState('');
 
   // ── Real-time email validation ────────────────────────────
+
+  const handleRegisterSubmit = async (e)=> {
+    e.preventDefault()
+
+    try {
+      console.log(email)
+      const response = await fetch('http://localhost:8000/api/user/register',{
+        method: 'POST',
+        headers: {
+          'Content-Type' : 'application/json'
+        },
+        body: JSON.stringify({
+          username: fullName,
+          email: email.trim(),
+          password: password
+        })
+      })
+      const data = await response.json()
+      if(response.ok){
+        setAlert({msg: "Registration successful! Please check your email for the OTP.", type: "success"})
+        navigate('/verify-otp')
+      }
+      else{
+        let errorMsg = data.message || "An error occurred";
+        if (data.error) {
+           // Extract specific field errors from Zod format
+           if (data.error.username) errorMsg = "Name error: " + data.error.username._errors[0];
+           else if (data.error.email) errorMsg = "Email error: " + data.error.email._errors[0];
+           else if (data.error.password) errorMsg = "Password error: " + data.error.password._errors[0];
+        }
+        setAlert({ msg: errorMsg, type: "error" })
+      }
+
+    } catch (error) {
+      console.error("Failed to connect to the backend server.");
+    }
+  }
+
   // Runs as user types — debounced by React's own batching
   const handleEmailChange = (e) => {
     const val = e.target.value;
@@ -191,7 +229,7 @@ function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <form onSubmit={handleRegisterSubmit} className={styles.form} noValidate>
 
           {/* Full Name */}
           <InputField
