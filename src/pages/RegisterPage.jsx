@@ -13,7 +13,6 @@ import InputField from '../components/ui/InputField';
 import {
   validateCollegeEmail, // Full college email check
   validatePassword,     // Password strength evaluator
-  isEmailTaken,         // Check if email already registered
 } from '../utils/authUtils';
 import styles from './AuthPages.module.css';
 
@@ -60,8 +59,9 @@ function RegisterPage() {
       })
       const data = await response.json()
       if(response.ok){
+        sendOTP(email.trim()); // Generate fake OTP in browser console for testing
         setAlert({msg: "Registration successful! Please check your email for the OTP.", type: "success"})
-        navigate('/verify-otp')
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`)
       }
       else{
         let errorMsg = data.message || "An error occurred";
@@ -75,6 +75,7 @@ function RegisterPage() {
       }
 
     } catch (error) {
+      //console.log(error.response.data);
       console.error("Failed to connect to the backend server.");
     }
   }
@@ -135,79 +136,80 @@ function RegisterPage() {
   }[pwStrength] || { width: '0%', color: 'transparent', label: '' };
 
   // ── Form Submission ───────────────────────────────────────
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setAlert({ msg: '', type: '' });
 
-    let hasError = false;
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setAlert({ msg: '', type: '' });
 
-    // Validate full name
-    if (!fullName.trim()) {
-      setNameErr('Full name is required.');
-      hasError = true;
-    } else { setNameErr(''); }
+  //   let hasError = false;
 
-    // Validate college email
-    const emailResult = validateCollegeEmail(email);
-    if (!emailResult.valid) {
-      setEmailErr(emailResult.reason);
-      setEmailOk(false);
-      hasError = true;
-    }
+  //   // Validate full name
+  //   if (!fullName.trim()) {
+  //     setNameErr('Full name is required.');
+  //     hasError = true;
+  //   } else { setNameErr(''); }
 
-    // Validate password
-    const pwResult = validatePassword(password);
-    if (!pwResult.valid) {
-      setPwErr(pwResult.reason);
-      hasError = true;
-    }
+  //   // Validate college email
+  //   const emailResult = validateCollegeEmail(email);
+  //   if (!emailResult.valid) {
+  //     setEmailErr(emailResult.reason);
+  //     setEmailOk(false);
+  //     hasError = true;
+  //   }
 
-    // Validate confirm password
-    if (password !== confirmPw) {
-      setConfirmErr('Passwords do not match.');
-      hasError = true;
-    }
+  //   // Validate password
+  //   const pwResult = validatePassword(password);
+  //   if (!pwResult.valid) {
+  //     setPwErr(pwResult.reason);
+  //     hasError = true;
+  //   }
 
-    // Validate terms acceptance
-    if (!acceptTerms) {
-      setAlert({ msg: 'Please accept the Terms of Service to continue.', type: 'warning' });
-      hasError = true;
-    }
+  //   // Validate confirm password
+  //   if (password !== confirmPw) {
+  //     setConfirmErr('Passwords do not match.');
+  //     hasError = true;
+  //   }
 
-    if (hasError) return;
+  //   // Validate terms acceptance
+  //   if (!acceptTerms) {
+  //     setAlert({ msg: 'Please accept the Terms of Service to continue.', type: 'warning' });
+  //     hasError = true;
+  //   }
 
-    // Check if email already exists in localStorage
-    if (isEmailTaken(email)) {
-      setAlert({ msg: 'This email is already registered. Please log in.', type: 'error' });
-      return;
-    }
+  //   if (hasError) return;
 
-    // All valid — send OTP
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 1200)); // Simulated API delay
+  //   // Check if email already exists in localStorage
+  //   if (isEmailTaken(email)) {
+  //     setAlert({ msg: 'This email is already registered. Please log in.', type: 'error' });
+  //     return;
+  //   }
 
-    sendOTP(email.trim()); // Generates OTP and stores it in localStorage
+  //   // All valid — send OTP
+  //   setLoading(true);
+  //   await new Promise(r => setTimeout(r, 1200)); // Simulated API delay
 
-    setAlert({
-      msg: `OTP sent to ${email}! Check your inbox (Dev: see browser console).`,
-      type: 'success'
-    });
+  //   sendOTP(email.trim()); // Generates OTP and stores it in localStorage
 
-    // Store registration data in sessionStorage so VerifyOTPPage can complete registration
-    // NOTE: In production, never store plain password client-side — hash on server
-    sessionStorage.setItem('bh_reg_pending', JSON.stringify({
-      fullName: fullName.trim(),
-      email:    email.trim().toLowerCase(),
-      password, // Temporary — cleared after registration is complete
-    }));
+  //   setAlert({
+  //     msg: `OTP sent to ${email}! Check your inbox (Dev: see browser console).`,
+  //     type: 'success'
+  //   });
 
-    await new Promise(r => setTimeout(r, 1200)); // Let user read success message
+  //   // Store registration data in sessionStorage so VerifyOTPPage can complete registration
+  //   // NOTE: In production, never store plain password client-side — hash on server
+  //   sessionStorage.setItem('bh_reg_pending', JSON.stringify({
+  //     fullName: fullName.trim(),
+  //     email:    email.trim().toLowerCase(),
+  //     password, // Temporary — cleared after registration is complete
+  //   }));
 
-    setLoading(false);
+  //   await new Promise(r => setTimeout(r, 1200)); // Let user read success message
 
-    // Navigate to OTP verification page, passing email and context as query params
-    navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`);
-  };
+  //   setLoading(false);
+
+  //   // Navigate to OTP verification page, passing email and context as query params
+  //   navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`);
+  // };
 
   // ── Render ────────────────────────────────────────────────
   return (

@@ -2,7 +2,7 @@ const {userValidation,loginValidationFunction,passwordValidations} = require("..
 const user = require("../models/userModel")
 
 exports.registerUser = async function(req,res){
-    console.log(req.body)
+    //console.log(req.body)
     const validationResult = await userValidation.safeParseAsync(req.body)
     if(validationResult.error){
         return res.status(400).json({
@@ -10,6 +10,7 @@ exports.registerUser = async function(req,res){
             error: validationResult.error.format()
         })
     }
+    console.log(validationResult);
     const {username,email,password} = validationResult.data
     const existingUser = await user.findOne({
         email
@@ -48,9 +49,11 @@ exports.loginUser = async function(req,res){
     if(!isMatch){
         return res.status(400).json({ message: "Password is not correct" })
     }
+    let accesstoken;
+    let refreshtoken;
     try {
-        const accesstoken = existingUser.generateAccesstoken()
-        const refreshtoken = existingUser.generateRefreshToken()
+        accesstoken = existingUser.generateAccesstoken()
+        refreshtoken = existingUser.generateRefreshToken()
         existingUser.refreshToken = refreshtoken
         await existingUser.save({validateBeforeSave:false})
     } catch (error) {
@@ -88,4 +91,18 @@ exports.logoutUser = async function(req,res){
     return res.status(200).clearCookie("accesstoken",options)
         .clearCookie("refreshtoken",options)
         .end("user is successfully logged out.")
+}
+
+exports.verifyEmail = async function(req, res){
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+    const existingUser = await user.findOne({ email });
+    if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
+    }
+    existingUser.isEmailVerified = true;
+    await existingUser.save({ validateBeforeSave: false });
+    return res.status(200).json({ message: "Email successfully verified!" });
 }

@@ -15,7 +15,7 @@ import styles from './AuthPages.module.css';
 
 function LoginPage() {
   const navigate  = useNavigate();  // For programmatic navigation after login
-  const { login } = useAuth();      // Get the login action from AuthContext
+  const { loginSuccess } = useAuth(); // Get the loginSuccess action from AuthContext
 
   // ── Form State ────────────────────────────────────────────
   const [email,    setEmail]    = useState(''); // College email input
@@ -41,51 +41,87 @@ function LoginPage() {
   };
 
   // ── Form Submission Handler ───────────────────────────────
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent browser default form submit (page reload)
-    setError('');
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault(); // Prevent browser default form submit (page reload)
+  //   setError('');
 
-    // Client-side validation before calling auth
-    if (!email.trim()) {
-      setEmailErr('College email is required.');
-      return;
+  //   // Client-side validation before calling auth
+  //   if (!email.trim()) {
+  //     setEmailErr('College email is required.');
+  //     return;
+  //   }
+  //   if (!isValidEmailFormat(email)) {
+  //     setEmailErr('Please enter a valid email address.');
+  //     return;
+  //   }
+  //   if (!isCollegeEmail(email)) {
+  //     setEmailErr('Only college/university emails are allowed (.edu, .ac.in, etc.)');
+  //     return;
+  //   }
+  //   if (!password) {
+  //     setError('Password is required.');
+  //     return;
+  //   }
+
+  //   // Start loading state — disables button and shows spinner
+  //   setLoading(true);
+
+  //   // Simulate a small network delay for realistic UX
+  //   await new Promise(r => setTimeout(r, 800));
+
+  //   // Call the login action from AuthContext
+  //   const result = login(email.trim(), password);
+
+  //   setLoading(false);
+
+  //   if (!result.success) {
+  //     // Show the error reason from the auth function
+  //     setError(result.reason);
+  //     // Trigger the shake animation on the form card
+  //     setShake(true);
+  //     setTimeout(() => setShake(false), 500); // Remove class after animation
+  //     return;
+  //   }
+
+  //   // ✅ Login successful → navigate to dashboard
+  //   navigate('/dashboard', { replace: true });
+  // };
+
+  const handleLoginSubmit = async (e)=> {
+    e.preventDefault()
+
+    try {
+      console.log(email)
+      const response = await fetch('http://localhost:8000/api/user/login',{
+        method: 'POST',
+        headers: {
+          'Content-Type' : 'application/json'
+        },
+        body: JSON.stringify({
+          //username: fullName,
+          email: email.trim(),
+          password: password
+        })
+      })
+      const data = await response.json()
+      if(response.ok){
+        loginSuccess({ email: email.trim() }); // Tell AuthContext we logged in
+        console.log("Navigating to dashboard...");
+        navigate('/dashboard', { replace: true });
+      }
+      else{
+        setError(data.message || "Login failed");
+        // Trigger the shake animation on the form card
+        setShake(true);
+        setTimeout(() => setShake(false), 500); // Remove class after animation
+        return;
+      }
+
+    } catch (error) {
+      //console.log(error.response.data);
+      console.error("Failed to connect to the backend server.");
     }
-    if (!isValidEmailFormat(email)) {
-      setEmailErr('Please enter a valid email address.');
-      return;
-    }
-    if (!isCollegeEmail(email)) {
-      setEmailErr('Only college/university emails are allowed (.edu, .ac.in, etc.)');
-      return;
-    }
-    if (!password) {
-      setError('Password is required.');
-      return;
-    }
-
-    // Start loading state — disables button and shows spinner
-    setLoading(true);
-
-    // Simulate a small network delay for realistic UX
-    await new Promise(r => setTimeout(r, 800));
-
-    // Call the login action from AuthContext
-    const result = login(email.trim(), password);
-
-    setLoading(false);
-
-    if (!result.success) {
-      // Show the error reason from the auth function
-      setError(result.reason);
-      // Trigger the shake animation on the form card
-      setShake(true);
-      setTimeout(() => setShake(false), 500); // Remove class after animation
-      return;
-    }
-
-    // ✅ Login successful → navigate to dashboard
-    navigate('/dashboard', { replace: true });
-  };
+  }
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -109,7 +145,7 @@ function LoginPage() {
         )}
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <form onSubmit={handleLoginSubmit} className={styles.form} noValidate>
 
           {/* College Email */}
           <InputField

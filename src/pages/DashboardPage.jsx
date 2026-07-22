@@ -125,6 +125,7 @@ function StatCard({ target, label }) {
 // ── DashboardPage component ────────────────────────────────────
 function DashboardPage() {
   const { session, logout } = useAuth();
+  console.log(session)
   const navigate = useNavigate(); // Hook for programmatic navigation
 
   // Extract user's first name for the personalized greeting
@@ -147,17 +148,6 @@ function DashboardPage() {
 
         {/* Right: User pill + logout button */}
         <div className={styles.navRight}>
-
-          {/* User pill: avatar initials + full name + verified badge */}
-          <div className={styles.userPill} id="user-pill" aria-label="Logged in user">
-            <div className={styles.avatar} id="user-avatar" aria-hidden="true">
-              {session?.avatar || '?'} {/* Initials like "JD" */}
-            </div>
-            <span id="user-name">{session?.fullName}</span>
-            {/* Verified email badge */}
-            <span className={styles.verifiedBadge}>✓ Verified</span>
-          </div>
-
           {/* Logout button */}
           <button
             className={styles.logoutBtn}

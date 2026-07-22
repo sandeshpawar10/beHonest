@@ -27,7 +27,7 @@ function VerifyOTPPage() {
   const email   = searchParams.get('email')   || '';
   const context = searchParams.get('context') || 'register';
 
-  const { confirmOTP, register, sendOTP } = useAuth();
+  const { confirmOTP, sendOTP } = useAuth();
 
   // ── OTP input state ───────────────────────────────────────
   // Array of 6 strings — one digit per box
@@ -165,30 +165,30 @@ function VerifyOTPPage() {
     setBoxState('verified');
 
     if (context === 'register') {
-      // Retrieve pending registration data from sessionStorage
-      const pendingRaw = sessionStorage.getItem('bh_reg_pending');
-      if (!pendingRaw) {
-        setAlert({ msg: 'Registration data not found. Please start over.', type: 'error' });
-        setTimeout(() => navigate('/register'), 2000);
-        return;
-      }
+      try {
+        const response = await fetch('http://localhost:8000/api/user/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await response.json();
 
-      const pending = JSON.parse(pendingRaw);
-      sessionStorage.removeItem('bh_reg_pending'); // Clean up immediately
+        if (!response.ok) {
+          setAlert({ msg: data.message || 'Verification failed.', type: 'error' });
+          setLoading(false);
+          return;
+        }
 
-      // Complete registration (creates user + auto-login via AuthContext)
-      const regResult = register(pending.fullName, pending.email, pending.password);
-
-      if (!regResult.success) {
-        setAlert({ msg: regResult.reason, type: 'error' });
+        // Show success briefly then navigate to login
+        setAlert({ msg: '🎉 Email verified! Redirecting to login...', type: 'success' });
+        await new Promise(r => setTimeout(r, 1500));
+        navigate('/login', { replace: true });
+        
+      } catch (err) {
+        setAlert({ msg: 'Failed to connect to server.', type: 'error' });
         setLoading(false);
-        return;
       }
 
-      // Show success briefly then navigate to dashboard
-      setAlert({ msg: '🎉 Account created! Redirecting to dashboard...', type: 'success' });
-      await new Promise(r => setTimeout(r, 1500));
-      navigate('/dashboard', { replace: true });
 
     } else {
       // Future contexts (e.g., password reset)
