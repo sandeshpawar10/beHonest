@@ -4,12 +4,15 @@ const cors = require("cors")
 const dotenv = require("dotenv")
 const userRoute = require("./routes/userRoutes")
 const itemRoute = require("./routes/itemFoundRoutes")
+const claimRoute = require("./routes/claimRoutes")
+const escrowRoute = require("./routes/escrowRoutes")
+const chatRoute = require("./routes/chatRoutes")
 const cookieParser = require("cookie-parser")
 dotenv.config()
 const app = express()
 const port = process.env.port || 8000
 connectDB(process.env.Database_url)
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(
   cors({
@@ -19,6 +22,9 @@ app.use(
 );
 app.use('/', userRoute)
 app.use('/', itemRoute)
+app.use('/', claimRoute)
+app.use('/', escrowRoute)
+app.use('/', chatRoute)
 app.listen(port,()=>{
     console.log("server is started")
 })

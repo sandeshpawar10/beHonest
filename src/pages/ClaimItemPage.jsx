@@ -383,7 +383,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
 
       <div className={styles.resultItemRef}>
         <span>{catConfig.icon}</span>
-        <span><strong>{item.title}</strong> — {catConfig.label}</span>
+        <span><strong>{item.shortTitle}</strong> — {catConfig.label}</span>
       </div>
 
       <div className={styles.gaugeSection}>
@@ -442,7 +442,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         {result.verdict === 'verified' && (
           <button
             className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item.id}`)}
+            onClick={() => navigate(`/reward/${item._id}`)}
           >
             💰 Proceed to Escrow
           </button>
@@ -457,7 +457,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         {result.verdict === 'needs_review' && (
           <button
             className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item.id}`)}
+            onClick={() => navigate(`/reward/${item._id}`)}
           >
             💰 Proceed to Escrow (Pending Review)
           </button>
