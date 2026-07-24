@@ -205,11 +205,14 @@ export async function runInteractiveInterrogation(item, chatHistory) {
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   
-  const base64Data = item.imageData.includes(',')
-    ? item.imageData.split(',')[1]
-    : item.imageData;
+  // Safe extraction of the first image
+  const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
+  
+  const base64Data = firstImage.includes(',')
+    ? firstImage.split(',')[1]
+    : firstImage;
 
-  const mimeType = item.imageData.startsWith('data:image/png')
+  const mimeType = firstImage.startsWith('data:image/png')
     ? 'image/png'
     : 'image/jpeg';
 
@@ -217,9 +220,9 @@ export async function runInteractiveInterrogation(item, chatHistory) {
 We need to verify if the person claiming this item is the true owner through a conversation.
 
 A student found this item and provided the following details:
-- Title: ${item.title}
+- Title: ${item.shortTitle || item.title}
 - Description: ${item.description}
-- Secret Identifier (Hidden from public): ${item.secretDetails || "None provided"}
+- Secret Identifier (Hidden from public): ${item.secretIdentity || item.secretDetails || "None provided"}
 
 You are conducting an interactive interview. You must ask ONE highly specific question at a time.
 Do NOT ask generic questions like "What color is it?". Ask about unique visual details in the image (scratches, stickers, precise colors, brand, serial number) or the Secret Identifier.

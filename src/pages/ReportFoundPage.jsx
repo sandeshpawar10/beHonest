@@ -163,6 +163,7 @@ function ReportFoundPage() {
           // We are temporarily sending the raw Base64 string to the DB.
           // Later, you should upload this to Cloudinary and send the URL instead!
           images: [imageData], 
+          blurZones: blurZones, // 🔥 CRITICAL: Actually send the blur zones to the DB!
         }) 
       });
 

@@ -3,7 +3,7 @@ const itemModel = require("../models/foundItemModel")
 exports.addItem = async function(req,res){
     try {
         console.log("hello")
-        const {category,shortTitle,description,location,secretIdentity,status,images,dateFound} = req.body
+        const {category,shortTitle,description,location,secretIdentity,status,images,blurZones,dateFound} = req.body
 
         if(!category || !shortTitle || !description || !location || !secretIdentity){
             return res.status(400).json({
@@ -16,7 +16,7 @@ exports.addItem = async function(req,res){
             });
         }
         const newItem = await itemModel.create({
-            reportedBy: req.user._id, category,shortTitle,description,location,secretIdentity,status:status || "found",images: images || [],dateFound: dateFound || Date.now()
+            reportedBy: req.user._id, category,shortTitle,description,location,secretIdentity,status:status || "found",images: images || [], blurZones: blurZones || [],dateFound: dateFound || Date.now()
         })
         return res.status(201).json({
             status: "success",
