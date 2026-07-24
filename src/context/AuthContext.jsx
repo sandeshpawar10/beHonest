@@ -18,20 +18,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Temporary UI persistence while waiting for a backend /me endpoint
-    const existingSession = localStorage.getItem('bh_session');
-    if (existingSession) {
+    // Fetch the user session from the backend securely
+    const fetchSession = async () => {
       try {
-        setSession(JSON.parse(existingSession));
-      } catch(e) {}
-    }
-    setLoading(false);
+        const response = await fetch('http://localhost:8000/api/user/me', {
+          method: 'GET',
+          credentials: 'include' // Important for sending the httpOnly cookie
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSession(data.user);
+        } else {
+          setSession(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch session:", error);
+        setSession(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
   }, []);
 
   // Called after a successful backend login
   const loginSuccess = useCallback((user) => {
     setSession(user);
-    localStorage.setItem('bh_session', JSON.stringify(user));
   }, []);
 
   // Called to logout
@@ -39,13 +53,12 @@ export function AuthProvider({ children }) {
     try {
       await fetch('http://localhost:8000/api/user/logout', { 
         method: 'POST',
-        // In real production, include credentials: 'include' if cookies are cross-origin
+        credentials: 'include'
       });
     } catch(e) {
       console.error(e);
     }
     setSession(null);
-    localStorage.removeItem('bh_session');
   }, []);
 
   // Kept for OTP testing until backend email service is built

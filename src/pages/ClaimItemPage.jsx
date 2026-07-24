@@ -40,21 +40,44 @@ function ClaimItemPage() {
 
   // ── Load the item on mount ────────────────────────────────
   useEffect(() => {
-    const foundItem = getFoundItemById(itemId);
-
-    if (!foundItem) {
-      setError('Item not found.');
-      setLoading(false);
-      return;
+    //const foundItem = getFoundItemById(itemId);
+    const fetchItems = async ()=>{
+        try {
+          const response = await fetch(`http://localhost:8000/api/item/getFoundItemById/${itemId}`,{
+            method: 'GET',
+            credentials: 'include'
+          })
+          if(!response.ok){
+            setError("Could not fetch item from the server.")
+            setLoading(false)
+            return
+          }
+          const data = await response.json();
+          setItem(data.items || data || [])
+        }
+        catch (error) {
+          console.error("Error occurred during fetching items:", error);
+          setError("A network error occurred")
+        }
+        finally{
+          setLoading(false)
+        }
     }
+    fetchItems()
 
-    if (foundItem.foundBy === session?.email) {
+    // if (!foundItem) {
+    //   setError('Item not found.');
+    //   setLoading(false);
+    //   return;
+    // }
+
+    if (item.foundBy === session?.email) {
       setError('You cannot claim an item you reported yourself.');
       setLoading(false);
       return;
     }
 
-    const finderDomain = foundItem.foundBy ? foundItem.foundBy.split('@')[1] : null;
+    const finderDomain = item.foundBy ? item.foundBy.split('@')[1] : null;
     const userDomain = session?.email ? session.email.split('@')[1] : null;
     if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
       setError('You can only claim items reported by students from your own college domain.');
@@ -62,7 +85,7 @@ function ClaimItemPage() {
       return;
     }
 
-    setItem(foundItem);
+    setItem(item);
     setLoading(false);
   }, [itemId, session]);
 

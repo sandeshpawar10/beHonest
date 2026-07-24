@@ -14,7 +14,7 @@
    but a random person cannot guess the private details.
    ============================================================ */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage   from '../components/ui/BlurableImage';
@@ -24,14 +24,43 @@ import styles from './FoundItemsPage.module.css';
 function FoundItemsPage() {
   const navigate = useNavigate();
 
-  // Load all found items from localStorage every time the component renders
-  const allItems = getAllFoundItems();
+  const [allItems, setAllItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   // Filter state — which category is selected ('' means show all)
   const [activeFilter, setActiveFilter] = useState('');
 
   // Search text state — filter by title or location
   const [searchText, setSearchText] = useState('');
+
+  useEffect(()=>{
+    const fetchItems = async ()=>{
+        try {
+          const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+            method: 'GET',
+            credentials: 'include'
+          })
+          if(!response.ok){
+            setError("Could not fetch items from the server.")
+            setLoading(false)
+            return
+          }
+          const data = await response.json();
+          setAllItems(data.items || data || [])
+        }
+        catch (error) {
+          console.error("Error occurred during fetching items:", error);
+          setError("A network error occurred")
+        }
+        finally{
+          setLoading(false)
+        }
+    }
+    fetchItems()
+  },[])
+
+
 
   /*
     filteredItems:
@@ -47,15 +76,15 @@ function FoundItemsPage() {
       // If search text is entered, check if title or location contains it
       if (searchText.trim()) {
         const query = searchText.toLowerCase();
-        const matchTitle    = item.title.toLowerCase().includes(query);
-        const matchLocation = item.location.toLowerCase().includes(query);
+        const matchTitle    = (item.shortTitle || '').toLowerCase().includes(query);
+        const matchLocation = (item.location || '').toLowerCase().includes(query);
         if (!matchTitle && !matchLocation) return false;
       }
 
       return true; // Item passes all filters
     })
-    // Sort by newest first (foundAt is an ISO date string, so string compare works)
-    .sort((a, b) => new Date(b.foundAt) - new Date(a.foundAt));
+    // Sort by newest first (dateFound is an ISO date string, so string compare works)
+    .sort((a, b) => new Date(b.dateFound) - new Date(a.dateFound));
 
   /* ── Format date for display ── */
   const formatDate = (isoString) => {
@@ -133,50 +162,58 @@ function FoundItemsPage() {
         ))}
       </div>
 
-      {/* ── Results count ── */}
-      <p className={styles.resultsCount}>
-        {filteredItems.length === 0
-          ? 'No items found'
-          : `Showing ${filteredItems.length} item${filteredItems.length > 1 ? 's' : ''}`
-        }
-      </p>
-
-      {/* ── Items grid OR empty state ── */}
-      {filteredItems.length === 0 ? (
-
-        /* Empty state — nothing to show */
-        <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>🔎</span>
-          <h3>No items here yet</h3>
-          <p>
-            {allItems.length === 0
-              ? 'Nobody has reported a found item yet. Be the first!'
-              : 'Try changing your search or filter.'
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.2rem', color: '#888' }}>
+          Loading items...
+        </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#ff6b6b' }}>
+          {error}
+        </div>
+      ) : (
+        <>
+          {/* ── Results count ── */}
+          <p className={styles.resultsCount}>
+            {filteredItems.length === 0
+              ? 'No items found'
+              : `Showing ${filteredItems.length} item${filteredItems.length > 1 ? 's' : ''}`
             }
           </p>
-          {allItems.length === 0 && (
-            <button
-              className={styles.emptyBtn}
-              onClick={() => navigate('/report-found')}
-            >
-              Report a Found Item
-            </button>
+
+          {/* ── Items grid OR empty state ── */}
+          {filteredItems.length === 0 ? (
+            /* Empty state — nothing to show */
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>🔎</span>
+              <h3>No items here yet</h3>
+              <p>
+                {allItems.length === 0
+                  ? 'Nobody has reported a found item yet. Be the first!'
+                  : 'Try changing your search or filter.'
+                }
+              </p>
+              {allItems.length === 0 && (
+                <button
+                  className={styles.emptyBtn}
+                  onClick={() => navigate('/report-found')}
+                >
+                  Report a Found Item
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Grid of item cards */
+            <div className={styles.grid}>
+              {filteredItems.map(item => (
+                <ItemCard
+                  key={item._id}
+                  item={item}
+                  formatDate={formatDate}
+                />
+              ))}
+            </div>
           )}
-        </div>
-
-      ) : (
-
-        /* Grid of item cards */
-        <div className={styles.grid}>
-          {filteredItems.map(item => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              formatDate={formatDate}
-            />
-          ))}
-        </div>
-
+        </>
       )}
     </div>
   );
@@ -197,11 +234,18 @@ function ItemCard({ item, formatDate }) {
   // Get category config for icon display
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
 
-  // Domain matching check
+  // Domain matching & finder check
   const { session } = useAuth();
-  const finderDomain = item.foundBy ? item.foundBy.split('@')[1] : null;
+  
+  // Extract finder's email from populated reportedBy object (or fallback to foundBy string if it exists)
+  const finderEmail = item.reportedBy?.email || item.foundBy || '';
+  
+  const finderDomain = finderEmail ? finderEmail.split('@')[1] : null;
   const userDomain = session?.email ? session.email.split('@')[1] : null;
+  
   const isSameCollege = finderDomain && userDomain && (finderDomain.toLowerCase() === userDomain.toLowerCase());
+  const isFinder = session?.email && finderEmail && (session.email.toLowerCase() === finderEmail.toLowerCase());
+
 
   return (
     <div className={styles.card}>
@@ -222,15 +266,15 @@ function ItemCard({ item, formatDate }) {
         */}
         {showFull ? (
           <img
-            src={item.imageData}
-            alt={item.title}
+            src={item.images && item.images.length > 0 ? item.images[0] : ''}
+            alt={item.shortTitle}
             className={styles.fullImage}
           />
         ) : (
           <BlurableImage
-            imageSrc={item.imageData}
-            blurZones={item.blurZones}
-            alt={item.title}
+            imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
+            blurZones={item.blurZones || []}
+            alt={item.shortTitle}
             blurStrength={14}
           />
         )}
@@ -255,16 +299,8 @@ function ItemCard({ item, formatDate }) {
       {/* ── Card content ── */}
       <div className={styles.cardBody}>
         {/* Item title */}
-        <h3 className={styles.itemTitle}>{item.title}</h3>
+        <h3 className={styles.itemTitle}>{item.shortTitle}</h3>
 
-        {/* Location + date row */}
-        {/* <div className={styles.metaRow}>
-          <span>📍 {item.location}</span>
-          <span>📅 {formatDate(item.foundAt)}</span>
-        </div> */}
-
-        {/* Description (truncated to 2 lines via CSS) */}
-        {/* <p className={styles.description}>{item.description}</p> */}
 
         {/* Blur zones info */}
         {item.blurZones && item.blurZones.length > 0 ? (
@@ -280,22 +316,25 @@ function ItemCard({ item, formatDate }) {
         {/* Claim button — NOW navigates to the AI verification page! */}
         <button
           className={styles.claimBtn}
-          id={`claim-btn-${item.id}`}
+          id={`claim-btn-${item._id}`}
           onClick={() => {
+            if (isFinder) return;
             if (isSameCollege) {
-              navigate(`/claim/${item.id}`);
+              navigate(`/claim/${item._id}`);
             } else {
               alert('Sorry, you can only claim items found by students from your own college domain.');
             }
           }}
-          disabled={!isSameCollege}
-          style={{ opacity: isSameCollege ? 1 : 0.6, cursor: isSameCollege ? 'pointer' : 'not-allowed' }}
+          disabled={!isSameCollege || isFinder}
+          style={{ 
+            opacity: (!isSameCollege || isFinder) ? 0.6 : 1, 
+            cursor: (!isSameCollege || isFinder) ? 'not-allowed' : 'pointer' 
+          }}
         >
-          {isSameCollege ? '🙋 This is Mine — Claim It' : '🚫 Not from your college'}
-          {isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
+          {isFinder ? '✅ You reported this item' : isSameCollege ? '🙋 This is Mine — Claim It' : '🚫 Not from your college'}
+          {!isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
         </button>
       </div>
-
     </div>
   );
 }

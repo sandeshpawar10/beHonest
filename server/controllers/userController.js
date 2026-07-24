@@ -15,15 +15,18 @@ exports.registerUser = async function(req,res){
     const existingUser = await user.findOne({
         email
     })
-    if(existingUser){
+    if(existingUser && existingUser.isEmailVerified){
         return res.status(400).json({ message: `${email} is already registered` })
     }
-    const u = await user.create({
-        username,
-        email,
-        password,
-        isEmailVerified: false
-    })
+    let u
+    if(!existingUser){
+        u = await user.create({
+            username,
+            email,
+            password,
+            isEmailVerified: false
+        })
+    }
     //here we will send the email for otp
     return res.status(201).json({message: "User registered successfully and email has been sent to you", user: u})
 }
@@ -43,7 +46,7 @@ exports.loginUser = async function(req,res){
         return res.status(400).json({ message: `${email} is not registered` })
     }
     if(!existingUser.isEmailVerified){
-        return res.status(403).json({ message: "Please verify your email first" });
+        return res.status(403).json({ message: "Please verify your email first, do registration " });
     }
     const isMatch = await existingUser.isPasswordCorrect(password)
     if(!isMatch){
@@ -63,7 +66,7 @@ exports.loginUser = async function(req,res){
     }
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV
+        secure: process.env.NODE_ENV === 'production'
     }
     return res.status(200).cookie("accesstoken",accesstoken,options)
         .cookie("refreshtoken",refreshtoken,options)
@@ -86,7 +89,7 @@ exports.logoutUser = async function(req,res){
     )
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV
+        secure: process.env.NODE_ENV === 'production'
     }
     return res.status(200).clearCookie("accesstoken",options)
         .clearCookie("refreshtoken",options)
@@ -95,14 +98,32 @@ exports.logoutUser = async function(req,res){
 
 exports.verifyEmail = async function(req, res){
     const { email } = req.body;
-    if (!email) {
-        return res.status(400).json({ message: "Email is required" });
+    try {
+        const u = await user.findOne({ email });
+        if (!u) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        u.isEmailVerified = true;
+        await u.save();
+
+        return res.status(200).json({ message: "Email successfully verified", user: u });
+    } catch (error) {
+        return res.status(500).json({ error: "An error occurred while verifying email" });
     }
-    const existingUser = await user.findOne({ email });
-    if (!existingUser) {
-        return res.status(404).json({ message: "User not found" });
+}
+
+exports.getUserProfile = async function(req, res) {
+    // req.user is populated by the verifyJWT middleware
+    if (!req.user) {
+        return res.status(401).json({ error: "Not authenticated" });
     }
-    existingUser.isEmailVerified = true;
-    await existingUser.save({ validateBeforeSave: false });
-    return res.status(200).json({ message: "Email successfully verified!" });
+    
+    return res.status(200).json({
+        user: {
+            _id: req.user._id,
+            email: req.user.email,
+            username: req.user.username,
+        }
+    });
 }

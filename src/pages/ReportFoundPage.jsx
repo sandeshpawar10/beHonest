@@ -125,12 +125,13 @@ function ReportFoundPage() {
     setError('');
 
     try {
-      // 1. Build a temporary item object for the scanner
+      // 1. Build a temporary item object for the AI scanner
+      // The AI expects exactly: category, title, description, imageData
       const tempItem = {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        imageData,
+        category: category,
+        title: title, 
+        description: description,
+        imageData: imageData,
       };
 
       // 2. Run the fraud scan BEFORE saving
@@ -139,7 +140,6 @@ function ReportFoundPage() {
       // 3. If AI detects high-severity fraud (e.g., fake photo), block the upload
       if (report.overallRisk === 'high') {
         setLoading(false);
-        // Find the specific high-severity error message to show the user
         const badFlag = report.aiFlags.find(f => f.severity === 'high') || 
                         report.heuristicFlags.find(f => f.severity === 'high');
         
@@ -148,24 +148,37 @@ function ReportFoundPage() {
       }
 
       // 4. If clean or low/medium risk, proceed to save the item
-      const savedItem = saveFoundItem({
-        category,
-        title:       title.trim(),
-        description: description.trim(),
-        location:    location.trim(),
-        secretDetails: secretDetails.trim(),
-        imageData,        
-        blurZones,        
-        foundBy:     session.email,
-        foundByName: session.fullName, 
+      const response = await fetch('http://localhost:8000/api/item/add', {
+        method: 'POST',
+        credentials: 'include', // 🔥 CRITICAL: Sends your secure login cookie!
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          category: category,
+          shortTitle: title, // Map React 'title' to Backend 'shortTitle'
+          description: description,
+          location: location,
+          secretIdentity: secretDetails, // Map React 'secretDetails' to Backend 'secretIdentity'
+          // We are temporarily sending the raw Base64 string to the DB.
+          // Later, you should upload this to Cloudinary and send the URL instead!
+          images: [imageData], 
+        }) 
       });
 
-      setLoading(false);
-      navigate('/found-items');
+      const data = await response.json();
       
+      if (response.ok) {
+        setLoading(false);
+        navigate('/found-items');
+      } else {
+        let errorMsg = data.error || data.message || "An error occurred";
+        setError(errorMsg);
+        setLoading(false);
+      }
     } catch (err) {
       console.error(err);
-      setError('An error occurred while scanning the image. Please try again.');
+      setError('An error occurred while communicating with the server. Please try again.');
       setLoading(false);
     }
   };

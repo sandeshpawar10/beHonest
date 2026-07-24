@@ -58,26 +58,44 @@ export { generateImageFingerprint };
    
    Returns: { flagged: true/false, type, severity, message, ... }
    ---------------------------------------------------------- */
-export function checkUploadFrequency(email) {
-  const items = getAllFoundItems();
-  const now = Date.now();
-  const twentyFourHours = 24 * 60 * 60 * 1000; // 24h in milliseconds
+export async function checkUploadFrequency(email) {
+  try {
+    const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+      method: 'GET',
+    })
+    
+    if (!response.ok) {
+      console.warn("Could not fetch items for frequency check");
+      return { flagged: false };
+    }
 
-  // Filter: items by this user, uploaded in the last 24 hours
-  const recentUploads = items.filter(item =>
-    item.foundBy === email &&
-    (now - new Date(item.foundAt).getTime()) < twentyFourHours
-  );
+    // Assuming the backend returns { status: "success", items: [...] } or just an array
+    const data = await response.json();
+    const items = data.items || data || [];
 
-  // 3+ uploads = suspicious, 5+ = very suspicious
-  if (recentUploads.length >= 3) {
-    return {
-      flagged: true,
-      type: 'HIGH_FREQUENCY',
-      severity: recentUploads.length >= 5 ? 'high' : 'medium',
-      message: `User uploaded ${recentUploads.length} items in the last 24 hours`,
-      details: `Uploaded ${recentUploads.length} items recently. Normal users upload 1-2 items.`,
-    };
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000; // 24h in milliseconds
+
+    // Filter: items by this user, uploaded in the last 24 hours
+    // (Ensure your backend schema matches 'reportedBy' or 'foundBy' and 'dateFound' or 'foundAt')
+    const recentUploads = items.filter(item =>
+      item.reportedBy === email &&
+      (now - new Date(item.dateFound || item.foundAt).getTime()) < twentyFourHours
+    );
+
+    // 3+ uploads = suspicious, 5+ = very suspicious
+    if (recentUploads.length >= 3) {
+      return {
+        flagged: true,
+        type: 'HIGH_FREQUENCY',
+        severity: recentUploads.length >= 5 ? 'high' : 'medium',
+        message: `User uploaded ${recentUploads.length} items in the last 24 hours`,
+        details: `Uploaded ${recentUploads.length} items recently. Normal users upload 1-2 items.`,
+      };
+    }
+
+  } catch (error) {
+    console.error("Error in checkUploadFrequency:", error);
   }
 
   return { flagged: false };
@@ -94,30 +112,45 @@ export function checkUploadFrequency(email) {
    - fingerprint    : the hash of the new image
    - excludeItemId  : skip this item (so it doesn't match itself)
    ---------------------------------------------------------- */
-export function checkDuplicateImage(fingerprint, excludeItemId = null) {
+export async function checkDuplicateImage(fingerprint, excludeItemId = null) {
   // No fingerprint or image too small → can't check
   if (!fingerprint || fingerprint === 'too_small') {
     return { flagged: false };
   }
 
-  const items = getAllFoundItems();
+  try {
+    const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+      method: 'GET',
+    })
+    
+    if (!response.ok) {
+      console.warn("Could not fetch items");
+      return { flagged: false };
+    }
 
-  // Find any existing item with the same image fingerprint
-  const duplicate = items.find(item =>
-    item.imageFingerprint === fingerprint &&
-    item.id !== excludeItemId
-  );
+    // Assuming the backend returns { status: "success", items: [...] } or just an array
+    const data = await response.json();
+    const items = data.items || data || [];
 
-  if (duplicate) {
-    return {
-      flagged: true,
-      type: 'DUPLICATE_IMAGE',
-      severity: 'high',
-      message: `Same image was already uploaded for "${duplicate.title}"`,
-      details: `This image matches an existing item (${duplicate.id}). Possible re-upload or fraud attempt.`,
-      duplicateItemId: duplicate.id,
-      duplicateItemTitle: duplicate.title,
-    };
+    const duplicate = items.find(item =>
+      item.imageFingerprint === fingerprint &&
+      item.id !== excludeItemId
+    );
+
+    if (duplicate) {
+      return {
+        flagged: true,
+        type: 'DUPLICATE_IMAGE',
+        severity: 'high',
+        message: `Same image was already uploaded for "${duplicate.title}"`,
+        details: `This image matches an existing item (${duplicate.id}). Possible re-upload or fraud attempt.`,
+        duplicateItemId: duplicate.id,
+        duplicateItemTitle: duplicate.title,
+      };
+    }
+
+  } catch (error) {
+    console.error("Error in checkDuplicateImage:", error);
   }
 
   return { flagged: false };
@@ -234,12 +267,12 @@ export async function runFullFraudScan(item, email, options = {}) {
   // ══════════ HEURISTIC CHECKS (instant) ══════════
 
   // 1. Upload frequency
-  const freqCheck = checkUploadFrequency(email);
+  const freqCheck = await checkUploadFrequency(email);
   if (freqCheck.flagged) report.heuristicFlags.push(freqCheck);
 
   // 2. Duplicate image
   const fingerprint = generateImageFingerprint(item.imageData);
-  const dupCheck = checkDuplicateImage(fingerprint, item.id);
+  const dupCheck = await checkDuplicateImage(fingerprint, item.id);
   if (dupCheck.flagged) report.heuristicFlags.push(dupCheck);
 
   // 3. Description quality

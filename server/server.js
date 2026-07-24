@@ -3,6 +3,7 @@ const connectDB = require("./db/connection")
 const cors = require("cors")
 const dotenv = require("dotenv")
 const userRoute = require("./routes/userRoutes")
+const itemRoute = require("./routes/itemFoundRoutes")
 const cookieParser = require("cookie-parser")
 dotenv.config()
 const app = express()
@@ -17,6 +18,7 @@ app.use(
   })
 );
 app.use('/', userRoute)
+app.use('/', itemRoute)
 app.listen(port,()=>{
     console.log("server is started")
 })

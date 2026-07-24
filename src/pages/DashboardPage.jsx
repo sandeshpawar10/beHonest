@@ -132,7 +132,36 @@ function DashboardPage() {
   const firstName = session?.fullName?.split(' ')[0] || 'Student';
 
   // Get the real count of found items from localStorage
-  const foundItemsCount = getAllFoundItems().length;
+  const [allItems, setAllItems] = useState([])
+  const [loading, setLoading] = useState()
+  const [error, setError] = useState()
+
+  useEffect(()=>{
+    const fetchItems = async ()=>{
+        try {
+          const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+            method: 'GET'
+          })
+          if(!response.ok){
+            setError("Could not fetch items from the server.")
+            setLoading(false)
+            return
+          }
+          const data = await response.json();
+          setAllItems(data.items || data || [])
+        }
+        catch (error) {
+          console.error("Error occurred during fetching items:", error);
+          setError("A network error occurred")
+        }
+        finally{
+          setLoading(false)
+        }
+    }
+    fetchItems()
+  },[])
+
+  const foundItemsCount = allItems.length;
 
   return (
     <div className={styles.page}>

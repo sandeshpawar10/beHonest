@@ -140,7 +140,7 @@ Be strict but fair — don't flag genuine photos.`;
 
     // ── Step 4: Send to Gemini ───────────────────────────
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
+      model: 'gemini-2.0-flash',
       contents: [
         {
           role: 'user',

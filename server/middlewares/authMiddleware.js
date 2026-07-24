@@ -5,17 +5,17 @@ exports.verifyJWT = async function(req,res,next){
     const token = req.cookies?.accesstoken || req.header("Authorization")?.replace("Bearer ", "");
         
     if(!token){
-        return res.status(404).end("Token not found")
+        return res.status(401).json({ error: "Token not found. Please log in again." });
     }
     try {
         const decode = jwt.verify(token, process.env.access_token_secret)
         const u = await user.findById(decode?._id)
         if(!u){
-            res.status(400).end("Invalid access token")
+            return res.status(401).json({ error: "Invalid access token. User not found." });
         }
         req.user=u
         next() 
     } catch (error) {
-        return res.status(400).end("Invalid access token, token is not verified")
+        return res.status(401).json({ error: "Invalid access token. Token is not verified." });
     }
 }
