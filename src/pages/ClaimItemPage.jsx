@@ -53,40 +53,40 @@ function ClaimItemPage() {
             return
           }
           const data = await response.json();
-          setItem(data.items || data || [])
+          const fetchedItem = data.items || data;
+          
+          if (!fetchedItem) {
+            setError('Item not found.');
+            setLoading(false);
+            return;
+          }
+
+          const finderEmail = fetchedItem.reportedBy?.email || fetchedItem.foundBy || '';
+          if (finderEmail && session?.email && finderEmail.toLowerCase() === session.email.toLowerCase()) {
+            setError('You cannot claim an item you reported yourself.');
+            setLoading(false);
+            return;
+          }
+
+          const finderDomain = finderEmail ? finderEmail.split('@')[1] : null;
+          const userDomain = session?.email ? session.email.split('@')[1] : null;
+          if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
+            setError('You can only claim items reported by students from your own college domain.');
+            setLoading(false);
+            return;
+          }
+
+          setItem(fetchedItem);
         }
         catch (error) {
           console.error("Error occurred during fetching items:", error);
-          setError("A network error occurred")
+          setError("A network error occurred");
         }
         finally{
-          setLoading(false)
+          setLoading(false);
         }
     }
-    fetchItems()
-
-    // if (!foundItem) {
-    //   setError('Item not found.');
-    //   setLoading(false);
-    //   return;
-    // }
-
-    if (item.foundBy === session?.email) {
-      setError('You cannot claim an item you reported yourself.');
-      setLoading(false);
-      return;
-    }
-
-    const finderDomain = item.foundBy ? item.foundBy.split('@')[1] : null;
-    const userDomain = session?.email ? session.email.split('@')[1] : null;
-    if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
-      setError('You can only claim items reported by students from your own college domain.');
-      setLoading(false);
-      return;
-    }
-
-    setItem(item);
-    setLoading(false);
+    fetchItems();
   }, [itemId, session]);
 
   // Auto-scroll chat to bottom
@@ -221,13 +221,13 @@ function ClaimItemPage() {
             <div className={styles.itemPreview}>
               <div className={styles.previewCard}>
                 <BlurableImage
-                  imageSrc={item.imageData}
+                  imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
                   blurZones={item.blurZones}
-                  alt={item.title}
+                  alt={item.shortTitle}
                   blurStrength={14}
                 />
                 <div className={styles.previewInfo}>
-                  <h3 className={styles.previewTitle}>{item.title}</h3>
+                  <h3 className={styles.previewTitle}>{item.shortTitle}</h3>
                 </div>
                 <div className={styles.reminderBox}>
                   🔒 Sensitive areas are blurred. If this is really your item,

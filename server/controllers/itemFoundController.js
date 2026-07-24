@@ -53,7 +53,7 @@ exports.getFoundItemById = async function(req,res){
         if(!itemid){
             return res.status(400).json({Status: "item id not found"})
         }
-        const item = await itemModel.findById(itemid)
+        const item = await itemModel.findById(itemid).populate('reportedBy', 'email')
         if(!item){
             return res.status(400).json({
                 errorMsg: "item not found"
