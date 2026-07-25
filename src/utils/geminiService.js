@@ -224,8 +224,8 @@ A student found this item and provided the following details:
 - Description: ${item.description}
 - Secret Identifier (Hidden from public): ${item.secretIdentity || item.secretDetails || "None provided"}
 
-You are conducting an interactive interview. You must ask ONE highly specific question at a time.
-Do NOT ask generic questions like "What color is it?". Ask about unique visual details in the image (scratches, stickers, precise colors, brand, serial number) or the Secret Identifier.
+You are conducting an interactive interview. You must ask ONE highly specific question at a time based on what the finder gave information about item.
+Do NOT ask generic questions like "What color is it?". Ask about unique visual details in the image (scratches, stickers, precise colors, brand, serial number) or the Secret Identifier that is given in the Description or in the Secret Identifier by the finder.
 
 The user's chat history is provided. Analyze their latest answer.
 If they answered correctly, proceed to the next question.
