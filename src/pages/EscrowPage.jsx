@@ -25,12 +25,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  getEscrowsForUser,      // Get user's escrow records
-  updateEscrowStatus,     // Change status (release/refund)
-  releaseEscrowWithPin,   // Release using secure PIN
-  REWARD_CATEGORIES,      // Category info for display
-} from '../utils/rewardUtils';
+import { REWARD_CATEGORIES } from '../utils/rewardUtils';
 import styles from './EscrowPage.module.css';
 
 function EscrowPage() {
@@ -53,18 +48,31 @@ function EscrowPage() {
 
   // ── Load escrows on mount ─────────────────────────────────
   useEffect(() => {
-    if (session?.email) {
-      const userEscrows = getEscrowsForUser(session.email);
-      setEscrows(userEscrows);
-    }
-    setLoading(false);
-  }, [session]);
+    fetchEscrows();
+  }, []);
 
-  // ── Refresh escrows (re-read from localStorage) ───────────
-  const refreshEscrows = () => {
-    if (session?.email) {
-      setEscrows(getEscrowsForUser(session.email));
+  const fetchEscrows = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('http://localhost:8000/api/escrow/my-escrows', {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEscrows(data);
+      } else {
+        console.error('Failed to fetch escrows');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // ── Refresh escrows (re-read from backend) ───────────
+  const refreshEscrows = () => {
+    fetchEscrows();
   };
 
   // ── Open confirm modal ────────────────────────────────────
@@ -86,28 +94,26 @@ function EscrowPage() {
 
     setProcessing(true);
 
-    // Simulate processing time
-    await new Promise(r => setTimeout(r, 1500));
-
-    if (confirmAction === 'release') {
-      // Owner confirms they received the item back → release reward to finder
-      updateEscrowStatus(
-        confirmModal.id,
-        'released',
-        `${session.fullName} confirmed item received. ₹${confirmModal.rewardAmount} released to ${confirmModal.finderName}.`
-      );
-    } else if (confirmAction === 'refund') {
-      // Owner requests a refund (exchange didn't happen)
-      updateEscrowStatus(
-        confirmModal.id,
-        'refunded',
-        `${session.fullName} requested a refund. ₹${confirmModal.rewardAmount} returned to depositor.`
-      );
+    try {
+      if (confirmAction === 'refund') {
+        const res = await fetch(`http://localhost:8000/api/escrow/refund/${confirmModal._id}`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(()=>({}));
+          throw new Error(errData.error || 'Failed to refund escrow');
+        }
+      }
+      
+      refreshEscrows();
+      closeConfirmModal();
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setProcessing(false);
     }
-
-    // Refresh the list
-    refreshEscrows();
-    closeConfirmModal();
   };
 
   // ── Handle PIN Release ────────────────────────────────────
@@ -120,8 +126,17 @@ function EscrowPage() {
 
     try {
       setProcessing(true);
-      await new Promise(r => setTimeout(r, 1000)); // Simulate delay
-      releaseEscrowWithPin(escrowId, pin);
+      const res = await fetch(`http://localhost:8000/api/escrow/release/${escrowId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pin })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        throw new Error(errData.error || 'Failed to release escrow');
+      }
+      
       refreshEscrows();
       setPinErrors(prev => ({ ...prev, [escrowId]: '' }));
     } catch (err) {
@@ -145,11 +160,12 @@ function EscrowPage() {
   const getStatusConfig = (status) => {
     const configs = {
       held:     { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
+      pending:  { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
       released: { label: '✅ Reward Released',   color: '#00ff88', bgColor: 'rgba(0, 255, 136, 0.08)' },
       refunded: { label: '↩️ Refunded',          color: '#ff8fa3', bgColor: 'rgba(255, 77, 109, 0.08)' },
       disputed: { label: '⚠️ Under Dispute',    color: '#ff4d6d', bgColor: 'rgba(255, 77, 109, 0.08)' },
     };
-    return configs[status] || configs.held;
+    return configs[status] || configs.pending;
   };
 
   // ── Get category info ─────────────────────────────────────
@@ -171,14 +187,14 @@ function EscrowPage() {
   const currentList = activeTab === 'owner' ? escrows.asOwner : escrows.asFinder;
 
   // Stats
-  const totalHeld     = escrows.asOwner.filter(e => e.status === 'held').length
-                      + escrows.asFinder.filter(e => e.status === 'held').length;
+  const totalHeld     = escrows.asOwner.filter(e => e.status === 'held' || e.status === 'pending').length
+                      + escrows.asFinder.filter(e => e.status === 'held' || e.status === 'pending').length;
   const totalReleased = escrows.asOwner.filter(e => e.status === 'released').length
                       + escrows.asFinder.filter(e => e.status === 'released').length;
-  const totalAmount   = escrows.asOwner.reduce((sum, e) => sum + e.rewardAmount, 0);
+  const totalAmount   = escrows.asOwner.reduce((sum, e) => sum + e.amount, 0);
   const earnedAmount  = escrows.asFinder
                           .filter(e => e.status === 'released')
-                          .reduce((sum, e) => sum + e.rewardAmount, 0);
+                          .reduce((sum, e) => sum + e.amount, 0);
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -288,14 +304,14 @@ function EscrowPage() {
             const catInfo   = getCategoryInfo(escrow.rewardCategory);
 
             return (
-              <div key={escrow.id} className={styles.escrowCard}>
+              <div key={escrow._id} className={styles.escrowCard}>
 
                 {/* Card header */}
                 <div className={styles.ecHeader}>
                   <div className={styles.ecItemInfo}>
                     <span className={styles.ecIcon}>{catInfo.icon}</span>
                     <div>
-                      <h4 className={styles.ecTitle}>{escrow.itemTitle}</h4>
+                      <h4 className={styles.ecTitle}>{escrow.itemId?.shortTitle}</h4>
                       <span className={styles.ecCategory}>{catInfo.label}</span>
                     </div>
                   </div>
@@ -313,7 +329,7 @@ function EscrowPage() {
                     <div className={styles.ecDetail}>
                       <span className={styles.ecDetailLabel}>Reward</span>
                       <span className={styles.ecDetailValue} style={{ color: '#00ff88' }}>
-                        ₹{escrow.rewardAmount}
+                        ₹{escrow.amount}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>
@@ -321,7 +337,7 @@ function EscrowPage() {
                         {activeTab === 'owner' ? 'Finder' : 'Owner'}
                       </span>
                       <span className={styles.ecDetailValue}>
-                        {activeTab === 'owner' ? escrow.finderName : escrow.depositorName}
+                        {activeTab === 'owner' ? (escrow.finderId?.username || escrow.finderId?.email) : (escrow.depositorId?.username || escrow.depositorId?.email)}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>
@@ -372,8 +388,8 @@ function EscrowPage() {
                     </div>
                   )}
 
-                  {/* ── Action buttons (only for owner + status is "held") ── */}
-                  {activeTab === 'owner' && escrow.status === 'held' && (
+                  {/* ── Action buttons (only for owner + status is "pending") ── */}
+                  {activeTab === 'owner' && (escrow.status === 'held' || escrow.status === 'pending') && (
                     <div className={styles.ecActions}>
                       <div className={styles.pinDisplayBox}>
                         <div className={styles.pinDisplayLabel}>Your Release PIN</div>
@@ -384,7 +400,7 @@ function EscrowPage() {
                       </div>
                       <button
                         className={styles.primaryBtn}
-                        onClick={() => navigate(`/chat/${escrow.id}`)}
+                        onClick={() => navigate(`/chat/${escrow._id}`)}
                         style={{ marginTop: '10px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
                         💬 Open Secure Chat
@@ -400,7 +416,7 @@ function EscrowPage() {
                   )}
 
                   {/* Finder PIN Input & chat */}
-                  {activeTab === 'finder' && escrow.status === 'held' && (
+                  {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
                     <div className={styles.finderWaiting}>
                       <p style={{ marginBottom: '10px' }}>
                         ⏳ Meet the owner and ask for their <strong>6-digit Release PIN</strong>.
@@ -410,26 +426,26 @@ function EscrowPage() {
                           type="text"
                           maxLength={6}
                           placeholder="Enter 6-digit PIN"
-                          value={pinInputs[escrow.id] || ''}
-                          onChange={(e) => setPinInputs(prev => ({ ...prev, [escrow.id]: e.target.value.replace(/\D/g, '') }))}
+                          value={pinInputs[escrow._id] || ''}
+                          onChange={(e) => setPinInputs(prev => ({ ...prev, [escrow._id]: e.target.value.replace(/\D/g, '') }))}
                           className={styles.pinInput}
                           disabled={processing}
                         />
                         <button
                           className={styles.pinSubmitBtn}
-                          onClick={() => handlePinRelease(escrow.id)}
-                          disabled={processing || (pinInputs[escrow.id]?.length !== 6)}
+                          onClick={() => handlePinRelease(escrow._id)}
+                          disabled={processing || (pinInputs[escrow._id]?.length !== 6)}
                         >
                           {processing ? '...' : 'Verify & Release'}
                         </button>
                       </div>
-                      {pinErrors[escrow.id] && (
-                        <div className={styles.pinError}>{pinErrors[escrow.id]}</div>
+                      {pinErrors[escrow._id] && (
+                        <div className={styles.pinError}>{pinErrors[escrow._id]}</div>
                       )}
 
                       <button
                         className={styles.primaryBtn}
-                        onClick={() => navigate(`/chat/${escrow.id}`)}
+                        onClick={() => navigate(`/chat/${escrow._id}`)}
                         style={{ marginTop: '15px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
                         💬 Open Secure Chat
@@ -440,7 +456,7 @@ function EscrowPage() {
                   {/* Released message for finder */}
                   {activeTab === 'finder' && escrow.status === 'released' && (
                     <div className={styles.finderReleased}>
-                      🎉 Congratulations! ₹{escrow.rewardAmount} has been released to you
+                      🎉 Congratulations! ₹{escrow.amount} has been released to you
                       for honestly returning the item. Thank you for being honest!
                     </div>
                   )}
@@ -448,7 +464,7 @@ function EscrowPage() {
 
                 {/* Escrow ID footer */}
                 <div className={styles.ecFooter}>
-                  <span>Escrow ID: {escrow.id}</span>
+                  <span>Escrow ID: {escrow._id}</span>
                 </div>
               </div>
             );
@@ -478,17 +494,17 @@ function EscrowPage() {
                   <div className={styles.modalIcon}>🤝</div>
                   <p className={styles.modalText}>
                     You are confirming that you have physically received your item
-                    <strong> "{confirmModal.itemTitle}"</strong> from the finder.
+                    <strong> "{confirmModal.itemId?.shortTitle}"</strong> from the finder.
                   </p>
                   <div className={styles.modalHighlight}>
                     <span>Reward to be released:</span>
                     <strong style={{ color: '#00ff88', fontSize: '1.4rem' }}>
-                      ₹{confirmModal.rewardAmount}
+                      ₹{confirmModal.amount}
                     </strong>
                   </div>
                   <p className={styles.modalCaption}>
-                    This amount will be released to <strong>{confirmModal.finderName}</strong> as
-                    a reward for their honesty. This action cannot be undone.
+                    This amount will be released to <strong>{confirmModal.finderId?.username || confirmModal.finderId?.email}</strong> as
+                    a reward. Are you sure? This action cannot be undone.
                   </p>
                 </>
               ) : (
@@ -496,12 +512,12 @@ function EscrowPage() {
                   <div className={styles.modalIcon}>↩️</div>
                   <p className={styles.modalText}>
                     You are requesting a refund for the escrow on
-                    <strong> "{confirmModal.itemTitle}"</strong>.
+                    <strong> "{confirmModal.itemId?.shortTitle}"</strong>.
                   </p>
                   <div className={styles.modalHighlight}>
                     <span>Amount to be refunded:</span>
                     <strong style={{ color: '#ffb347', fontSize: '1.4rem' }}>
-                      ₹{confirmModal.rewardAmount}
+                      ₹{confirmModal.amount}
                     </strong>
                   </div>
                   <p className={styles.modalCaption}>
@@ -539,3 +555,5 @@ function EscrowPage() {
 }
 
 export default EscrowPage;
+
+

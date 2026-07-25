@@ -15,21 +15,21 @@
    ============================================================ */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getFoundItemById } from '../utils/itemUtils';
 import {
   REWARD_CATEGORIES,     // All item type reward ranges
   calculateReward,       // AI recommendation function
-  createEscrow,          // Save to escrow
-  getEscrowForItem,      // Check if escrow already exists
 } from '../utils/rewardUtils';
 import styles from './RewardPage.module.css';
 
 function RewardPage() {
   const { itemId }  = useParams();   // Item ID from URL
   const navigate    = useNavigate();
+  const location    = useLocation();
   const { session } = useAuth();
+  
+  const claimId = location.state?.claimId;
 
   // ── State ─────────────────────────────────────────────────
   const [item, setItem]               = useState(null);
@@ -59,26 +59,28 @@ function RewardPage() {
 
   // ── Load item on mount ────────────────────────────────────
   useEffect(() => {
-    const foundItem = getFoundItemById(itemId);
+    const fetchItem = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/api/item/getFoundItemById/${itemId}`, {
+          credentials: 'include'
+        });
 
-    if (!foundItem) {
-      setError('Item not found.');
-      setLoading(false);
-      return;
-    }
+        if (!response.ok) {
+          setError('Item not found.');
+          setLoading(false);
+          return;
+        }
 
-    // Check if escrow already exists for this item
-    const existingEscrow = getEscrowForItem(itemId);
-    if (existingEscrow) {
-      setItem(foundItem);
-      setEscrowRecord(existingEscrow);
-      setStep('done');
-      setLoading(false);
-      return;
-    }
-
-    setItem(foundItem);
-    setLoading(false);
+        const data = await response.json();
+        setItem(data.items || data.item || data);
+        setLoading(false);
+      } catch (err) {
+        setError('Item not found.');
+        setLoading(false);
+      }
+    };
+    
+    fetchItem();
   }, [itemId]);
 
   // ── Handle category selection ─────────────────────────────
@@ -108,25 +110,33 @@ function RewardPage() {
   const handleConfirmReward = async () => {
     setProcessing(true);
 
-    // Simulate payment processing time
-    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const response = await fetch('http://localhost:8000/api/escrow/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemId: item._id,
+          claimId,
+          amount: chosenReward,
+          rewardCategory: selectedCategory
+        })
+      });
 
-    // Create the escrow record
-    const escrow = createEscrow({
-      itemId:          item.id,
-      itemTitle:       item.title,
-      rewardAmount:    chosenReward,
-      rewardCategory:  selectedCategory,
-      depositorEmail:  session.email,     // The owner (claimant) pays
-      depositorName:   session.fullName,
-      finderEmail:     item.foundBy,      // The finder receives
-      finderName:      item.foundByName,
-    });
+      if (!response.ok) {
+        throw new Error('Failed to create escrow');
+      }
 
-    setEscrowRecord(escrow);
-    setStep('done');
-    setProcessing(false);
-    window.scrollTo(0, 0);
+      const data = await response.json();
+      setEscrowRecord(data.escrow || data);
+      setStep('done');
+    } catch (err) {
+      console.error(err);
+      setError('Failed to process escrow. Please try again.');
+    } finally {
+      setProcessing(false);
+      window.scrollTo(0, 0);
+    }
   };
 
   // ── Filtered categories for search ────────────────────────
@@ -175,7 +185,7 @@ function RewardPage() {
       <div className={styles.itemStrip}>
         <span className={styles.stripIcon}>📦</span>
         <div>
-          <strong>{item.title}</strong>
+          <strong>{item.shortTitle}</strong>
           <span className={styles.stripMeta}> · 📍 {item.location}</span>
         </div>
       </div>
@@ -418,21 +428,21 @@ function RewardPage() {
 
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Item</span>
-              <span className={styles.receiptValue}>{item.title}</span>
+              <span className={styles.receiptValue}>{item.shortTitle}</span>
             </div>
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Reward Amount</span>
               <span className={`${styles.receiptValue} ${styles.receiptAmount}`}>
-                ₹{escrowRecord.rewardAmount}
+                ₹{escrowRecord.amount}
               </span>
             </div>
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Deposited By</span>
-              <span className={styles.receiptValue}>{escrowRecord.depositorName}</span>
+              <span className={styles.receiptValue}>{session?.fullName || escrowRecord.depositorName || "You"}</span>
             </div>
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Finder</span>
-              <span className={styles.receiptValue}>{escrowRecord.finderName}</span>
+              <span className={styles.receiptValue}>{item.reportedBy?.email || escrowRecord.finderEmail || "Finder"}</span>
             </div>
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Status</span>
@@ -443,7 +453,7 @@ function RewardPage() {
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Escrow ID</span>
               <span className={styles.receiptValue} style={{ fontSize: '0.75rem' }}>
-                {escrowRecord.id}
+                {escrowRecord._id}
               </span>
             </div>
           </div>

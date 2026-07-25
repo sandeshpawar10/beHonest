@@ -13,7 +13,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import { getFoundItemById, CATEGORY_CONFIG } from '../utils/itemUtils';
-import { saveClaim } from '../utils/verificationUtils';
 import { runInteractiveInterrogation } from '../utils/geminiService';
 import styles from './ClaimItemPage.module.css';
 
@@ -146,7 +145,7 @@ function ClaimItemPage() {
   };
 
   // ── Handle Verdict ────────────────────────────────────────
-  const handleVerdict = (response, finalHistory) => {
+  const handleVerdict = async (response, finalHistory) => {
     let verdictLabel = '';
     let finalVerdict = response.status;
     
@@ -159,25 +158,43 @@ function ClaimItemPage() {
       finalVerdict = 'rejected';
     }
 
-    const verificationResult = {
-      overallScore: response.score || 0,
-      verdict: finalVerdict,
-      verdictLabel,
-      verdictMessage: response.message
-    };
+    try {
+      const res = await fetch('http://localhost:8000/api/claim/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemId: item._id,
+          answers: finalHistory,
+          verdict: finalVerdict,
+          score: response.score || 0,
+          verdictMessage: response.message
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save claim');
+      }
 
-    saveClaim({
-      itemId:       item.id,
-      itemTitle:    item.title,
-      claimantEmail: session.email,
-      claimantName: session.fullName,
-      answers: finalHistory, // Save the chat history as the answers
-      result: verificationResult,
-    });
+      const verificationResult = {
+        overallScore: response.score || 0,
+        verdict: finalVerdict,
+        verdictLabel,
+        verdictMessage: response.message,
+        claimId: data.claim._id
+      };
 
-    setResult(verificationResult);
-    setStep('result');
-    setVerifying(false);
+      setResult(verificationResult);
+      setStep('result');
+    } catch (err) {
+      console.error("Error saving claim:", err);
+      setError("Error saving claim: " + err.message);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   // ── Loading state ─────────────────────────────────────────
@@ -442,7 +459,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         {result.verdict === 'verified' && (
           <button
             className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item._id}`)}
+            onClick={() => navigate(`/reward/${item._id}`, { state: { claimId: result.claimId } })}
           >
             💰 Proceed to Escrow
           </button>
@@ -457,7 +474,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         {result.verdict === 'needs_review' && (
           <button
             className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item._id}`)}
+            onClick={() => navigate(`/reward/${item._id}`, { state: { claimId: result.claimId } })}
           >
             💰 Proceed to Escrow (Pending Review)
           </button>

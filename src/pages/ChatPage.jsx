@@ -11,8 +11,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEscrowForItem, getAllEscrows } from '../utils/rewardUtils';
-import { getMessagesForEscrow, sendMessage } from '../utils/chatUtils';
 import styles from './ChatPage.module.css';
 
 function ChatPage() {
@@ -22,6 +20,7 @@ function ChatPage() {
   
   const [escrow, setEscrow] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [userRole, setUserRole] = useState(null);
   const [inputText, setInputText] = useState('');
   const [error, setError] = useState('');
   
@@ -30,28 +29,50 @@ function ChatPage() {
 
   // ── 1. Load Data & Verify Access on Mount ──
   useEffect(() => {
-    // Find the escrow record
-    const all = getAllEscrows();
-    const foundEscrow = all.find(e => e.id === escrowId);
-    
-    if (!foundEscrow) {
-      setError('Chat room not found or escrow does not exist.');
-      return;
-    }
+    const fetchChatAndEscrow = async () => {
+      if (!session) return;
+      try {
+        const chatRes = await fetch(`http://localhost:8000/api/chat/${escrowId}`, {
+          credentials: 'include'
+        });
+        
+        if (!chatRes.ok) {
+          if (chatRes.status === 403 || chatRes.status === 401) {
+            setError('Access Denied. You are not authorized to view this chat.');
+          } else {
+            setError('Chat room not found or access denied.');
+          }
+          return;
+        }
 
-    // Verify access: Only the depositor (owner) or finder can view this chat
-    const isOwner = foundEscrow.depositorEmail === session?.email;
-    const isFinder = foundEscrow.finderEmail === session?.email;
+        const chatData = await chatRes.json();
+        setMessages(chatData.messages || []);
+        setUserRole(chatData.userRole);
 
-    if (!isOwner && !isFinder) {
-      setError('Access Denied. You are not authorized to view this chat.');
-      return;
-    }
+        const escrowsRes = await fetch('http://localhost:8000/api/escrow/my-escrows', {
+          credentials: 'include'
+        });
+        if (escrowsRes.ok) {
+          const escrowsData = await escrowsRes.json();
+          const allEscrows = [...(escrowsData.asOwner || []), ...(escrowsData.asFinder || [])];
+          const found = allEscrows.find(e => e._id === escrowId);
+          if (found) {
+            setEscrow(found);
+          } else {
+            setEscrow({ _id: escrowId, itemTitle: 'Item' });
+          }
+        } else {
+          setEscrow({ _id: escrowId, itemTitle: 'Item' });
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Error connecting to server.');
+      }
+    };
 
-    setEscrow(foundEscrow);
-    
-    // Load existing messages
-    setMessages(getMessagesForEscrow(escrowId));
+    fetchChatAndEscrow();
+    const interval = setInterval(fetchChatAndEscrow, 3000);
+    return () => clearInterval(interval);
   }, [escrowId, session]);
 
   // ── 2. Auto-scroll to bottom when messages change ──
@@ -60,23 +81,37 @@ function ChatPage() {
   }, [messages]);
 
   // ── 3. Handle Sending a Message ──
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || !escrow) return;
 
-    // Use Option 2: First Name only to keep it friendly but anonymous
-    const firstName = session.fullName.split(' ')[0];
-
-    const newMsg = sendMessage(
-      escrowId, 
-      session.email, 
-      firstName, 
-      inputText
-    );
-
-    // Update local state so it appears instantly
-    setMessages(prev => [...prev, newMsg]);
+    const firstName = session?.username || session?.email?.split('@')[0] || 'User';
+    const messageText = inputText;
     setInputText('');
+
+    try {
+      const res = await fetch('http://localhost:8000/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          escrowId,
+          message: messageText,
+          senderAlias: firstName
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => [...prev, data.chatMessage]);
+      } else {
+        console.error('Failed to send message');
+        setInputText(messageText);
+      }
+    } catch (err) {
+      console.error(err);
+      setInputText(messageText);
+    }
   };
 
   // ── Render Error State ──
@@ -100,7 +135,7 @@ function ChatPage() {
   }
 
   // Determine who the current user is in this context
-  const iAmOwner = escrow.depositorEmail === session?.email;
+  const iAmOwner = userRole === 'owner';
   const myRole = iAmOwner ? 'Owner' : 'Finder';
   const theirRole = iAmOwner ? 'Finder' : 'Owner';
 
@@ -144,20 +179,20 @@ function ChatPage() {
             </div>
           ) : (
             messages.map((msg) => {
-              const isMe = msg.senderEmail === session?.email;
+              const isMe = String(msg.senderId) === String(session?._id);
               return (
                 <div 
-                  key={msg.id} 
+                  key={msg._id} 
                   className={`${styles.messageWrapper} ${isMe ? styles.sent : styles.received}`}
                 >
                   <span className={styles.messageSender}>
-                    {isMe ? 'You' : msg.senderName}
+                    {isMe ? 'You' : msg.senderAlias}
                   </span>
                   <div className={styles.messageBubble}>
-                    {msg.text}
+                    {msg.message}
                   </div>
                   <span className={styles.messageTime}>
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               );
