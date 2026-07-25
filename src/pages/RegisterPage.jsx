@@ -46,8 +46,9 @@ function RegisterPage() {
 
     try {
       console.log(email)
-      const response = await fetch('http://localhost:8000/api/user/register',{
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/register`,{
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type' : 'application/json'
         },
@@ -59,7 +60,6 @@ function RegisterPage() {
       })
       const data = await response.json()
       if(response.ok){
-        sendOTP(email.trim()); // Generate fake OTP in browser console for testing
         setAlert({msg: "Registration successful! Please check your email for the OTP.", type: "success"})
         navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`)
       }
@@ -134,82 +134,6 @@ function RegisterPage() {
     medium: { width: '66%', color: 'var(--color-warning)', label: 'Medium' },
     strong: { width: '100%', color: 'var(--color-success)', label: 'Strong 💪' },
   }[pwStrength] || { width: '0%', color: 'transparent', label: '' };
-
-  // ── Form Submission ───────────────────────────────────────
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setAlert({ msg: '', type: '' });
-
-  //   let hasError = false;
-
-  //   // Validate full name
-  //   if (!fullName.trim()) {
-  //     setNameErr('Full name is required.');
-  //     hasError = true;
-  //   } else { setNameErr(''); }
-
-  //   // Validate college email
-  //   const emailResult = validateCollegeEmail(email);
-  //   if (!emailResult.valid) {
-  //     setEmailErr(emailResult.reason);
-  //     setEmailOk(false);
-  //     hasError = true;
-  //   }
-
-  //   // Validate password
-  //   const pwResult = validatePassword(password);
-  //   if (!pwResult.valid) {
-  //     setPwErr(pwResult.reason);
-  //     hasError = true;
-  //   }
-
-  //   // Validate confirm password
-  //   if (password !== confirmPw) {
-  //     setConfirmErr('Passwords do not match.');
-  //     hasError = true;
-  //   }
-
-  //   // Validate terms acceptance
-  //   if (!acceptTerms) {
-  //     setAlert({ msg: 'Please accept the Terms of Service to continue.', type: 'warning' });
-  //     hasError = true;
-  //   }
-
-  //   if (hasError) return;
-
-  //   // Check if email already exists in localStorage
-  //   if (isEmailTaken(email)) {
-  //     setAlert({ msg: 'This email is already registered. Please log in.', type: 'error' });
-  //     return;
-  //   }
-
-  //   // All valid — send OTP
-  //   setLoading(true);
-  //   await new Promise(r => setTimeout(r, 1200)); // Simulated API delay
-
-  //   sendOTP(email.trim()); // Generates OTP and stores it in localStorage
-
-  //   setAlert({
-  //     msg: `OTP sent to ${email}! Check your inbox (Dev: see browser console).`,
-  //     type: 'success'
-  //   });
-
-  //   // Store registration data in sessionStorage so VerifyOTPPage can complete registration
-  //   // NOTE: In production, never store plain password client-side — hash on server
-  //   sessionStorage.setItem('bh_reg_pending', JSON.stringify({
-  //     fullName: fullName.trim(),
-  //     email:    email.trim().toLowerCase(),
-  //     password, // Temporary — cleared after registration is complete
-  //   }));
-
-  //   await new Promise(r => setTimeout(r, 1200)); // Let user read success message
-
-  //   setLoading(false);
-
-  //   // Navigate to OTP verification page, passing email and context as query params
-  //   navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`);
-  // };
 
   // ── Render ────────────────────────────────────────────────
   return (

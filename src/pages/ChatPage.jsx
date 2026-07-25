@@ -32,7 +32,7 @@ function ChatPage() {
     const fetchChatAndEscrow = async () => {
       if (!session) return;
       try {
-        const chatRes = await fetch(`http://localhost:8000/api/chat/${escrowId}`, {
+        const chatRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/chat/${escrowId}`, {
           credentials: 'include'
         });
         
@@ -49,7 +49,7 @@ function ChatPage() {
         setMessages(chatData.messages || []);
         setUserRole(chatData.userRole);
 
-        const escrowsRes = await fetch('http://localhost:8000/api/escrow/my-escrows', {
+        const escrowsRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/my-escrows`, {
           credentials: 'include'
         });
         if (escrowsRes.ok) {
@@ -90,7 +90,7 @@ function ChatPage() {
     setInputText('');
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat/send', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/chat/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

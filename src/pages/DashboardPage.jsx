@@ -125,7 +125,6 @@ function StatCard({ target, label }) {
 // ── DashboardPage component ────────────────────────────────────
 function DashboardPage() {
   const { session, logout } = useAuth();
-  console.log(session)
   const navigate = useNavigate(); // Hook for programmatic navigation
 
   // Extract user's first name for the personalized greeting
@@ -139,8 +138,9 @@ function DashboardPage() {
   useEffect(()=>{
     const fetchItems = async ()=>{
         try {
-          const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
-            method: 'GET'
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
+            method: 'GET',
+            credentials: 'include'
           })
           if(!response.ok){
             setError("Could not fetch items from the server.")
@@ -208,7 +208,7 @@ function DashboardPage() {
           <h1 className={styles.heroTitle}>
             Welcome to beHonest,{' '}
             {/* Gradient text for the user's first name */}
-            <span className="gradient-text" id="hero-greeting">{firstName}</span> 👋
+            <span className="gradient-text" id="hero-greeting">{session.username}</span> 👋
           </h1>
           <p className={styles.heroSubtitle}>
             Lost something? Found something? Use the platform to report it securely.
@@ -240,12 +240,6 @@ function DashboardPage() {
         </div>
 
         {/* ── Stats Row ── */}
-        <div className={styles.statsRow} role="region" aria-label="Platform statistics">
-          {/* Show real found-items count, rest are placeholder numbers */}
-          <StatCard target={foundItemsCount} label="Items Found & Reported" />
-          <StatCard target={8}   label="Active Lost Reports" />
-          <StatCard target={127} label="Verified Students" />
-        </div>
 
         {/* ── Action Cards Grid ── */}
         <div className={styles.cardsGrid} role="region" aria-label="Platform features">

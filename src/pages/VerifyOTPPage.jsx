@@ -149,9 +149,10 @@ function VerifyOTPPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/user/verify-email', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/verify-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, otp: otpString })
       });
       const data = await response.json();
@@ -191,9 +192,10 @@ function VerifyOTPPage() {
     setAlert({ msg: '', type: '' });
 
     try {
-      const response = await fetch('http://localhost:8000/api/user/resend-otp', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email })
       });
       const data = await response.json();

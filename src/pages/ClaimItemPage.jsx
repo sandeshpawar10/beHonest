@@ -42,7 +42,7 @@ function ClaimItemPage() {
     //const foundItem = getFoundItemById(itemId);
     const fetchItems = async ()=>{
         try {
-          const response = await fetch(`http://localhost:8000/api/item/getFoundItemById/${itemId}`,{
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getFoundItemById/${itemId}`,{
             method: 'GET',
             credentials: 'include'
           })
@@ -159,7 +159,7 @@ function ClaimItemPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/claim/create', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

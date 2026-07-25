@@ -92,7 +92,7 @@ function LoginPage() {
 
     try {
       console.log(email)
-      const response = await fetch('http://localhost:8000/api/user/login',{
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/login`,{
         method: 'POST',
         credentials: 'include',
         headers: {

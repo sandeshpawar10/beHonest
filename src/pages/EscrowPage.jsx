@@ -54,7 +54,7 @@ function EscrowPage() {
   const fetchEscrows = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:8000/api/escrow/my-escrows', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/my-escrows`, {
         credentials: 'include'
       });
       if (res.ok) {
@@ -96,7 +96,7 @@ function EscrowPage() {
 
     try {
       if (confirmAction === 'refund') {
-        const res = await fetch(`http://localhost:8000/api/escrow/refund/${confirmModal._id}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/refund/${confirmModal._id}`, {
           method: 'POST',
           credentials: 'include'
         });
@@ -126,7 +126,7 @@ function EscrowPage() {
 
     try {
       setProcessing(true);
-      const res = await fetch(`http://localhost:8000/api/escrow/release/${escrowId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/release/${escrowId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

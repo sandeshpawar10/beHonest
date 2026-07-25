@@ -61,7 +61,7 @@ function RewardPage() {
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/item/getFoundItemById/${itemId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getFoundItemById/${itemId}`, {
           credentials: 'include'
         });
 
@@ -111,7 +111,7 @@ function RewardPage() {
     setProcessing(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/escrow/create', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

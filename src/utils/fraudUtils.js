@@ -60,8 +60,9 @@ export { generateImageFingerprint };
    ---------------------------------------------------------- */
 export async function checkUploadFrequency(email) {
   try {
-    const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
       method: 'GET',
+      credentials: 'include'
     })
     
     if (!response.ok) {
@@ -119,8 +120,9 @@ export async function checkDuplicateImage(fingerprint, excludeItemId = null) {
   }
 
   try {
-    const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
       method: 'GET',
+      credentials: 'include'
     })
     
     if (!response.ok) {

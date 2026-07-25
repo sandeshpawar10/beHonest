@@ -148,7 +148,7 @@ function ReportFoundPage() {
       }
 
       // 4. If clean or low/medium risk, proceed to save the item
-      const response = await fetch('http://localhost:8000/api/item/add', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/add`, {
         method: 'POST',
         credentials: 'include', // 🔥 CRITICAL: Sends your secure login cookie!
         headers: {
@@ -276,7 +276,7 @@ function ReportFoundPage() {
                 Description *
               </label>
               <p className={styles.fieldHint}>
-                Describe what you can see — but DON'T mention specific identifying details
+                Describe what you can see on item and how it is — mention specific identifying details
                 (brand, serial numbers, engravings). Those will be used to verify the real owner.
               </p>
               <textarea
@@ -419,7 +419,7 @@ function ReportFoundPage() {
               disabled={loading}
             >
               {loading
-                ? <><span className={styles.spinner} /> Submitting...</>
+                ? <><span className={styles.spinner} /> AI is checking your item...</>
                 : '🚀 Submit Found Item Report'
               }
             </button>
