@@ -43,3 +43,33 @@ exports.sendOTP = async function(email, otp) {
         return false;
     }
 };
+
+exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
+    try {
+        const mailOptions = {
+            from: `"beHonest Support" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `🎉 Great News! The owner has claimed the item ${itemTitle} you found`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                    <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Welcome to beHonest!</h2>
+                    <p style="font-size: 16px; color: #333;">Hello,</p>
+                    <p style="font-size: 16px; color: #333;">Thank you for using the beHonest platform. The owner of ${itemTitle} has passed the verification interview and deposited a reward of ₹${rewardAmount}. They are waiting for you in the secure chat to arrange a meetup</p>
+                    <p style="font-size: 14px; color: #666; text-align: center;">
+                        Please visit your Escrow Dashboard to chat with the owner and coordinate the return. Keep being awesome! Thanks for your honesty 😄🙌.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                    <p style="font-size: 12px; color: #aaa; text-align: center;">
+                        This is an automated notification. Please do not reply to this email.
+                    </p>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error("Error sending escrow email", error);
+        return false;
+    }
+};
