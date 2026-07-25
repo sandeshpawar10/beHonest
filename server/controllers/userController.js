@@ -18,8 +18,8 @@ exports.registerUser = async function(req,res){
     if(existingUser && existingUser.isEmailVerified){
         return res.status(400).json({ message: `${email} is already registered` })
     }
-    let u
-    if(!existingUser){
+    let u = existingUser;
+    if(!u){
         u = await user.create({
             username,
             email,
@@ -27,7 +27,21 @@ exports.registerUser = async function(req,res){
             isEmailVerified: false
         })
     }
-    //here we will send the email for otp
+    
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    u.emailVerificationOTP = otp;
+    u.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+    await u.save({ validateBeforeSave: false });
+
+    // Send the OTP email
+    const { sendOTP } = require('../utils/emailUtils');
+    const emailSent = await sendOTP(email, otp);
+
+    if (!emailSent) {
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+    }
+
     return res.status(201).json({message: "User registered successfully and email has been sent to you", user: u})
 }
 
@@ -97,15 +111,34 @@ exports.logoutUser = async function(req,res){
 }
 
 exports.verifyEmail = async function(req, res){
-    const { email } = req.body;
+    const { email, otp } = req.body;
+    
+    if (!email || !otp) {
+        return res.status(400).json({ error: "Email and OTP are required" });
+    }
+
     try {
         const u = await user.findOne({ email });
         if (!u) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (u.isEmailVerified) {
+            return res.status(400).json({ error: "Email is already verified" });
+        }
+
+        if (u.emailVerificationOTP !== otp.trim()) {
+            return res.status(400).json({ error: "Invalid OTP" });
+        }
+
+        if (u.otpExpiresAt < Date.now()) {
+            return res.status(400).json({ error: "OTP has expired. Please register again to request a new one." });
         }
 
         u.isEmailVerified = true;
-        await u.save();
+        u.emailVerificationOTP = null;
+        u.otpExpiresAt = null;
+        await u.save({ validateBeforeSave: false });
 
         return res.status(200).json({ message: "Email successfully verified", user: u });
     } catch (error) {
@@ -126,4 +159,31 @@ exports.getUserProfile = async function(req, res) {
             username: req.user.username,
         }
     });
+}
+
+exports.resendOTP = async function(req, res) {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    try {
+        const u = await user.findOne({ email });
+        if (!u) return res.status(404).json({ error: "User not found" });
+        if (u.isEmailVerified) return res.status(400).json({ error: "Email is already verified" });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        u.emailVerificationOTP = otp;
+        u.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        await u.save({ validateBeforeSave: false });
+
+        const { sendOTP } = require('../utils/emailUtils');
+        const emailSent = await sendOTP(email, otp);
+
+        if (!emailSent) {
+            return res.status(500).json({ error: "Failed to send verification email." });
+        }
+
+        return res.status(200).json({ message: "OTP resent successfully" });
+    } catch (error) {
+        return res.status(500).json({ error: "An error occurred while resending OTP" });
+    }
 }

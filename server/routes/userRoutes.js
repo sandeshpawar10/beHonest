@@ -5,6 +5,7 @@ const controller = require("../controllers/userController")
 router.post('/api/user/register',controller.registerUser)
 router.post('/api/user/login',controller.loginUser)
 router.post('/api/user/logout',verifyJWT,controller.logoutUser)
+router.post('/api/user/resend-otp',controller.resendOTP)
 router.post('/api/user/verify-email',controller.verifyEmail)
 router.get('/api/user/me', verifyJWT, controller.getUserProfile)
 module.exports = router

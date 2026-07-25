@@ -147,52 +147,37 @@ function VerifyOTPPage() {
     }
 
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800)); // Simulated verify delay
 
-    // Call confirmOTP from AuthContext (which calls verifyOTP utility)
-    const result = confirmOTP(email, otpString);
+    try {
+      const response = await fetch('http://localhost:8000/api/user/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: otpString })
+      });
+      const data = await response.json();
 
-    if (!result.success) {
-      // Wrong OTP — flash red on boxes
-      setBoxState('error');
-      setTimeout(() => setBoxState(''), 1000); // Remove error state after 1s
-      setAlert({ msg: result.reason, type: 'error' });
-      setLoading(false);
-      return;
-    }
+      if (!response.ok) {
+        setBoxState('error');
+        setTimeout(() => setBoxState(''), 1000);
+        setAlert({ msg: data.error || 'Verification failed.', type: 'error' });
+        setLoading(false);
+        return;
+      }
 
-    // ✅ OTP Verified — show success state on boxes
-    setBoxState('verified');
+      setBoxState('verified');
 
-    if (context === 'register') {
-      try {
-        const response = await fetch('http://localhost:8000/api/user/verify-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          setAlert({ msg: data.message || 'Verification failed.', type: 'error' });
-          setLoading(false);
-          return;
-        }
-
+      if (context === 'register') {
         // Show success briefly then navigate to login
         setAlert({ msg: '🎉 Email verified! Redirecting to login...', type: 'success' });
         await new Promise(r => setTimeout(r, 1500));
         navigate('/login', { replace: true });
-        
-      } catch (err) {
-        setAlert({ msg: 'Failed to connect to server.', type: 'error' });
-        setLoading(false);
+      } else {
+        // Future contexts (e.g., password reset)
+        navigate('/dashboard', { replace: true });
       }
-
-
-    } else {
-      // Future contexts (e.g., password reset)
-      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setAlert({ msg: 'Failed to connect to server.', type: 'error' });
+      setLoading(false);
     }
   };
 
@@ -205,14 +190,28 @@ function VerifyOTPPage() {
     setBoxState('');
     setAlert({ msg: '', type: '' });
 
-    await new Promise(r => setTimeout(r, 800));
-    sendOTP(email); // Generate and store new OTP
+    try {
+      const response = await fetch('http://localhost:8000/api/user/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
 
-    // Reset the cooldown and timer
-    setResendCooldown(AUTH_CONFIG.OTP_RESEND_COOLDOWN);
-    setTimeLeft(OTP_TOTAL_SECONDS);
+      if (!response.ok) {
+        setAlert({ msg: data.error || 'Failed to resend OTP.', type: 'error' });
+        setCanResend(true);
+        return;
+      }
 
-    setAlert({ msg: 'New OTP sent! Check your email (Dev: see browser console).', type: 'success' });
+      setResendCooldown(AUTH_CONFIG.OTP_RESEND_COOLDOWN);
+      setTimeLeft(OTP_TOTAL_SECONDS);
+      setAlert({ msg: 'New OTP sent! Check your email.', type: 'success' });
+    } catch (err) {
+      setAlert({ msg: 'Failed to connect to server.', type: 'error' });
+      setCanResend(true);
+      return;
+    }
 
     // Focus first box again
     inputRefs.current[0]?.focus();

@@ -61,15 +61,6 @@ export function AuthProvider({ children }) {
     setSession(null);
   }, []);
 
-  // Kept for OTP testing until backend email service is built
-  const sendOTP = useCallback((email) => {
-    const otp = createAndStoreOTP(email);
-    return { success: true, otp };
-  }, []);
-
-  const confirmOTP = useCallback((email, submittedOTP) => {
-    return verifyOTP(email, submittedOTP);
-  }, []);
 
   const value = {
     session,
@@ -77,8 +68,6 @@ export function AuthProvider({ children }) {
     isLoggedIn: session !== null,
     loginSuccess,
     logout,
-    sendOTP,
-    confirmOTP,
   };
 
   return (
