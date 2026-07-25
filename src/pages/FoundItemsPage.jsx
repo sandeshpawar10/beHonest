@@ -23,6 +23,7 @@ import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   const [allItems, setAllItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +38,7 @@ function FoundItemsPage() {
   useEffect(()=>{
     const fetchItems = async ()=>{
         try {
-          const response = await fetch('http://localhost:8000/api/item/getAllFoundItems',{
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
             method: 'GET',
             credentials: 'include'
           })
@@ -279,8 +280,8 @@ function ItemCard({ item, formatDate }) {
           />
         )}
 
-        {/* Demo toggle button — shows blur/unblur */}
-        {item.blurZones && item.blurZones.length > 0 && (
+        {/* Demo toggle button — shows blur/unblur ONLY for the finder */}
+        {item.blurZones && item.blurZones.length > 0 && session?.email === item.reportedBy?.email && (
           <button
             className={styles.toggleBtn}
             onClick={() => setShowFull(f => !f)}

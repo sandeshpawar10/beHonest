@@ -5,7 +5,7 @@ exports.addItem = async function(req,res){
         console.log("hello")
         const {category,shortTitle,description,location,secretIdentity,status,images,blurZones,dateFound} = req.body
 
-        if(!category || !shortTitle || !description || !location || !secretIdentity){
+        if(!category || !shortTitle || !description || !location){
             return res.status(400).json({
                 error: "Incomplete data, Please fill all required fields."
             })

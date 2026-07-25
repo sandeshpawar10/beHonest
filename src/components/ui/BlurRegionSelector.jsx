@@ -51,9 +51,22 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
     const rect = containerRef.current.getBoundingClientRect();
     // getBoundingClientRect() gives us the container's pixel position on screen
 
-    // Calculate how far the mouse is from the container's top-left corner
-    const pixelX = e.clientX - rect.left;
-    const pixelY = e.clientY - rect.top;
+    // Support both mouse and touch events
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    // Calculate how far the pointer is from the container's top-left corner
+    const pixelX = clientX - rect.left;
+    const pixelY = clientY - rect.top;
 
     // Convert to percentage of container size
     const percentX = (pixelX / rect.width)  * 100;
@@ -162,6 +175,10 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp} // Cancel if mouse leaves the image
+            onTouchStart={handleMouseDown}
+            onTouchMove={handleMouseMove}
+            onTouchEnd={handleMouseUp}
+            onTouchCancel={handleMouseUp}
           >
             {/* The uploaded image */}
             <img src={imageSrc} alt="Uploaded item" className={styles.drawImage} />

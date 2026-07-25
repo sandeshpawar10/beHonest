@@ -61,6 +61,7 @@
   cursor: crosshair;        /* Crosshair cursor shows user they can draw */
   border: 2px solid rgba(0, 212, 255, 0.3);
   user-select: none;        /* Prevents text selection while dragging */
+  touch-action: none;       /* 🔥 CRITICAL for mobile: prevents page scrolling while drawing */
   background: #0a0f1e;
   line-height: 0;
 }

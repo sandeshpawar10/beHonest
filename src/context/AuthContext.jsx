@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
     // Fetch the user session from the backend securely
     const fetchSession = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/user/me', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/me`, {
           method: 'GET',
           credentials: 'include' // Important for sending the httpOnly cookie
         });
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
   // Called to logout
   const logout = useCallback(async () => {
     try {
-      await fetch('http://localhost:8000/api/user/logout', { 
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/logout`, { 
         method: 'POST',
         credentials: 'include'
       });

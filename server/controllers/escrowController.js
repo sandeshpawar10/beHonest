@@ -1,6 +1,7 @@
 const escrowModel = require("../models/escrowModel");
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
+const userModel = require("../models/userModel")
 
 // ── Helper: Generate a random 6-digit PIN ──────────────────────
 function generatePin() {
@@ -59,7 +60,17 @@ exports.createEscrow = async function(req, res) {
             releasePin,
             status: "pending"
         });
-
+        const { sendClaimNotification } = require('../utils/emailUtils');
+        const finder = await userModel.findById(finderId)
+        if(!finder){
+            return res.status(404).json({
+                errorMsg: "Finder not found to the mail"
+            })
+        }
+        const emailSent = await sendClaimNotification(finder.email, item.shortTitle, amount)
+        if (!emailSent) {
+            return res.status(500).json({ error: "Failed to send notification email. Please try again." });
+        }
         return res.status(201).json({
             status: "success",
             message: "Escrow created successfully.",

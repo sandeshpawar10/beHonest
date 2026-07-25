@@ -42,7 +42,10 @@ exports.registerUser = async function(req,res){
         return res.status(500).json({ error: "Failed to send verification email. Please try again." });
     }
 
-    return res.status(201).json({message: "User registered successfully and email has been sent to you", user: u})
+    return res.status(201).json({
+        message: "User registered successfully and email has been sent to you", 
+        user: { _id: u._id, username: u.username, email: u.email }
+    })
 }
 
 exports.loginUser = async function(req,res){

@@ -32,7 +32,7 @@ const itemSchema = new Schema({
     },
     secretIdentity: {
         type: String,
-        required: true,
+        default: ""
     },
     // Track if the item is still lost or if it has been returned
     status: {
