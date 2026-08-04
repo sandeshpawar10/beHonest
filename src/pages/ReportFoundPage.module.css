@@ -441,4 +441,15 @@
   .card { padding: 20px 16px; }
   .pageTitle { font-size: 1.2rem; }
   .stepLine { width: 20px; }
+  
+  .navBtns {
+    justify-content: space-between;
+    flex-wrap: wrap-reverse;
+  }
+  .submitBtn, .nextBtn, .backStepBtn {
+    flex: 1;
+    min-width: 100%;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
 }
