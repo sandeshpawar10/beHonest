@@ -17,31 +17,33 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Fetch the user session from the backend securely
-    const fetchSession = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/me`, {
-          method: 'GET',
-          credentials: 'include' // Important for sending the httpOnly cookie
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setSession(data.user);
-        } else {
-          setSession(null);
-        }
-      } catch (error) {
-        console.error("Failed to fetch session:", error);
+  const refreshSession = useCallback(async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/me`, {
+        method: 'GET',
+        credentials: 'include' // Important for sending the httpOnly cookie
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSession(data.user);
+        return data.user;
+      } else {
         setSession(null);
-      } finally {
-        setLoading(false);
+        return null;
       }
-    };
-
-    fetchSession();
+    } catch (error) {
+      console.error("Failed to fetch session:", error);
+      setSession(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
 
   // Called after a successful backend login
   const loginSuccess = useCallback((user) => {
@@ -68,6 +70,7 @@ export function AuthProvider({ children }) {
     isLoggedIn: session !== null,
     loginSuccess,
     logout,
+    refreshSession,
   };
 
   return (

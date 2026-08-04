@@ -15,7 +15,7 @@ import styles from './AuthPages.module.css';
 
 function LoginPage() {
   const navigate  = useNavigate();  // For programmatic navigation after login
-  const { loginSuccess } = useAuth(); // Get the loginSuccess action from AuthContext
+  const { loginSuccess, refreshSession } = useAuth(); // Get the loginSuccess action from AuthContext
 
   // ── Form State ────────────────────────────────────────────
   const [email,    setEmail]    = useState(''); // College email input
@@ -106,7 +106,7 @@ function LoginPage() {
       })
       const data = await response.json()
       if(response.ok){
-        loginSuccess({ email: email.trim() }); // Tell AuthContext we logged in
+        await refreshSession(); // Fetch full user data including username
         console.log("Navigating to dashboard...");
         navigate('/dashboard', { replace: true });
       }
