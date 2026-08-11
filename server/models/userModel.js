@@ -34,6 +34,11 @@ const userSchema = new Schema({
         type: Date,
         default: null // e.g., expires 10 minutes after generation
     },
+    role: {
+        type: String,
+        enum: ["user", "admin"],
+        default: "user"
+    }
 }, 
 { 
   // Automatically adds 'createdAt' and 'updatedAt' timestamps

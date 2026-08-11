@@ -1,12 +1,7 @@
 const escrowModel = require("../models/escrowModel");
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
-const userModel = require("../models/userModel")
-
-// ── Helper: Generate a random 6-digit PIN ──────────────────────
-function generatePin() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
+const userModel = require("../models/userModel");
 
 // ── Create a new escrow (after verified claim + reward selection) ─
 exports.createEscrow = async function(req, res) {
@@ -47,9 +42,6 @@ exports.createEscrow = async function(req, res) {
             return res.status(403).json({ error: "Finder cannot create an escrow for themselves." });
         }
 
-        // Generate a unique 6-digit release PIN
-        const releasePin = generatePin();
-
         const newEscrow = await escrowModel.create({
             itemId,
             claimId,
@@ -57,7 +49,6 @@ exports.createEscrow = async function(req, res) {
             finderId,
             amount,
             rewardCategory: rewardCategory || "standard",
-            releasePin,
             status: "pending"
         });
         const { sendClaimNotification } = require('../utils/emailUtils');
@@ -79,7 +70,6 @@ exports.createEscrow = async function(req, res) {
                 itemId: newEscrow.itemId,
                 amount: newEscrow.amount,
                 rewardCategory: newEscrow.rewardCategory,
-                releasePin: newEscrow.releasePin, // Owner sees the PIN
                 status: newEscrow.status,
                 createdAt: newEscrow.createdAt
             }
@@ -109,22 +99,29 @@ exports.getMyEscrows = async function(req, res) {
         .populate("finderId", "email username")
         .sort({ createdAt: -1 });
 
-        // Separate into "as owner" and "as finder" for the frontend
         const asOwner = [];
         const asFinder = [];
 
-        escrows.forEach(escrow => {
+        const now = new Date();
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+        for (let escrow of escrows) {
+            // Auto-refund check for pending escrows > 24 hours with no dispute
+            if (escrow.status === 'pending' && !escrow.disputeRaisedAt) {
+                if (now.getTime() - new Date(escrow.createdAt).getTime() > TWENTY_FOUR_HOURS) {
+                    escrow.status = 'refunded';
+                    await escrow.save();
+                }
+            }
+
             const escrowObj = escrow.toObject();
             if (escrow.depositorId._id.toString() === userId.toString()) {
-                // User is the owner — they can see the release PIN
                 asOwner.push(escrowObj);
             }
             if (escrow.finderId._id.toString() === userId.toString()) {
-                // User is the finder — hide the PIN (they need to receive it from the owner)
-                const { releasePin, ...safeEscrow } = escrowObj;
-                asFinder.push(safeEscrow);
+                asFinder.push(escrowObj);
             }
-        });
+        }
 
         return res.status(200).json({
             status: "success",
@@ -138,52 +135,86 @@ exports.getMyEscrows = async function(req, res) {
     }
 };
 
-// ── Release escrow (finder enters PIN to claim reward) ──────────
-exports.releaseEscrow = async function(req, res) {
+// ── Confirm handover ──────────
+exports.confirmHandover = async function(req, res) {
     try {
         const { escrowId } = req.params;
-        const { pin } = req.body;
-
-        if (!pin) {
-            return res.status(400).json({ error: "PIN is required." });
-        }
 
         const escrow = await escrowModel.findById(escrowId);
         if (!escrow) {
             return res.status(404).json({ error: "Escrow not found." });
         }
 
-        // Only the finder can release the escrow
-        if (escrow.finderId.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ error: "Only the finder can release this escrow." });
-        }
-
-        // Check escrow is still pending
         if (escrow.status !== "pending") {
-            return res.status(400).json({ error: `Escrow has already been ${escrow.status}.` });
+            return res.status(400).json({ error: `Cannot confirm escrow with status: ${escrow.status}.` });
         }
 
-        // Verify the PIN
-        if (escrow.releasePin !== pin) {
-            return res.status(400).json({ error: "Incorrect PIN. Please try again." });
+        if (req.user._id.toString() === escrow.depositorId.toString()) {
+            escrow.ownerConfirmed = true;
+            escrow.ownerConfirmedAt = new Date();
+        } else if (req.user._id.toString() === escrow.finderId.toString()) {
+            escrow.finderConfirmed = true;
+            escrow.finderConfirmedAt = new Date();
+        } else {
+            return res.status(403).json({ error: "You are not authorized to confirm this escrow." });
         }
 
-        // Release the escrow!
-        escrow.status = "released";
+        let bothConfirmed = false;
+
+        if (escrow.ownerConfirmed && escrow.finderConfirmed) {
+            escrow.status = "released";
+            bothConfirmed = true;
+            await itemModel.deleteOne({ _id: escrow.itemId });
+        }
+
         await escrow.save();
 
         return res.status(200).json({
             status: "success",
-            message: "Escrow released! The reward has been claimed.",
-            escrow: {
-                _id: escrow._id,
-                status: escrow.status,
-                amount: escrow.amount
-            }
+            bothConfirmed,
+            escrow
         });
 
     } catch (error) {
-        console.error("Error releasing escrow:", error);
+        console.error("Error confirming handover:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+};
+
+// ── Raise Dispute ──────────
+exports.raiseDispute = async function(req, res) {
+    try {
+        const { escrowId } = req.params;
+        const { reason } = req.body;
+
+        const escrow = await escrowModel.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        if (req.user._id.toString() !== escrow.depositorId.toString() && req.user._id.toString() !== escrow.finderId.toString()) {
+            return res.status(403).json({ error: "You are not authorized to dispute this escrow." });
+        }
+
+        if (escrow.status !== "pending") {
+            return res.status(400).json({ error: `Cannot raise dispute for escrow with status: ${escrow.status}.` });
+        }
+
+        escrow.status = "disputed";
+        escrow.disputeReason = reason;
+        escrow.disputeRaisedBy = req.user._id;
+        escrow.disputeRaisedAt = new Date();
+
+        await escrow.save();
+
+        return res.status(200).json({
+            status: "success",
+            message: "Dispute raised successfully.",
+            escrow
+        });
+
+    } catch (error) {
+        console.error("Error raising dispute:", error);
         return res.status(500).json({ error: "Internal server error." });
     }
 };

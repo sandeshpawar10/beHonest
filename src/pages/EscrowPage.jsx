@@ -9,17 +9,12 @@
 
    THE COMPLETE ESCROW FLOW:
    ┌─────────────────────────────────────────────────────────┐
-   │  1. Owner claims item (AI quiz → verified)              │
-   │  2. Owner deposits reward → status = "held" 🔒          │
-   │  3. Finder returns item physically                      │
-   │  4. Owner clicks "Confirm Item Received" → "released" ✅│
-   │  5. Platform releases reward to finder                  │
+   │  1. Owner deposits reward                               │
+   │  2. They arrange meetup via chat                        │
+   │  3. Finder confirms handover                            │
+   │  4. Owner confirms receipt                              │
+   │  5. Reward auto-releases                                │
    └─────────────────────────────────────────────────────────┘
-
-   SAFETY:
-   - Finder can't take money and disappear (money is held)
-   - Owner can't refuse to pay after getting item (money already deposited)
-   - If no exchange happens, owner can request a refund
    ============================================================ */
 
 import { useState, useEffect } from 'react';
@@ -37,14 +32,15 @@ function EscrowPage() {
   const [activeTab, setActiveTab] = useState('owner'); // 'owner' | 'finder'
   const [loading, setLoading]     = useState(true);
 
-  // Confirm modal state
+  // Confirm modal state (for refund)
   const [confirmModal, setConfirmModal]   = useState(null);  // The escrow being confirmed
-  const [confirmAction, setConfirmAction] = useState('');     // 'release' | 'refund'
+  const [confirmAction, setConfirmAction] = useState('');     // 'refund'
   const [processing, setProcessing]       = useState(false);
 
-  // PIN state for finders
-  const [pinInputs, setPinInputs] = useState({});
-  const [pinErrors, setPinErrors] = useState({});
+  // New State for Mutual Confirmation and Dispute
+  const [disputeModal, setDisputeModal] = useState(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [confirmingId, setConfirmingId] = useState(null);
 
   // ── Load escrows on mount ─────────────────────────────────
   useEffect(() => {
@@ -88,22 +84,19 @@ function EscrowPage() {
     setProcessing(false);
   };
 
-  // ── Handle release / refund ───────────────────────────────
+  // ── Handle refund ───────────────────────────────
   const handleConfirmAction = async () => {
-    if (!confirmModal || !confirmAction) return;
+    if (!confirmModal || confirmAction !== 'refund') return;
 
     setProcessing(true);
-
     try {
-      if (confirmAction === 'refund') {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/refund/${confirmModal._id}`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(()=>({}));
-          throw new Error(errData.error || 'Failed to refund escrow');
-        }
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/refund/${confirmModal._id}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        throw new Error(errData.error || 'Failed to refund escrow');
       }
       
       refreshEscrows();
@@ -116,31 +109,50 @@ function EscrowPage() {
     }
   };
 
-  // ── Handle PIN Release ────────────────────────────────────
-  const handlePinRelease = async (escrowId) => {
-    const pin = pinInputs[escrowId];
-    if (!pin || pin.length !== 6) {
-      setPinErrors(prev => ({ ...prev, [escrowId]: 'PIN must be 6 digits' }));
-      return;
+  // ── Handle Mutual Confirmation ───────────────────────────
+  const handleConfirm = async (escrowId) => {
+    setConfirmingId(escrowId);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/confirm/${escrowId}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to confirm');
+      }
+      const data = await res.json();
+      if (data.bothConfirmed) {
+        alert('🎉 Both parties confirmed! The reward has been released!');
+      }
+      refreshEscrows();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setConfirmingId(null);
     }
+  };
 
+  // ── Handle Dispute ──────────────────────────────────────
+  const handleDispute = async () => {
+    if (!disputeModal || disputeReason.trim().length < 10) return;
     try {
       setProcessing(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/release/${escrowId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/dispute/${disputeModal._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ pin })
+        body: JSON.stringify({ reason: disputeReason.trim() })
       });
       if (!res.ok) {
-        const errData = await res.json().catch(()=>({}));
-        throw new Error(errData.error || 'Failed to release escrow');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to raise dispute');
       }
-      
       refreshEscrows();
-      setPinErrors(prev => ({ ...prev, [escrowId]: '' }));
+      setDisputeModal(null);
+      setDisputeReason('');
     } catch (err) {
-      setPinErrors(prev => ({ ...prev, [escrowId]: err.message }));
+      alert(err.message);
     } finally {
       setProcessing(false);
     }
@@ -214,27 +226,27 @@ function EscrowPage() {
         <div className={styles.flowSteps}>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>1</span>
-            <span>Owner verifies ownership</span>
-          </div>
-          <div className={styles.flowArrow}>→</div>
-          <div className={styles.flowStep}>
-            <span className={styles.flowNum}>2</span>
             <span>Owner deposits reward</span>
           </div>
           <div className={styles.flowArrow}>→</div>
           <div className={styles.flowStep}>
+            <span className={styles.flowNum}>2</span>
+            <span>They arrange meetup via chat</span>
+          </div>
+          <div className={styles.flowArrow}>→</div>
+          <div className={styles.flowStep}>
             <span className={styles.flowNum}>3</span>
-            <span>Finder returns item</span>
+            <span>Finder confirms handover</span>
           </div>
           <div className={styles.flowArrow}>→</div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>4</span>
-            <span>Finder verifies PIN</span>
+            <span>Owner confirms receipt</span>
           </div>
           <div className={styles.flowArrow}>→</div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>5</span>
-            <span>Reward released</span>
+            <span>Reward auto-releases</span>
           </div>
         </div>
       </div>
@@ -388,76 +400,151 @@ function EscrowPage() {
                     </div>
                   )}
 
-                  {/* ── Action buttons (only for owner + status is "pending") ── */}
+                  {/* ── Action buttons (Owner View) ── */}
                   {activeTab === 'owner' && (escrow.status === 'held' || escrow.status === 'pending') && (
                     <div className={styles.ecActions}>
-                      <div className={styles.pinDisplayBox}>
-                        <div className={styles.pinDisplayLabel}>Your Release PIN</div>
-                        <div className={styles.pinDisplayCode}>{escrow.releasePin || '123456'}</div>
-                        <p className={styles.pinDisplayHint}>
-                          Give this PIN to the finder <strong>only after</strong> you receive the item.
+                      
+                      <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
+                        <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                          <strong>Status:</strong> {escrow.ownerConfirmed ? 'You confirmed ✅' : 'Waiting for your confirmation'}
+                          <br />
+                          <strong>Finder status:</strong> {escrow.finderConfirmed ? 'Finder confirmed ✅' : "Finder hasn't confirmed yet"}
                         </p>
-                      </div>
-                      <button
-                        className={styles.primaryBtn}
-                        onClick={() => navigate(`/chat/${escrow._id}`)}
-                        style={{ marginTop: '10px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                      >
-                        💬 Open Secure Chat
-                      </button>
-                      <button
-                        className={styles.refundBtn}
-                        onClick={() => openConfirmModal(escrow, 'refund')}
-                        style={{ marginTop: '10px' }}
-                      >
-                        ↩️ Request Refund
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Finder PIN Input & chat */}
-                  {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
-                    <div className={styles.finderWaiting}>
-                      <p style={{ marginBottom: '10px' }}>
-                        ⏳ Meet the owner and ask for their <strong>6-digit Release PIN</strong>.
-                      </p>
-                      <div className={styles.pinInputContainer}>
-                        <input
-                          type="text"
-                          maxLength={6}
-                          placeholder="Enter 6-digit PIN"
-                          value={pinInputs[escrow._id] || ''}
-                          onChange={(e) => setPinInputs(prev => ({ ...prev, [escrow._id]: e.target.value.replace(/\D/g, '') }))}
-                          className={styles.pinInput}
-                          disabled={processing}
-                        />
+                        
+                        {escrow.finderConfirmed && !escrow.ownerConfirmed && (
+                          <p style={{ color: '#ffb347', fontSize: '0.9rem', marginBottom: '12px', background: 'rgba(255, 179, 71, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                            The finder says they've handed over the item. Please confirm if you received it.
+                          </p>
+                        )}
+                        
                         <button
-                          className={styles.pinSubmitBtn}
-                          onClick={() => handlePinRelease(escrow._id)}
-                          disabled={processing || (pinInputs[escrow._id]?.length !== 6)}
+                          onClick={() => handleConfirm(escrow._id)}
+                          disabled={escrow.ownerConfirmed || confirmingId === escrow._id}
+                          style={{
+                            width: '100%',
+                            padding: '14px',
+                            background: escrow.ownerConfirmed ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(135deg, #00ff88, #00d4ff)',
+                            color: escrow.ownerConfirmed ? '#00ff88' : '#000',
+                            border: escrow.ownerConfirmed ? '1px solid rgba(0, 255, 136, 0.3)' : 'none',
+                            borderRadius: '12px',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            cursor: escrow.ownerConfirmed ? 'default' : 'pointer',
+                            opacity: escrow.ownerConfirmed ? 0.7 : (confirmingId === escrow._id ? 0.7 : 1)
+                          }}
                         >
-                          {processing ? '...' : 'Verify & Release'}
+                          {confirmingId === escrow._id ? 'Processing...' : escrow.ownerConfirmed ? '✅ Confirmed' : '✅ I have received my item'}
                         </button>
                       </div>
-                      {pinErrors[escrow._id] && (
-                        <div className={styles.pinError}>{pinErrors[escrow._id]}</div>
-                      )}
 
                       <button
                         className={styles.primaryBtn}
                         onClick={() => navigate(`/chat/${escrow._id}`)}
-                        style={{ marginTop: '15px', width: '100%', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', color: '#000', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                        style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
                         💬 Open Secure Chat
+                      </button>
+
+                      <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '10px' }}>
+                        <button
+                          className={styles.refundBtn}
+                          onClick={() => openConfirmModal(escrow, 'refund')}
+                          style={{ flex: 1, padding: '12px', borderRadius: '10px' }}
+                        >
+                          ↩️ Request Refund
+                        </button>
+                        <button
+                          onClick={() => setDisputeModal(escrow)}
+                          style={{ flex: 1, background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#ff8fa3', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          🚨 Raise Dispute
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Action buttons (Finder View) ── */}
+                  {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
+                    <div className={styles.ecActions}>
+                      
+                      <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
+                        <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                          <strong>Status:</strong> {escrow.finderConfirmed ? 'You confirmed ✅' : 'Waiting for your confirmation'}
+                          <br />
+                          <strong>Owner status:</strong> {escrow.ownerConfirmed ? 'Owner confirmed ✅' : "Owner hasn't confirmed yet"}
+                        </p>
+                        
+                        {escrow.finderConfirmed && !escrow.ownerConfirmed && (
+                          <p style={{ color: '#ffb347', fontSize: '0.9rem', marginBottom: '12px', background: 'rgba(255, 179, 71, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                            ⚠️ You confirmed handover but the owner hasn't confirmed receipt. If they don't confirm, raise a dispute!
+                          </p>
+                        )}
+                        
+                        <button
+                          onClick={() => handleConfirm(escrow._id)}
+                          disabled={escrow.finderConfirmed || confirmingId === escrow._id}
+                          style={{
+                            width: '100%',
+                            padding: '14px',
+                            background: escrow.finderConfirmed ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(135deg, #00ff88, #00d4ff)',
+                            color: escrow.finderConfirmed ? '#00ff88' : '#000',
+                            border: escrow.finderConfirmed ? '1px solid rgba(0, 255, 136, 0.3)' : 'none',
+                            borderRadius: '12px',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            cursor: escrow.finderConfirmed ? 'default' : 'pointer',
+                            opacity: escrow.finderConfirmed ? 0.7 : (confirmingId === escrow._id ? 0.7 : 1)
+                          }}
+                        >
+                          {confirmingId === escrow._id ? 'Processing...' : escrow.finderConfirmed ? '✅ Confirmed' : '🤝 I have handed over the item'}
+                        </button>
+                      </div>
+
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={() => navigate(`/chat/${escrow._id}`)}
+                        style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        💬 Open Secure Chat
+                      </button>
+
+                      <button
+                        onClick={() => setDisputeModal(escrow)}
+                        style={{ width: '100%', marginTop: '10px', background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#ff8fa3', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        🚨 Raise Dispute
                       </button>
                     </div>
                   )}
 
-                  {/* Released message for finder */}
-                  {activeTab === 'finder' && escrow.status === 'released' && (
-                    <div className={styles.finderReleased}>
-                      🎉 Congratulations! ₹{escrow.amount} has been released to you
-                      for honestly returning the item. Thank you for being honest!
+                  {/* ── Disputed View ── */}
+                  {escrow.status === 'disputed' && (
+                    <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255, 77, 109, 0.08)', border: '1px solid rgba(255, 77, 109, 0.3)', borderRadius: '12px' }}>
+                      <h4 style={{ color: '#ff4d6d', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
+                        ⚠️ Under Dispute
+                      </h4>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                        <strong>Raised by:</strong> {escrow.disputedBy === session?.user?.id ? 'You' : (activeTab === 'owner' ? 'Finder' : 'Owner')} on {formatDate(escrow.disputedAt)}
+                      </p>
+                      <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '12px' }}>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
+                          <strong>Reason:</strong> {escrow.disputeReason}
+                        </p>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: '#ffb347', margin: 0, padding: '10px', background: 'rgba(255, 179, 71, 0.1)', borderRadius: '8px' }}>
+                        An admin is reviewing this dispute. The funds are frozen until resolved.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ── Released message ── */}
+                  {escrow.status === 'released' && (
+                    <div className={styles.finderReleased} style={{ marginTop: '16px' }}>
+                      {escrow.ownerConfirmed && escrow.finderConfirmed 
+                        ? '🎉 Both parties confirmed the exchange. Reward released!'
+                        : activeTab === 'finder' 
+                          ? `🎉 Congratulations! ₹${escrow.amount} has been released to you for honestly returning the item. Thank you for being honest!`
+                          : `✅ Reward of ₹${escrow.amount} was successfully released to the finder.`}
                     </div>
                   )}
                 </div>
@@ -472,60 +559,33 @@ function EscrowPage() {
         </div>
       )}
 
-      {/* ══════════ Confirm Modal ══════════ */}
+      {/* ══════════ Confirm Modal (Refund) ══════════ */}
       {confirmModal && (
         <div className={styles.modalOverlay} onClick={closeConfirmModal}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className={styles.modalHeader}>
-              <h2>
-                {confirmAction === 'release'
-                  ? '✅ Confirm Item Received'
-                  : '↩️ Request Refund'
-                }
-              </h2>
+              <h2>↩️ Request Refund</h2>
               <button className={styles.modalClose} onClick={closeConfirmModal}>✕</button>
             </div>
 
             {/* Body */}
             <div className={styles.modalBody}>
-              {confirmAction === 'release' ? (
-                <>
-                  <div className={styles.modalIcon}>🤝</div>
-                  <p className={styles.modalText}>
-                    You are confirming that you have physically received your item
-                    <strong> "{confirmModal.itemId?.shortTitle}"</strong> from the finder.
-                  </p>
-                  <div className={styles.modalHighlight}>
-                    <span>Reward to be released:</span>
-                    <strong style={{ color: '#00ff88', fontSize: '1.4rem' }}>
-                      ₹{confirmModal.amount}
-                    </strong>
-                  </div>
-                  <p className={styles.modalCaption}>
-                    This amount will be released to <strong>{confirmModal.finderId?.username || confirmModal.finderId?.email}</strong> as
-                    a reward. Are you sure? This action cannot be undone.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className={styles.modalIcon}>↩️</div>
-                  <p className={styles.modalText}>
-                    You are requesting a refund for the escrow on
-                    <strong> "{confirmModal.itemId?.shortTitle}"</strong>.
-                  </p>
-                  <div className={styles.modalHighlight}>
-                    <span>Amount to be refunded:</span>
-                    <strong style={{ color: '#ffb347', fontSize: '1.4rem' }}>
-                      ₹{confirmModal.amount}
-                    </strong>
-                  </div>
-                  <p className={styles.modalCaption}>
-                    Use this only if the exchange didn't happen.
-                    The finder will not receive any reward.
-                  </p>
-                </>
-              )}
+              <div className={styles.modalIcon}>↩️</div>
+              <p className={styles.modalText}>
+                You are requesting a refund for the escrow on
+                <strong> "{confirmModal.itemId?.shortTitle}"</strong>.
+              </p>
+              <div className={styles.modalHighlight}>
+                <span>Amount to be refunded:</span>
+                <strong style={{ color: '#ffb347', fontSize: '1.4rem' }}>
+                  ₹{confirmModal.amount}
+                </strong>
+              </div>
+              <p className={styles.modalCaption}>
+                Use this only if the exchange didn't happen.
+                The finder will not receive any reward.
+              </p>
             </div>
 
             {/* Footer buttons */}
@@ -534,16 +594,69 @@ function EscrowPage() {
                 Cancel
               </button>
               <button
-                className={confirmAction === 'release' ? styles.modalConfirmRelease : styles.modalConfirmRefund}
+                className={styles.modalConfirmRefund}
                 onClick={handleConfirmAction}
                 disabled={processing}
               >
                 {processing
                   ? <><span className={styles.spinner} /> Processing...</>
-                  : confirmAction === 'release'
-                    ? '✅ Yes, Release Reward'
-                    : '↩️ Yes, Refund Me'
+                  : '↩️ Yes, Refund Me'
                 }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ Dispute Modal ══════════ */}
+      {disputeModal && (
+        <div className={styles.modalOverlay} onClick={() => setDisputeModal(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 style={{ color: '#ff4d6d' }}>🚨 Raise a Dispute</h2>
+              <button className={styles.modalClose} onClick={() => setDisputeModal(null)}>✕</button>
+            </div>
+            <div className={styles.modalBody}>
+              <p className={styles.modalText} style={{ textAlign: 'left', marginBottom: '16px' }}>
+                Explain what happened. An admin will review your dispute and decide.
+              </p>
+              <textarea
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                placeholder="Please describe the issue in detail (min 10 characters)..."
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  padding: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.95rem',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.modalCancel} onClick={() => setDisputeModal(null)} disabled={processing}>
+                Cancel
+              </button>
+              <button
+                onClick={handleDispute}
+                disabled={processing || disputeReason.trim().length < 10}
+                style={{
+                  padding: '11px 22px',
+                  background: 'rgba(255, 77, 109, 0.1)',
+                  border: '1px solid rgba(255, 77, 109, 0.3)',
+                  color: '#ff4d6d',
+                  borderRadius: '10px',
+                  fontWeight: 'bold',
+                  cursor: (processing || disputeReason.trim().length < 10) ? 'not-allowed' : 'pointer',
+                  opacity: (processing || disputeReason.trim().length < 10) ? 0.5 : 1
+                }}
+              >
+                {processing ? <><span className={styles.spinner} /> Submitting...</> : 'Submit Dispute'}
               </button>
             </div>
           </div>
@@ -555,5 +668,3 @@ function EscrowPage() {
 }
 
 export default EscrowPage;
-
-

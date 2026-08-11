@@ -34,6 +34,8 @@ import ClaimItemPage   from './pages/ClaimItemPage';   // Feature 3: AI ownershi
 import RewardPage      from './pages/RewardPage';      // Feature 4: AI reward recommendation
 import EscrowPage      from './pages/EscrowPage';      // Feature 5: Escrow payment dashboard
 import ChatPage        from './pages/ChatPage';        // Feature 6: Anonymous chat
+import AdminLoginPage  from './pages/AdminLoginPage';  // Admin: separate login
+import AdminPage       from './pages/AdminPage';       // Admin: dispute dashboard
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -193,6 +195,12 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Login — separate from student auth, no AuthContext needed */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* Admin Dashboard — protected by admin JWT cookie */}
+        <Route path="/admin" element={<AdminPage />} />
 
         {/* Catch-all → redirect unknown routes to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />

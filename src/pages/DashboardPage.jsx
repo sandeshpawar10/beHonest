@@ -261,9 +261,9 @@ function DashboardPage() {
               <p className={styles.cardDesc}>{card.desc}</p>
 
               {/* "Live" badge for built features */}
-              {card.ready && (
+              {/* {card.ready && (
                 <span className={styles.liveBadge}>✅ Live</span>
-              )}
+              )} */}
 
               {/* "Coming Soon" badge for future features */}
               {!card.ready && (

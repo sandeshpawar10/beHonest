@@ -2,7 +2,7 @@ const itemModel = require("../models/foundItemModel")
 
 exports.addItem = async function(req,res){
     try {
-        console.log("hello")
+        //console.log("hello")
         const {category,shortTitle,description,location,secretIdentity,status,images,blurZones,dateFound} = req.body
 
         if(!category || !shortTitle || !description || !location){
@@ -69,4 +69,3 @@ exports.getFoundItemById = async function(req,res){
         })
     }
 }
-

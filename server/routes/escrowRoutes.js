@@ -9,8 +9,11 @@ router.post('/api/escrow/create', verifyJWT, controller.createEscrow);
 // Get all escrows for the logged-in user (as owner OR finder)
 router.get('/api/escrow/my-escrows', verifyJWT, controller.getMyEscrows);
 
-// Release escrow (finder enters PIN)
-router.post('/api/escrow/release/:escrowId', verifyJWT, controller.releaseEscrow);
+// Confirm handover (owner or finder confirms)
+router.post('/api/escrow/confirm/:escrowId', verifyJWT, controller.confirmHandover);
+
+// Raise dispute
+router.post('/api/escrow/dispute/:escrowId', verifyJWT, controller.raiseDispute);
 
 // Refund escrow (owner requests refund)
 router.post('/api/escrow/refund/:escrowId', verifyJWT, controller.refundEscrow);

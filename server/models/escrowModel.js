@@ -40,15 +40,19 @@ const escrowSchema = new Schema({
         type: String,
         default: "standard"
     },
-    // 6-digit PIN the owner shares with the finder to release funds
-    releasePin: {
-        type: String,
-        required: true
-    },
+    ownerConfirmed: { type: Boolean, default: false },
+    finderConfirmed: { type: Boolean, default: false },
+    ownerConfirmedAt: { type: Date, default: null },
+    finderConfirmedAt: { type: Date, default: null },
+    disputeReason: { type: String, default: "" },
+    disputeRaisedBy: { type: Schema.Types.ObjectId, ref: "user", default: null },
+    disputeRaisedAt: { type: Date, default: null },
+    adminResolvedAt: { type: Date, default: null },
+    adminResolution: { type: String, enum: ["release_to_finder", "refund_to_owner", ""], default: "" },
     // Current escrow state
     status: {
         type: String,
-        enum: ["pending", "released", "refunded"],
+        enum: ["pending", "released", "refunded", "disputed"],
         default: "pending"
     }
 },
