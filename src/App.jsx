@@ -4,6 +4,7 @@
    ============================================================ */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 
 //Route is used to define which component should be shown for a URL.
 /*
@@ -36,6 +37,7 @@ import EscrowPage      from './pages/EscrowPage';      // Feature 5: Escrow paym
 import ChatPage        from './pages/ChatPage';        // Feature 6: Anonymous chat
 import AdminLoginPage  from './pages/AdminLoginPage';  // Admin: separate login
 import AdminPage       from './pages/AdminPage';       // Admin: dispute dashboard
+import SplashScreen    from './components/ui/SplashScreen'; // Logo splash animation
 
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
@@ -88,7 +90,17 @@ function PublicRoute({ children }) {
 
 // ── Main App Component with Router ────────────────────────────
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashFinish = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   return (
+    <>
+      {/* Logo splash animation — plays once on first load */}
+      {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
+
     <BrowserRouter>
       <Routes>
 
@@ -207,6 +219,7 @@ function App() {
 
       </Routes>
     </BrowserRouter>
+    </>
   );
 }
 

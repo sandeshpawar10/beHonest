@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 40px;
-  background: rgba(10,15,30,0.85);
+  background: var(--bg-secondary);
   backdrop-filter: blur(14px);        /* Frosted glass effect */
   border-bottom: 1px solid var(--border);
   position: sticky;

@@ -49,6 +49,8 @@ const escrowSchema = new Schema({
     disputeRaisedAt: { type: Date, default: null },
     adminResolvedAt: { type: Date, default: null },
     adminResolution: { type: String, enum: ["release_to_finder", "refund_to_owner", ""], default: "" },
+    itemPossession: { type: String, enum: ["me", "other_party", "unknown", ""], default: "" },
+
     // Current escrow state
     status: {
         type: String,

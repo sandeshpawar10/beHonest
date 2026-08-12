@@ -40,6 +40,7 @@ function EscrowPage() {
   // New State for Mutual Confirmation and Dispute
   const [disputeModal, setDisputeModal] = useState(null);
   const [disputeReason, setDisputeReason] = useState('');
+  const [itemPossession, setItemPossession] = useState(''); // 'me', 'other_party', 'unknown'
   const [confirmingId, setConfirmingId] = useState(null);
 
   // ── Load escrows on mount ─────────────────────────────────
@@ -135,14 +136,14 @@ function EscrowPage() {
 
   // ── Handle Dispute ──────────────────────────────────────
   const handleDispute = async () => {
-    if (!disputeModal || disputeReason.trim().length < 10) return;
+    if (!disputeModal || disputeReason.trim().length < 10 || !itemPossession) return;
     try {
       setProcessing(true);
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/dispute/${disputeModal._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ reason: disputeReason.trim() })
+        body: JSON.stringify({ reason: disputeReason.trim(), itemPossession })
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -151,6 +152,7 @@ function EscrowPage() {
       refreshEscrows();
       setDisputeModal(null);
       setDisputeReason('');
+      setItemPossession('');
     } catch (err) {
       alert(err.message);
     } finally {
@@ -424,7 +426,7 @@ function EscrowPage() {
                             width: '100%',
                             padding: '14px',
                             background: escrow.ownerConfirmed ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(135deg, #00ff88, #00d4ff)',
-                            color: escrow.ownerConfirmed ? '#00ff88' : '#000',
+                            color: escrow.ownerConfirmed ? '#0c0f0e' : '#000',
                             border: escrow.ownerConfirmed ? '1px solid rgba(0, 255, 136, 0.3)' : 'none',
                             borderRadius: '12px',
                             fontWeight: 'bold',
@@ -455,13 +457,15 @@ function EscrowPage() {
                         </button>
                         <button
                           onClick={() => setDisputeModal(escrow)}
-                          style={{ flex: 1, background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#ff8fa3', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                          style={{ flex: 1, background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#0c0f0e', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
                         >
                           🚨 Raise Dispute
                         </button>
                       </div>
                     </div>
                   )}
+
+                  {/* ── Action buttons (Owner View, Counter Dispute) ── */}
 
                   {/* ── Action buttons (Finder View) ── */}
                   {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
@@ -487,7 +491,7 @@ function EscrowPage() {
                             width: '100%',
                             padding: '14px',
                             background: escrow.finderConfirmed ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(135deg, #00ff88, #00d4ff)',
-                            color: escrow.finderConfirmed ? '#00ff88' : '#000',
+                            color: escrow.finderConfirmed ? '#0c0f0e' : '#000',
                             border: escrow.finderConfirmed ? '1px solid rgba(0, 255, 136, 0.3)' : 'none',
                             borderRadius: '12px',
                             fontWeight: 'bold',
@@ -510,12 +514,14 @@ function EscrowPage() {
 
                       <button
                         onClick={() => setDisputeModal(escrow)}
-                        style={{ width: '100%', marginTop: '10px', background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#ff8fa3', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                        style={{ width: '100%', marginTop: '10px', background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#0c0f0e', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
                       >
                         🚨 Raise Dispute
                       </button>
                     </div>
                   )}
+
+                  {/* ── Action buttons (Finder View, Counter Dispute) ── */}
 
                   {/* ── Disputed View ── */}
                   {escrow.status === 'disputed' && (
@@ -524,8 +530,22 @@ function EscrowPage() {
                         ⚠️ Under Dispute
                       </h4>
                       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                        <strong>Raised by:</strong> {escrow.disputedBy === session?.user?.id ? 'You' : (activeTab === 'owner' ? 'Finder' : 'Owner')} on {formatDate(escrow.disputedAt)}
+                        <strong>Raised by:</strong> {String(escrow.disputeRaisedBy?._id || escrow.disputeRaisedBy) === String(session?._id) ? 'You' : (activeTab === 'owner' ? 'Finder' : 'Owner')} on {formatDate(escrow.disputeRaisedAt)}
                       </p>
+                      
+                      <div style={{ marginBottom: '12px', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        <strong>Who has the item:</strong>{' '}
+                        {escrow.itemPossession === 'me' ? (
+                          <span>🙋‍♂️ The person who raised the dispute</span>
+                        ) : escrow.itemPossession === 'other_party' ? (
+                          <span>👉 The other person</span>
+                        ) : escrow.itemPossession === 'unknown' ? (
+                          <span>❓ Unknown / Lost</span>
+                        ) : (
+                          <span>Not specified</span>
+                        )}
+                      </div>
+
                       <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '12px' }}>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
                           <strong>Reason:</strong> {escrow.disputeReason}
@@ -617,8 +637,26 @@ function EscrowPage() {
               <button className={styles.modalClose} onClick={() => setDisputeModal(null)}>✕</button>
             </div>
             <div className={styles.modalBody}>
-              <p className={styles.modalText} style={{ textAlign: 'left', marginBottom: '16px' }}>
-                Explain what happened. An admin will review your dispute and decide.
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-primary)' }}>Who currently has the item?</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="itemPossession" value="me" checked={itemPossession === 'me'} onChange={(e) => setItemPossession(e.target.value)} />
+                    I have it
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="itemPossession" value="other_party" checked={itemPossession === 'other_party'} onChange={(e) => setItemPossession(e.target.value)} />
+                    The other person has it
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="itemPossession" value="unknown" checked={itemPossession === 'unknown'} onChange={(e) => setItemPossession(e.target.value)} />
+                    I don't know / Lost
+                  </label>
+                </div>
+              </div>
+
+              <p className={styles.modalText} style={{ textAlign: 'left', marginBottom: '8px', fontWeight: 'bold' }}>
+                Explain what happened in detail:
               </p>
               <textarea
                 value={disputeReason}
@@ -626,7 +664,7 @@ function EscrowPage() {
                 placeholder="Please describe the issue in detail (min 10 characters)..."
                 style={{
                   width: '100%',
-                  minHeight: '120px',
+                  minHeight: '100px',
                   padding: '12px',
                   background: 'var(--bg-tertiary)',
                   border: '1px solid var(--border)',
@@ -644,7 +682,7 @@ function EscrowPage() {
               </button>
               <button
                 onClick={handleDispute}
-                disabled={processing || disputeReason.trim().length < 10}
+                disabled={processing || disputeReason.trim().length < 10 || !itemPossession}
                 style={{
                   padding: '11px 22px',
                   background: 'rgba(255, 77, 109, 0.1)',
@@ -652,8 +690,8 @@ function EscrowPage() {
                   color: '#ff4d6d',
                   borderRadius: '10px',
                   fontWeight: 'bold',
-                  cursor: (processing || disputeReason.trim().length < 10) ? 'not-allowed' : 'pointer',
-                  opacity: (processing || disputeReason.trim().length < 10) ? 0.5 : 1
+                  cursor: (processing || disputeReason.trim().length < 10 || !itemPossession) ? 'not-allowed' : 'pointer',
+                  opacity: (processing || disputeReason.trim().length < 10 || !itemPossession) ? 0.5 : 1
                 }}
               >
                 {processing ? <><span className={styles.spinner} /> Submitting...</> : 'Submit Dispute'}

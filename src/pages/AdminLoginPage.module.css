@@ -38,8 +38,10 @@
   margin-bottom: 12px;
 }
 
-.icon {
-  font-size: 3rem;
+.logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
   margin-bottom: 12px;
 }
 
@@ -48,7 +50,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   text-align: center;
-  color: #fff;
+  color: var(--text-primary, #fff);
   margin: 0;
 }
 
@@ -97,7 +99,7 @@
   border-radius: 12px;
   background: var(--bg-tertiary, #1a1f36);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-  color: #fff;
+  color: var(--text-primary, #fff);
   font-size: 0.95rem;
   transition: all 0.2s ease;
 }

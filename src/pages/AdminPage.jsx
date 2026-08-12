@@ -74,7 +74,7 @@ function AdminPage() {
     setResolving(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/resolve/${selectedDispute.escrowId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/resolve/${selectedDispute._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -111,8 +111,8 @@ function AdminPage() {
       {/* Top Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navBrand}>
-          <span className={styles.navIcon}>🛡️</span>
-          <span className={styles.navTitle}>beHonest Admin</span>
+          <img src="/logo.png" alt="beHonest logo" className={styles.navLogo} />
+          <span className={styles.navTitle}>Admin</span>
         </div>
         <button onClick={handleLogout} className={styles.logoutBtn}>
           Logout
@@ -158,33 +158,45 @@ function AdminPage() {
               {disputes.map((dispute, index) => (
                 <div key={index} className={styles.disputeCard}>
                   <div className={styles.disputeHeader}>
-                    <h3>{dispute.escrow?.itemId?.shortTitle || 'Unknown Item'}</h3>
-                    <span className={styles.rewardBadge}>₹{dispute.escrow?.amount || 0}</span>
+                    <h3>{dispute.itemId?.shortTitle || 'Unknown Item'}</h3>
+                    <span className={styles.rewardBadge}>₹{dispute.amount || 0}</span>
                   </div>
                   
                   <div className={styles.disputeInfoGrid}>
                     <div className={styles.infoBox}>
                       <span className={styles.infoLabel}>Owner</span>
                       <p className={styles.infoValue}>
-                        {dispute.escrow?.ownerId?.name || 'Unknown'} 
-                        <span title="Owner Confirmation">{dispute.escrow?.ownerConfirmed ? ' ✅' : ' ❌'}</span>
+                        {dispute.depositorId?.username || 'Unknown'} 
+                        <span title="Owner Confirmation">{dispute.ownerConfirmed ? ' ✅' : ' ❌'}</span>
                       </p>
                     </div>
                     <div className={styles.infoBox}>
                       <span className={styles.infoLabel}>Finder</span>
                       <p className={styles.infoValue}>
-                        {dispute.escrow?.finderId?.name || 'Unknown'}
-                        <span title="Finder Confirmation">{dispute.escrow?.finderConfirmed ? ' ✅' : ' ❌'}</span>
+                        {dispute.finderId?.username || 'Unknown'}
+                        <span title="Finder Confirmation">{dispute.finderConfirmed ? ' ✅' : ' ❌'}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className={styles.disputeReasonBox}>
                     <div className={styles.reasonHeader}>
-                      <strong>Raised by:</strong> {dispute.raisedBy?.name || 'System'} on {new Date(dispute.createdAt).toLocaleDateString()}
+                      <strong>Raised by:</strong> {dispute.disputeRaisedBy?.username || 'System'} on {new Date(dispute.disputeRaisedAt || dispute.updatedAt).toLocaleDateString()}
+                    </div>
+                    <div style={{ marginBottom: '8px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      <strong>Who has the item:</strong>{' '}
+                      {dispute.itemPossession === 'me' ? (
+                        <span>🙋‍♂️ The person who raised the dispute</span>
+                      ) : dispute.itemPossession === 'other_party' ? (
+                        <span>👉 The other person</span>
+                      ) : dispute.itemPossession === 'unknown' ? (
+                        <span>❓ Unknown / Lost</span>
+                      ) : (
+                        <span>Not specified</span>
+                      )}
                     </div>
                     <p className={styles.disputeReason}>
-                      "{dispute.reason}"
+                      "{dispute.disputeReason || 'No reason provided.'}"
                     </p>
                   </div>
 

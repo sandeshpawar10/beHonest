@@ -24,15 +24,12 @@ function AuthLayout({ children, tagline }) {
       {/* ── LEFT PANEL ── Branding */}
       <section className={styles.left} aria-label="Platform information">
 
-        {/* Floating logo */}
+        {/* New logo image */}
         <img
           src="/logo.png"
           alt="beHonest logo"
           className={styles.logo}
         />
-
-        {/* Platform name with gradient text */}
-        <h2 className={styles.brandName}>beHonest</h2>
 
         {/* Tagline — can differ between login/register pages */}
         <p className={styles.tagline}>
@@ -53,6 +50,15 @@ function AuthLayout({ children, tagline }) {
 
       {/* ── RIGHT PANEL ── Form slot */}
       <section className={styles.right} aria-label="Authentication form">
+        {/* Mobile Header (Hidden on Desktop) */}
+        <div className={styles.mobileHeader}>
+          <img
+            src="/logo.png"
+            alt="beHonest logo"
+            className={styles.logoMobile}
+          />
+        </div>
+        
         {children}
       </section>
 

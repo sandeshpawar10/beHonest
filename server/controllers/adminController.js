@@ -2,6 +2,8 @@ const jwt = require("jsonwebtoken");
 const escrowModel = require("../models/escrowModel");
 const userModel = require("../models/userModel");
 const itemModel = require("../models/foundItemModel");
+const chatModel = require("../models/chatModel")
+const claimModel = require("../models/claimModel")
 
 exports.adminLogin = async (req, res) => {
     try {
@@ -36,7 +38,8 @@ exports.getAllDisputes = async (req, res) => {
         const disputes = await escrowModel.find({ status: "disputed" })
             .populate("itemId")
             .populate("depositorId", "email username")
-            .populate("finderId", "email username");
+            .populate("finderId", "email username")
+            .populate("disputeRaisedBy", "email username");
 
         return res.status(200).json({ status: "success", disputes });
     } catch (error) {
@@ -69,6 +72,8 @@ exports.resolveDispute = async (req, res) => {
         if (resolution === "release_to_finder") {
             escrow.status = "released";
             await itemModel.deleteOne({ _id: escrow.itemId });
+            await claimModel.deleteMany({itemId: escrow.itemId})
+            await chatModel.deleteMany({escrowId: escrow._id})
         } else if (resolution === "refund_to_owner") {
             escrow.status = "refunded";
         }

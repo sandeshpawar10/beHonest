@@ -58,8 +58,8 @@ function AdminLoginPage() {
     <div className={styles.page}>
       <div className={`${styles.card} ${shake ? styles.shake : ''}`}>
         <div className={styles.header}>
-          <span className={styles.icon}>🛡️</span>
-          <h1 className={styles.heading}>beHonest Admin Portal</h1>
+          <img src="/logo.png" alt="beHonest logo" className={styles.logo} />
+          <h1 className={styles.heading}>Admin Portal</h1>
         </div>
         <p className={styles.subtitle}>Sign in to manage the platform.</p>
 

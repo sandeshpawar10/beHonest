@@ -194,14 +194,14 @@ function DashboardPage() {
       <main className={styles.main} role="main">
 
         {/* Email verified confirmation banner */}
-        <div className={styles.verifiedBanner} role="status" aria-live="polite">
+        {/* <div className={styles.verifiedBanner} role="status" aria-live="polite">
           <span className={styles.checkIcon} aria-hidden="true">✅</span>
           <div>
             <strong>College email verified!</strong>
             {' '}You're signed in as a trusted student on the beHonest network.
             Your identity is protected until ownership is verified.
           </div>
-        </div>
+        </div> */}
 
         {/* ── Hero / Welcome section ── */}
         <div className={styles.hero}>

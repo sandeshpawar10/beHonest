@@ -2,6 +2,7 @@ const escrowModel = require("../models/escrowModel");
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
 const userModel = require("../models/userModel");
+const chatModel = require("../models/chatModel")
 
 // ── Create a new escrow (after verified claim + reward selection) ─
 exports.createEscrow = async function(req, res) {
@@ -165,6 +166,8 @@ exports.confirmHandover = async function(req, res) {
             escrow.status = "released";
             bothConfirmed = true;
             await itemModel.deleteOne({ _id: escrow.itemId });
+            await claimModel.deleteMany({itemId: escrow.itemId})
+            await chatModel.deleteMany({escrowId: escrow._id})
         }
 
         await escrow.save();
@@ -185,7 +188,7 @@ exports.confirmHandover = async function(req, res) {
 exports.raiseDispute = async function(req, res) {
     try {
         const { escrowId } = req.params;
-        const { reason } = req.body;
+        const { reason, itemPossession } = req.body;
 
         const escrow = await escrowModel.findById(escrowId);
         if (!escrow) {
@@ -204,6 +207,7 @@ exports.raiseDispute = async function(req, res) {
         escrow.disputeReason = reason;
         escrow.disputeRaisedBy = req.user._id;
         escrow.disputeRaisedAt = new Date();
+        escrow.itemPossession = itemPossession || "unknown";
 
         await escrow.save();
 

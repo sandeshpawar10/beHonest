@@ -13,7 +13,7 @@
 
 /* ── Left Panel: Branding area ── */
 .left {
-  background: linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(123,94,167,0.06) 100%);
+  background: var(--bg-primary); /* Just use the global light background */
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -50,25 +50,10 @@
 
 /* Logo: floats up and down */
 .logo {
-  width: 100px; height: 100px;
+  width: 250px; height: auto;
   object-fit: contain;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 0 20px rgba(0,212,255,0.4));
+  margin-bottom: 30px;
   animation: float 3s ease-in-out infinite;
-  position: relative;
-  z-index: 1;
-}
-
-/* Brand name: gradient text */
-.brandName {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: var(--gradient-main);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 16px;
   position: relative;
   z-index: 1;
 }
@@ -136,6 +121,20 @@
   overflow-y: auto; /* Scroll on tall forms like register */
 }
 
+/* Mobile Header (Hidden by default on Desktop) */
+.mobileHeader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.logoMobile {
+  width: 180px; height: auto;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
 /* ── Responsive: single column on tablet/mobile ── */
 @media (max-width: 900px) {
   .page {
@@ -147,5 +146,10 @@
   .right {
     min-height: 100vh;
     padding: 32px 20px;
+    justify-content: flex-start; /* Push content to top on mobile */
+    padding-top: 48px;
+  }
+  .mobileHeader {
+    display: flex; /* Show logo on mobile */
   }
 }

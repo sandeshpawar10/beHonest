@@ -1,4 +1,7 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
+
+const logoPath = path.join(__dirname, '../../public/logo.png');
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -16,6 +19,9 @@ exports.sendOTP = async function(email, otp) {
             subject: 'Your beHonest Verification Code',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 50px; width: auto;" />
+                    </div>
                     <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Welcome to beHonest!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Thank you for registering. Please use the following 6-digit One-Time Password (OTP) to verify your email address:</p>
@@ -32,7 +38,12 @@ exports.sendOTP = async function(email, otp) {
                         If you did not request this code, please ignore this email.
                     </p>
                 </div>
-            `
+            `,
+            attachments: [{
+                filename: 'logo.png',
+                path: logoPath,
+                cid: 'behonestlogo' // same cid value as in the html img src
+            }]
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -52,7 +63,10 @@ exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
             subject: `🎉 Great News! The owner has claimed the item ${itemTitle} you found`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Welcome to beHonest!</h2>
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 50px; width: auto;" />
+                    </div>
+                    <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Great News!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Thank you for using the beHonest platform. The owner of ${itemTitle} has passed the verification interview and deposited a reward of ₹${rewardAmount}. They are waiting for you in the secure chat to arrange a meetup</p>
                     <p style="font-size: 14px; color: #666; text-align: center;">
@@ -63,7 +77,12 @@ exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `
+            `,
+            attachments: [{
+                filename: 'logo.png',
+                path: logoPath,
+                cid: 'behonestlogo' // same cid value as in the html img src
+            }]
         };
 
         const info = await transporter.sendMail(mailOptions);

@@ -1,0 +1,132 @@
+/* ============================================================
+   SplashScreen.module.css — Premium Logo Splash Animation
+   ============================================================ */
+
+/* ── Full-screen splash overlay ── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+/* ── Phase states ── */
+.enter {
+  opacity: 1;
+}
+
+.visible {
+  opacity: 1;
+}
+
+.exit {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Subtle glowing background orbs ── */
+.orbOne {
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+  top: 15%; left: 20%;
+  animation: orbFloat 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.orbTwo {
+  position: absolute;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
+  bottom: 20%; right: 20%;
+  animation: orbFloat 3s ease-in-out infinite 1.5s;
+  pointer-events: none;
+}
+
+/* ── Logo image ── */
+.logo {
+  width: 280px;
+  height: auto;
+  object-fit: contain;
+  animation: logoReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Tagline ── */
+.tagline {
+  font-family: var(--font-base);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 20px;
+  opacity: 0;
+  animation: taglineReveal 0.8s ease 0.8s forwards;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Keyframes ── */
+
+/* Logo: scales up from small, fades in */
+@keyframes logoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Tagline: slides up + fades in */
+@keyframes taglineReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Orb floating animation */
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%      { transform: translateY(-20px) scale(1.05); }
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 600px) {
+  .logo {
+    width: 200px;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+  }
+  .orbOne {
+    width: 250px; height: 250px;
+  }
+  .orbTwo {
+    width: 200px; height: 200px;
+  }
+}

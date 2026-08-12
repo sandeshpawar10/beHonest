@@ -3,39 +3,38 @@
    Imported once in main.jsx → applies to the entire app
    ============================================================ */
 
-/* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap');
+/* ── Google Fonts (Now loaded in index.html for better mobile support) ── */
 
 /* ── CSS Design Tokens (Custom Properties) ── */
 :root {
   /* Background layers */
-  --bg-primary:    #0a0f1e;
-  --bg-secondary:  #0f1729;
-  --bg-tertiary:   #151e35;
-  --bg-glass:      rgba(255, 255, 255, 0.04);
+  --bg-primary:    #F8FBFF;
+  --bg-secondary:  rgba(240, 248, 255, 0.5);
+  --bg-tertiary:   rgba(255, 255, 255, 0.8);
+  --bg-glass:      rgba(240, 248, 255, 0.6);
 
   /* Accent colors */
-  --accent-cyan:   #00d4ff;
-  --accent-purple: #7b5ea7;
-  --accent-green:  #00ff88;
-  --gradient-main: linear-gradient(135deg, #00d4ff 0%, #7b5ea7 100%);
+  --accent-cyan:   #3B82F6; /* Steel blue */
+  --accent-purple: #0EA5E9; /* Sky blue */
+  --accent-green:  #2563EB; /* Deep blue */
+  --gradient-main: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
 
   /* Text */
-  --text-primary:   #f0f4ff;
-  --text-secondary: #8b9fc7;
-  --text-muted:     #4a5a80;
+  --text-primary:   #1E3A5F;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
 
   /* Status */
-  --color-success: #00ff88;
-  --color-error:   #ff4d6d;
-  --color-warning: #ffb347;
+  --color-success: #10B981;
+  --color-error:   #EF4444;
+  --color-warning: #F59E0B;
 
   /* Borders & shadows */
-  --border:        rgba(0, 212, 255, 0.15);
-  --border-active: rgba(0, 212, 255, 0.5);
-  --shadow-card:   0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow:   0 0 20px rgba(0, 212, 255, 0.2);
-  --shadow-glow-strong: 0 0 40px rgba(0, 212, 255, 0.35);
+  --border:        rgba(180, 210, 240, 0.4);
+  --border-active: rgba(147, 197, 253, 0.6);
+  --shadow-card:   0 8px 32px rgba(147, 197, 253, 0.15);
+  --shadow-glow:   0 0 20px rgba(147, 197, 253, 0.2);
+  --shadow-glow-strong: 0 0 40px rgba(96, 165, 250, 0.3);
 
   /* Typography */
   --font-base:    'Inter', sans-serif;
@@ -81,9 +80,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,212,255,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 60% at 80% 80%, rgba(123,94,167,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0,255,136,0.03) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 50% at 80% 20%, rgba(147,197,253,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, rgba(191,219,254,0.1) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
