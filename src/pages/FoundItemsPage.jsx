@@ -246,6 +246,7 @@ function ItemCard({ item, formatDate }) {
   
   const isSameCollege = finderDomain && userDomain && (finderDomain.toLowerCase() === userDomain.toLowerCase());
   const isFinder = session?.email && finderEmail && (session.email.toLowerCase() === finderEmail.toLowerCase());
+  const isClaimed = item.status === 'claimed';
 
 
   return (
@@ -319,21 +320,27 @@ function ItemCard({ item, formatDate }) {
           className={styles.claimBtn}
           id={`claim-btn-${item._id}`}
           onClick={() => {
-            if (isFinder) return;
+            if (isClaimed || isFinder) return;
             if (isSameCollege) {
               navigate(`/claim/${item._id}`);
             } else {
               alert('Sorry, you can only claim items found by students from your own college domain.');
             }
           }}
-          disabled={!isSameCollege || isFinder}
+          disabled={isClaimed || !isSameCollege || isFinder}
           style={{ 
-            opacity: (!isSameCollege || isFinder) ? 0.6 : 1, 
-            cursor: (!isSameCollege || isFinder) ? 'not-allowed' : 'pointer' 
+            opacity: (isClaimed || !isSameCollege || isFinder) ? 0.6 : 1, 
+            cursor: (isClaimed || !isSameCollege || isFinder) ? 'not-allowed' : 'pointer' 
           }}
         >
-          {isFinder ? '✅ You reported this item' : isSameCollege ? '🙋 This is Mine — Claim It' : '🚫 Not from your college'}
-          {!isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
+          {isClaimed 
+            ? '🔐 Already Claimed' 
+            : isFinder 
+              ? '✅ You reported this item' 
+              : isSameCollege 
+                ? '🙋 This is Mine — Claim It' 
+                : '🚫 Not from your college'}
+          {!isClaimed && !isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
         </button>
       </div>
     </div>

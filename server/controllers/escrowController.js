@@ -211,6 +211,28 @@ exports.raiseDispute = async function(req, res) {
 
         await escrow.save();
 
+        const u = await userModel.findById(escrow.disputeRaisedBy)
+        if(!u){
+            return res.status(404).json({error: "User not found to send email"});
+        }
+        // const f = await userModel.findById(escrow.finderId)
+        // if(!f){
+        //     return res.status(404).json({error: "Finder not found to send email"});
+        // }
+        const i = await itemModel.findById(escrow.itemId)
+        if(!i){
+            return res.status(404).json({error: "Item not found to send email"});
+        }
+
+        const {sendDisputeEmailToAdmin, sendDisputeEmail} = require("../utils/emailUtils")
+        const emailSent = await sendDisputeEmail(u.email, i.shortTitle, escrow.disputeReason)
+        if (!emailSent) {
+            return res.status(500).json({ error: "Failed to send notification email. Please try again." });
+        }
+        const emailSentToAdmin = await sendDisputeEmailToAdmin(process.env.ADMIN_EMAIL, i.shortTitle, escrow.disputeReason,u.username )
+        if (!emailSentToAdmin) {
+            return res.status(500).json({ error: "Failed to send notification email to admin. Please try again." });
+        }
         return res.status(200).json({
             status: "success",
             message: "Dispute raised successfully.",

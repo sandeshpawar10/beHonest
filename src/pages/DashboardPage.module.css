@@ -193,6 +193,10 @@
   box-shadow: 0 0 25px rgba(0,212,255,0.4);
 }
 
+.ctaPrimary:focus {
+  outline: none;
+}
+
 /* Ghost CTA button */
 .ctaGhost {
   padding: 12px 28px;
@@ -210,6 +214,10 @@
 .ctaGhost:hover {
   background: rgba(0,212,255,0.06);
   border-color: var(--border-active);
+}
+
+.ctaGhost:focus {
+  outline: none;
 }
 
 /* ── Stats row ── */
@@ -294,8 +302,7 @@
 }
 
 .actionCard:focus {
-  outline: 2px solid var(--accent-cyan);
-  outline-offset: 2px;
+  outline: none;
 }
 
 /* Card icon */

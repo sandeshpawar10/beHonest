@@ -92,3 +92,79 @@ exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
         return false;
     }
 };
+
+exports.sendDisputeEmailToAdmin = async function(email, itemTitle, disputeReason, name){
+    try {
+        const mailOptions = {
+            from: `"beHonest Support" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `⚠️ A Dispute Has Been Raised Regarding ${itemTitle} by ${name}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 50px; width: auto;" />
+                    </div>
+                    <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Great News!</h2>
+                    <p style="font-size: 16px; color: #333;">Hello,</p>
+                    <p style="font-size: 16px; color: #333;">A new dispute has been raised regarding ${itemTitle} on the beHonest platform. <b>Dispute Reason: ${disputeReason}</b>. Please review the dispute and take the necessary action.</p>
+                    <p style="font-size: 14px; color: #666; text-align: center;">
+                        Please visit your Admin Dashboard to review the dispute.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                    <p style="font-size: 12px; color: #aaa; text-align: center;">
+                        This is an automated notification. Please do not reply to this email.
+                    </p>
+                </div>
+            `,
+            attachments: [{
+                filename: 'logo.png',
+                path: logoPath,
+                cid: 'behonestlogo' // same cid value as in the html img src
+            }]
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error("Error sending escrow email", error);
+        return false;
+    }
+}
+
+exports.sendDisputeEmail = async function(email, itemTitle, disputeReason){
+    try {
+        const mailOptions = {
+            from: `"beHonest Support" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `⚠️ A Dispute Has Been Raised Regarding ${itemTitle}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 50px; width: auto;" />
+                    </div>
+                    <h2 style="color: #00d4ff; text-align: center; margin-bottom: 20px;">Great News!</h2>
+                    <p style="font-size: 16px; color: #333;">Hello,</p>
+                    <p style="font-size: 16px; color: #333;">Thank you for using the beHonest platform.A dispute has been raised regarding ${itemTitle} by the owner. The reason provided for the dispute is: <b>${disputeReason}</b>. Our team will review the dispute and the relevant information before taking further action. Please check your secure chat and cooperate with the verification process if required. We’ll keep you updated once the dispute has been reviewed.</p>
+                    <p style="font-size: 14px; color: #666; text-align: center;">
+                        Your dispute has been raised successfully. Our admin team will review it and update you once a decision has been made. 🔍
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                    <p style="font-size: 12px; color: #aaa; text-align: center;">
+                        This is an automated notification. Please do not reply to this email.
+                    </p>
+                </div>
+            `,
+            attachments: [{
+                filename: 'logo.png',
+                path: logoPath,
+                cid: 'behonestlogo' // same cid value as in the html img src
+            }]
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error("Error sending escrow email", error);
+        return false;
+    }
+}
