@@ -202,12 +202,8 @@ function StackCard({ item, formatDate }) {
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
   const { session } = useAuth();
 
-  const finderEmail = item.reportedBy?.email || item.foundBy || '';
-  const finderDomain = finderEmail ? finderEmail.split('@')[1] : null;
-  const userDomain = session?.email ? session.email.split('@')[1] : null;
-
-  const isSameCollege = finderDomain && userDomain && (finderDomain.toLowerCase() === userDomain.toLowerCase());
-  const isFinder = session?.email && finderEmail && (session.email.toLowerCase() === finderEmail.toLowerCase());
+  const isFinder = Boolean(item.isFinder);
+  const isSameCollege = Boolean(item.isSameCollege);
   const isClaimed = item.status === 'claimed';
 
   const [showFull, setShowFull] = useState(false);
@@ -232,7 +228,7 @@ function StackCard({ item, formatDate }) {
             )}
 
             {/* Demo toggle — only for the finder */}
-            {item.blurZones && item.blurZones.length > 0 && session?.email === item.reportedBy?.email && (
+            {item.blurZones && item.blurZones.length > 0 && isFinder && (
               <button
                 className={styles.toggleBtn}
                 onClick={() => setShowFull(f => !f)}

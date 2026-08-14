@@ -60,16 +60,13 @@ function ClaimItemPage() {
             return;
           }
 
-          const finderEmail = fetchedItem.reportedBy?.email || fetchedItem.foundBy || '';
-          if (finderEmail && session?.email && finderEmail.toLowerCase() === session.email.toLowerCase()) {
+          if (fetchedItem.isFinder) {
             setError('You cannot claim an item you reported yourself.');
             setLoading(false);
             return;
           }
 
-          const finderDomain = finderEmail ? finderEmail.split('@')[1] : null;
-          const userDomain = session?.email ? session.email.split('@')[1] : null;
-          if (finderDomain && userDomain && finderDomain.toLowerCase() !== userDomain.toLowerCase()) {
+          if (!fetchedItem.isSameCollege) {
             setError('You can only claim items reported by students from your own college domain.');
             setLoading(false);
             return;

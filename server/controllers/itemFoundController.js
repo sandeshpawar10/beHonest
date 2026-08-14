@@ -61,9 +61,29 @@ exports.getAllFoundItems = async function(req,res){
             .select('-secretIdentity')
             .populate('reportedBy', 'email')
             .sort({ createdAt: -1 });
+
+        const userEmail = req.user ? req.user.email : null;
+        const userDomain = userEmail ? userEmail.split('@')[1].toLowerCase() : null;
+
+        const sanitizedItems = allItems.map(item => {
+            const itemObj = item.toObject();
+            const finderEmail = itemObj.reportedBy?.email;
+            
+            if (finderEmail) {
+                const finderDomain = finderEmail.split('@')[1].toLowerCase();
+                itemObj.isFinder = userEmail ? (userEmail.toLowerCase() === finderEmail.toLowerCase()) : false;
+                itemObj.isSameCollege = userDomain ? (userDomain === finderDomain) : false;
+                delete itemObj.reportedBy.email; // Erase the email to protect privacy
+            } else {
+                itemObj.isFinder = false;
+                itemObj.isSameCollege = false;
+            }
+            return itemObj;
+        });
+
         return res.status(200).json({
             status: "success",
-            items: allItems
+            items: sanitizedItems
         })
     } catch (error) {
         return res.status(400).json({
@@ -86,9 +106,26 @@ exports.getFoundItemById = async function(req,res){
                 errorMsg: "item not found"
             })
         }
+
+        const userEmail = req.user ? req.user.email : null;
+        const userDomain = userEmail ? userEmail.split('@')[1].toLowerCase() : null;
+
+        const itemObj = item.toObject();
+        const finderEmail = itemObj.reportedBy?.email;
+        
+        if (finderEmail) {
+            const finderDomain = finderEmail.split('@')[1].toLowerCase();
+            itemObj.isFinder = userEmail ? (userEmail.toLowerCase() === finderEmail.toLowerCase()) : false;
+            itemObj.isSameCollege = userDomain ? (userDomain === finderDomain) : false;
+            delete itemObj.reportedBy.email; // Erase the email to protect privacy
+        } else {
+            itemObj.isFinder = false;
+            itemObj.isSameCollege = false;
+        }
+
         return res.status(200).json({
             status: "success",
-            items: item
+            items: itemObj
         })
     } catch (error) {
         return res.status(400).json({
