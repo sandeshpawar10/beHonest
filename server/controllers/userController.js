@@ -88,7 +88,6 @@ exports.loginUser = async function(req,res){
     return res.status(200).cookie("accesstoken",accesstoken,options)
         .cookie("refreshtoken",refreshtoken,options)
         .json({
-            AccessToken: accesstoken,
             Status: `${email} logged in successfully`
         })
 }
