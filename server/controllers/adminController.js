@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const escrowModel = require("../models/escrowModel");
 const userModel = require("../models/userModel");
 const itemModel = require("../models/foundItemModel");
@@ -9,7 +10,23 @@ exports.adminLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+        const envEmail = process.env.ADMIN_EMAIL || "";
+        const envPassword = process.env.ADMIN_PASSWORD || "";
+
+        // Prevent timing attacks using crypto.timingSafeEqual
+        // Both strings must be converted to Buffers of the EXACT same length to be compared safely
+        let isEmailMatch = false;
+        let isPasswordMatch = false;
+
+        if (email && envEmail && email.length === envEmail.length) {
+            isEmailMatch = crypto.timingSafeEqual(Buffer.from(email), Buffer.from(envEmail));
+        }
+
+        if (password && envPassword && password.length === envPassword.length) {
+            isPasswordMatch = crypto.timingSafeEqual(Buffer.from(password), Buffer.from(envPassword));
+        }
+
+        if (isEmailMatch && isPasswordMatch) {
             const token = jwt.sign(
                 { email, role: "admin" },
                 process.env.access_token_secret,
