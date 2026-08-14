@@ -115,6 +115,26 @@ export const CATEGORY_CONFIG = {
     icon: '💻',
     blurHint: 'Blur: stickers with personal info, screen content, serial number'
   },
+  headphones: {
+    label: 'Headphones',
+    icon: '🎧',
+    blurHint: 'Blur: serial number, custom engravings, inside of case'
+  },
+  id_card: {
+    label: 'ID / Document',
+    icon: '🪪',
+    blurHint: 'Blur: name, photo, ID number, address, barcodes'
+  },
+  bottle: {
+    label: 'Water Bottle',
+    icon: '🥤',
+    blurHint: 'Blur: custom stickers, names written on it'
+  },
+  glasses: {
+    label: 'Glasses',
+    icon: '👓',
+    blurHint: 'Blur: specific prescription markings or brand engravings if unique'
+  },
   other: {
     label: 'Other Item',
     icon: '📦',

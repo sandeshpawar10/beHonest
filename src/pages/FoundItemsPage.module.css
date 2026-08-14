@@ -1,12 +1,12 @@
 /* ============================================================
-   FoundItemsPage.module.css — Styles for the found items listing
+   FoundItemsPage.module.css — Scroll Stack Cards Layout
    ============================================================ */
 
 /* Page wrapper */
 .page {
   min-height: 100vh;
   padding: 32px 24px;
-  max-width: 1100px;
+  max-width: 900px;
   margin: 0 auto;
   animation: fadeInUp 0.4s ease;
 }
@@ -54,7 +54,6 @@
   line-height: 1.5;
 }
 
-/* "Report Found Item" button in header */
 .reportBtn {
   padding: 10px 20px;
   background: var(--gradient-main);
@@ -67,12 +66,12 @@
   cursor: pointer;
   flex-shrink: 0;
   transition: transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2);
 }
 
 .reportBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
 }
 
 /* ── Search bar ── */
@@ -90,13 +89,10 @@
 
 .searchBar:focus-within {
   border-color: var(--border-active);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
 }
 
-.searchIcon {
-  font-size: 1rem;
-  flex-shrink: 0;
-}
+.searchIcon { font-size: 1rem; flex-shrink: 0; }
 
 .searchInput {
   flex: 1;
@@ -109,9 +105,7 @@
   outline: none;
 }
 
-.searchInput::placeholder {
-  color: var(--text-muted);
-}
+.searchInput::placeholder { color: var(--text-muted); }
 
 .clearSearch {
   background: none;
@@ -124,9 +118,7 @@
   transition: color 0.15s;
 }
 
-.clearSearch:hover {
-  color: var(--color-error);
-}
+.clearSearch:hover { color: var(--color-error); }
 
 /* ── Filter tabs ── */
 .filters {
@@ -140,7 +132,7 @@
   padding: 7px 14px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 999px;        /* Pill shape */
+  border-radius: 999px;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 0.8rem;
@@ -155,149 +147,176 @@
   color: var(--text-primary);
 }
 
-/* Active/selected filter */
 .filterTab.activeTab {
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(59, 130, 246, 0.1);
   border-color: var(--accent-cyan);
   color: var(--accent-cyan);
 }
 
-/* Results count text */
 .resultsCount {
   font-size: 0.82rem;
   color: var(--text-muted);
   margin-bottom: 18px;
 }
 
-/* ── Items grid ── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 22px;
+/* ══════════════════════════════════════════════
+   SIMPLE CARDS LIST
+   ══════════════════════════════════════════════ */
+
+.simpleList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-/* ── Item card ── */
-.card {
-  background: var(--bg-secondary);
+.cardInner {
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 20px;
-  overflow: hidden;        /* Clips the image at the border-radius */
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(147, 197, 253, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+  /* Hardware acceleration to prevent scroll jank */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
-.card:hover {
+.cardInner:hover {
   transform: translateY(-4px);
-  border-color: var(--border-active);
-  box-shadow: 0 0 24px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 0 20px rgba(147, 197, 253, 0.15);
 }
 
-/* ── Image section ── */
-.imageSection {
-  position: relative;        /* For absolute-positioned badges + toggle button */
-  line-height: 0;
+/* ── Card inner layout (horizontal: image + info) ── */
+.cardInner {
+  display: flex;
+  gap: 0;
+  min-height: 240px;
 }
 
-/* Full (unblurred) image — shown in demo toggle mode */
-.fullImage {
+/* ── Image side ── */
+.cardImage {
+  width: 240px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  background: #e8f0fe;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.cardImage img,
+.cardImage canvas {
   width: 100%;
-  height: 220px;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 
-/* Category badge on top-left of image */
-.categoryBadge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(10, 15, 30, 0.82);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  font-size: 0.73rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  backdrop-filter: blur(6px);
-  pointer-events: none;
+.fullImage {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
-/* Demo toggle button — bottom-right of image */
+/* Demo toggle button on image */
 .toggleBtn {
   position: absolute;
   bottom: 10px;
   right: 10px;
-  background: rgba(10, 15, 30, 0.85);
-  border: 1px solid rgba(0, 212, 255, 0.4);
-  color: var(--accent-cyan);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border);
   border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
   cursor: pointer;
   backdrop-filter: blur(6px);
   transition: background 0.15s;
-  font-family: inherit;
 }
 
 .toggleBtn:hover {
-  background: rgba(0, 212, 255, 0.15);
+  background: rgba(255, 255, 255, 1);
 }
 
-/* ── Card body (below the image) ── */
-.cardBody {
-  padding: 16px;
+/* ── Info side ── */
+.cardInfo {
+  flex: 1;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  justify-content: center;
 }
 
-/* Item title */
-.itemTitle {
-  font-size: 1rem;
+/* Top row: category pill + claimed badge */
+.cardTopRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.categoryPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.claimedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+/* Card title */
+.cardTitle {
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
+  margin: 2px 0;
 }
 
-/* Location + date row */
-.metaRow {
+/* Location + Date row */
+.cardMeta {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-/* Description — max 2 lines */
-.description {
-  font-size: 0.84rem;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  /* Clamp to 2 lines with ellipsis */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Blur info box */
+/* Blur info */
 .blurInfo {
-  padding: 8px 12px;
-  background: rgba(0, 212, 255, 0.05);
-  border: 1px solid rgba(0, 212, 255, 0.15);
+  padding: 6px 12px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.12);
   border-radius: 8px;
-  font-size: 0.77rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   line-height: 1.4;
 }
 
-/* No blur warning box */
 .noBlurInfo {
-  padding: 8px 12px;
+  padding: 6px 12px;
   background: rgba(255, 179, 71, 0.06);
   border: 1px solid rgba(255, 179, 71, 0.2);
   border-radius: 8px;
-  font-size: 0.77rem;
+  font-size: 0.78rem;
   color: var(--color-warning);
 }
 
@@ -305,12 +324,12 @@
 .claimBtn {
   width: 100%;
   padding: 11px 14px;
-  background: rgba(0, 212, 255, 0.08);
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 10px;
   color: var(--accent-cyan);
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -318,14 +337,14 @@
   align-items: center;
   gap: 2px;
   transition: background 0.2s ease, border-color 0.2s ease;
+  margin-top: 4px;
 }
 
 .claimBtn:hover {
-  background: rgba(0, 212, 255, 0.14);
+  background: rgba(59, 130, 246, 0.14);
   border-color: var(--accent-cyan);
 }
 
-/* Small "coming soon" note inside the claim button */
 .claimNote {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -342,9 +361,7 @@
   gap: 14px;
 }
 
-.emptyIcon {
-  font-size: 3.5rem;
-}
+.emptyIcon { font-size: 3.5rem; }
 
 .emptyState h3 {
   font-size: 1.3rem;
@@ -375,9 +392,37 @@
   transform: translateY(-2px);
 }
 
-/* Mobile */
-@media (max-width: 600px) {
+/* ── Mobile ── */
+@media (max-width: 700px) {
   .page { padding: 20px 14px; }
   .title { font-size: 1.4rem; }
-  .grid  { grid-template-columns: 1fr; }
+
+  .simpleList {
+    gap: 16px;
+  }
+
+  .cardInner {
+    flex-direction: column;
+    min-height: auto;
+    /* Simplify shadow on mobile for better performance */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .cardImage {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .cardImage img {
+    height: auto !important;
+  }
+
+  .cardInfo {
+    padding: 16px;
+  }
+
+  .cardTitle {
+    font-size: 1.05rem;
+  }
 }

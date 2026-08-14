@@ -112,6 +112,10 @@ exports.getMyEscrows = async function(req, res) {
                 if (now.getTime() - new Date(escrow.createdAt).getTime() > TWENTY_FOUR_HOURS) {
                     escrow.status = 'refunded';
                     await escrow.save();
+
+                    // Reset the item so it can be claimed again
+                    await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
+                    await claimModel.deleteMany({ itemId: escrow.itemId });
                 }
             }
 
@@ -165,6 +169,16 @@ exports.confirmHandover = async function(req, res) {
         if (escrow.ownerConfirmed && escrow.finderConfirmed) {
             escrow.status = "released";
             bothConfirmed = true;
+            
+            const item = await itemModel.findById(escrow.itemId);
+            const finder = await userModel.findById(escrow.finderId);
+            
+            if (item && finder) {
+                const { sendRewardReleasedEmail } = require('../utils/emailUtils');
+                // send the email asynchronously so we don't block
+                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+            }
+
             await itemModel.deleteOne({ _id: escrow.itemId });
             await claimModel.deleteMany({itemId: escrow.itemId})
             await chatModel.deleteMany({escrowId: escrow._id})
@@ -265,9 +279,25 @@ exports.refundEscrow = async function(req, res) {
             return res.status(400).json({ error: `Escrow has already been ${escrow.status}.` });
         }
 
+        // Prevent refund if the finder claims to have already handed it over
+        if (escrow.finderConfirmed) {
+            return res.status(403).json({ error: "Finder has already confirmed handover. You must raise a dispute instead." });
+        }
+
         // Refund the escrow
         escrow.status = "refunded";
         await escrow.save();
+
+        // Reset the item so it can be claimed again
+        const item = await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
+        await claimModel.deleteMany({ itemId: escrow.itemId });
+        
+        // Send refund email to the owner
+        const user = await userModel.findById(req.user._id);
+        if (user && item) {
+            const { sendRefundEmail } = require('../utils/emailUtils');
+            await sendRefundEmail(user.email, item.shortTitle, escrow.amount);
+        }
 
         return res.status(200).json({
             status: "success",

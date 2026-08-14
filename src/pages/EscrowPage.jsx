@@ -414,9 +414,14 @@ function EscrowPage() {
                         </p>
                         
                         {escrow.finderConfirmed && !escrow.ownerConfirmed && (
-                          <p style={{ color: '#ffb347', fontSize: '0.9rem', marginBottom: '12px', background: 'rgba(255, 179, 71, 0.1)', padding: '10px', borderRadius: '8px' }}>
-                            The finder says they've handed over the item. Please confirm if you received it.
-                          </p>
+                          <div style={{ background: 'rgba(255, 179, 71, 0.1)', padding: '10px', borderRadius: '8px', marginBottom: '12px' }}>
+                            <p style={{ color: '#ffb347', fontSize: '0.9rem', marginBottom: '6px' }}>
+                              The finder says they've handed over the item. Please confirm if you received it.
+                            </p>
+                            <p style={{ color: '#ffb347', fontSize: '0.85rem', margin: 0 }}>
+                              <strong>Note:</strong> Since the finder confirmed handover, the direct "Request Refund" option is disabled. If they gave you the wrong item or didn't actually hand it over, please click <strong>Raise Dispute</strong> to get your refund.
+                            </p>
+                          </div>
                         )}
                         
                         <button
@@ -451,7 +456,9 @@ function EscrowPage() {
                         <button
                           className={styles.refundBtn}
                           onClick={() => openConfirmModal(escrow, 'refund')}
-                          style={{ flex: 1, padding: '12px', borderRadius: '10px' }}
+                          disabled={escrow.finderConfirmed}
+                          title={escrow.finderConfirmed ? "Finder confirmed handover. Raise a dispute instead." : ""}
+                          style={{ flex: 1, padding: '12px', borderRadius: '10px', opacity: escrow.finderConfirmed ? 0.5 : 1, cursor: escrow.finderConfirmed ? 'not-allowed' : 'pointer' }}
                         >
                           ↩️ Request Refund
                         </button>

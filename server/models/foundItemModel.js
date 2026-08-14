@@ -13,7 +13,7 @@ const itemSchema = new Schema({
         type: String,
         required: true,
         // The exact category keys used in your React frontend
-        enum: ["wallet", "watch", "phone", "keychain", "bag", "laptop", "other"]
+        enum: ["wallet", "watch", "phone", "keychain", "bag", "laptop", "headphones", "id_card", "bottle", "glasses", "other"]
     },
     shortTitle: {
         type: String,

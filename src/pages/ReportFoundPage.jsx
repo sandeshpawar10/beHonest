@@ -337,26 +337,40 @@ function ReportFoundPage() {
             </p>
 
             {/* Drag-to-upload area */}
-            <label className={styles.uploadArea} htmlFor="image-upload">
+            <div className={styles.uploadArea}>
               {imageData ? (
                 /* Show uploaded image preview */
-                <div className={styles.uploadPreview}>
+                <label className={styles.uploadPreview} htmlFor="gallery-upload" style={{ cursor: 'pointer' }}>
                   <img src={imageData} alt="Uploaded item" className={styles.previewImg} />
                   <span className={styles.changePhotoText}>Click to change photo</span>
-                </div>
+                </label>
               ) : (
                 /* Upload placeholder */
                 <div className={styles.uploadPlaceholder}>
-                  <span className={styles.uploadIcon}>📷</span>
-                  <span className={styles.uploadText}>Click to upload a photo</span>
+                  <div className={styles.uploadButtons}>
+                    <label className={styles.cameraBtn} htmlFor="camera-upload">
+                      📸 Take Photo
+                    </label>
+                    <label className={styles.galleryBtn} htmlFor="gallery-upload">
+                      🖼️ Choose from Gallery
+                    </label>
+                  </div>
                   <span className={styles.uploadHint}>JPG, PNG, WEBP — max 5MB</span>
                 </div>
               )}
-            </label>
+            </div>
 
-            {/* Hidden file input — triggered by clicking the label above */}
+            {/* Hidden file inputs */}
             <input
-              id="image-upload"
+              id="camera-upload"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageUpload}
+              className={styles.hiddenInput}
+            />
+            <input
+              id="gallery-upload"
               type="file"
               accept="image/*"
               onChange={handleImageUpload}

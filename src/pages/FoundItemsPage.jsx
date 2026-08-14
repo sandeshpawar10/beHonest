@@ -3,15 +3,8 @@
    Route: /found-items  (public — anyone logged in can view)
 
    PURPOSE:
-   Shows all reported found items as cards.
-   Each card shows:
-   - Category icon + title + location
-   - The BLURRED image (using BlurableImage component)
-   - A "Claim This Item" button (ownership verification — coming soon)
-
-   This is the page where the PARTIAL IMAGE REVEAL feature is visible.
-   The real owner can recognise their item even through the blur,
-   but a random person cannot guess the private details.
+   Shows all reported found items using a scroll-stack card
+   animation. Cards stick to the top and overlap as you scroll.
    ============================================================ */
 
 import { useEffect, useState } from 'react';
@@ -61,20 +54,10 @@ function FoundItemsPage() {
     fetchItems()
   },[])
 
-
-
-  /*
-    filteredItems:
-    Start with all items, then apply:
-    1. Category filter (if one is selected)
-    2. Search text filter (matches title or location)
-  */
   const filteredItems = allItems
     .filter(item => {
-      // If a category filter is active, only show items of that category
       if (activeFilter && item.category !== activeFilter) return false;
 
-      // If search text is entered, check if title or location contains it
       if (searchText.trim()) {
         const query = searchText.toLowerCase();
         const matchTitle    = (item.shortTitle || '').toLowerCase().includes(query);
@@ -82,9 +65,8 @@ function FoundItemsPage() {
         if (!matchTitle && !matchLocation) return false;
       }
 
-      return true; // Item passes all filters
+      return true;
     })
-    // Sort by newest first (dateFound is an ISO date string, so string compare works)
     .sort((a, b) => new Date(b.dateFound) - new Date(a.dateFound));
 
   /* ── Format date for display ── */
@@ -92,10 +74,10 @@ function FoundItemsPage() {
     const date = new Date(isoString);
     return date.toLocaleDateString('en-IN', {
       day: 'numeric', month: 'short', year: 'numeric'
-    }); // e.g. "2 Jun 2024"
+    });
   };
 
-  /* ── Render ──────────────────────────────────────────────── */
+  /* ── Render ── */
   return (
     <div className={styles.page}>
 
@@ -108,11 +90,10 @@ function FoundItemsPage() {
         <div className={styles.headerText}>
           <h1 className={styles.title}>📦 Found Items</h1>
           <p className={styles.subtitle}>
-            Sensitive details are blurred. Only the real owner will recognise their item.
+            Scroll through the stack to find your item. Each card stacks as you scroll.
           </p>
         </div>
 
-        {/* Report a found item button */}
         <button
           className={styles.reportBtn}
           onClick={() => navigate('/report-found')}
@@ -132,7 +113,6 @@ function FoundItemsPage() {
           value={searchText}
           onChange={e => setSearchText(e.target.value)}
         />
-        {/* Clear search button */}
         {searchText && (
           <button className={styles.clearSearch} onClick={() => setSearchText('')}>
             ✕
@@ -142,8 +122,6 @@ function FoundItemsPage() {
 
       {/* ── Category filter tabs ── */}
       <div className={styles.filters}>
-
-        {/* "All" tab */}
         <button
           className={`${styles.filterTab} ${activeFilter === '' ? styles.activeTab : ''}`}
           onClick={() => setActiveFilter('')}
@@ -151,7 +129,6 @@ function FoundItemsPage() {
           🗂️ All
         </button>
 
-        {/* One tab per category */}
         {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
           <button
             key={key}
@@ -173,7 +150,6 @@ function FoundItemsPage() {
         </div>
       ) : (
         <>
-          {/* ── Results count ── */}
           <p className={styles.resultsCount}>
             {filteredItems.length === 0
               ? 'No items found'
@@ -181,9 +157,7 @@ function FoundItemsPage() {
             }
           </p>
 
-          {/* ── Items grid OR empty state ── */}
           {filteredItems.length === 0 ? (
-            /* Empty state — nothing to show */
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}>🔎</span>
               <h3>No items here yet</h3>
@@ -203,10 +177,9 @@ function FoundItemsPage() {
               )}
             </div>
           ) : (
-            /* Grid of item cards */
-            <div className={styles.grid}>
-              {filteredItems.map(item => (
-                <ItemCard
+            <div className={styles.simpleList}>
+              {filteredItems.map((item) => (
+                <StackCard
                   key={item._id}
                   item={item}
                   formatDate={formatDate}
@@ -221,129 +194,115 @@ function FoundItemsPage() {
 }
 
 /* ============================================================
-   ItemCard Component
-   Renders a single found-item card.
-   This is a sub-component inside this file (not exported).
+   StackCard Component (Inner content)
    ============================================================ */
-function ItemCard({ item, formatDate }) {
-  const navigate = useNavigate(); // Need this to navigate to the claim page
-
-  // Track whether we are showing the full image or the blurred one
-  // (Default: blurred for public view)
-  const [showFull, setShowFull] = useState(false);
-
-  // Get category config for icon display
+function StackCard({ item, formatDate }) {
+  const navigate = useNavigate();
+  
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
-
-  // Domain matching & finder check
   const { session } = useAuth();
-  
-  // Extract finder's email from populated reportedBy object (or fallback to foundBy string if it exists)
+
   const finderEmail = item.reportedBy?.email || item.foundBy || '';
-  
   const finderDomain = finderEmail ? finderEmail.split('@')[1] : null;
   const userDomain = session?.email ? session.email.split('@')[1] : null;
-  
+
   const isSameCollege = finderDomain && userDomain && (finderDomain.toLowerCase() === userDomain.toLowerCase());
   const isFinder = session?.email && finderEmail && (session.email.toLowerCase() === finderEmail.toLowerCase());
   const isClaimed = item.status === 'claimed';
 
+  const [showFull, setShowFull] = useState(false);
 
   return (
-    <div className={styles.card}>
+    <div className={styles.cardInner}>
+      {/* Left: Image */}
+      <div className={styles.cardImage}>
+            {showFull ? (
+              <img
+                src={item.images && item.images.length > 0 ? item.images[0] : ''}
+                alt={item.shortTitle}
+                className={styles.fullImage}
+              />
+            ) : (
+              <BlurableImage
+                imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
+                blurZones={item.blurZones || []}
+                alt={item.shortTitle}
+                blurStrength={14}
+              />
+            )}
 
-      {/* ── Image section ── */}
-      <div className={styles.imageSection}>
-
-        {/*
-          KEY FEATURE: Partial Image Reveal
-          
-          If showFull is false  → use BlurableImage (hides sensitive areas)
-          If showFull is true   → show the raw image (full reveal)
-
-          In the real platform:
-          - Public always sees the blurred version
-          - Full image is only shown AFTER the owner proves identity via AI quiz
-          - Here we add a toggle for demo purposes
-        */}
-        {showFull ? (
-          <img
-            src={item.images && item.images.length > 0 ? item.images[0] : ''}
-            alt={item.shortTitle}
-            className={styles.fullImage}
-          />
-        ) : (
-          <BlurableImage
-            imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
-            blurZones={item.blurZones || []}
-            alt={item.shortTitle}
-            blurStrength={14}
-          />
-        )}
-
-        {/* Demo toggle button — shows blur/unblur ONLY for the finder */}
-        {item.blurZones && item.blurZones.length > 0 && session?.email === item.reportedBy?.email && (
-          <button
-            className={styles.toggleBtn}
-            onClick={() => setShowFull(f => !f)}
-            title={showFull ? 'Show blurred (public view)' : 'Show full image (owner only)'}
-          >
-            {showFull ? '🔒 Show Public View' : '👁️ Show Full (Demo)'}
-          </button>
-        )}
-
-        {/* Category badge on the image */}
-        <span className={styles.categoryBadge}>
-          {catConfig.icon} {catConfig.label}
-        </span>
-      </div>
-
-      {/* ── Card content ── */}
-      <div className={styles.cardBody}>
-        {/* Item title */}
-        <h3 className={styles.itemTitle}>{item.shortTitle}</h3>
-
-
-        {/* Blur zones info */}
-        {item.blurZones && item.blurZones.length > 0 ? (
-          <div className={styles.blurInfo}>
-            🔒 {item.blurZones.length} sensitive area{item.blurZones.length > 1 ? 's' : ''} are hidden to protect the owner's privacy.
+            {/* Demo toggle — only for the finder */}
+            {item.blurZones && item.blurZones.length > 0 && session?.email === item.reportedBy?.email && (
+              <button
+                className={styles.toggleBtn}
+                onClick={() => setShowFull(f => !f)}
+              >
+                {showFull ? '🔒' : '👁️'}
+              </button>
+            )}
           </div>
-        ) : (
-          <div className={styles.noBlurInfo}>
-            ⚠️ No blur zones — full image is visible.
-          </div>
-        )}
 
-        {/* Claim button — NOW navigates to the AI verification page! */}
-        <button
-          className={styles.claimBtn}
-          id={`claim-btn-${item._id}`}
-          onClick={() => {
-            if (isClaimed || isFinder) return;
-            if (isSameCollege) {
-              navigate(`/claim/${item._id}`);
-            } else {
-              alert('Sorry, you can only claim items found by students from your own college domain.');
-            }
-          }}
-          disabled={isClaimed || !isSameCollege || isFinder}
-          style={{ 
-            opacity: (isClaimed || !isSameCollege || isFinder) ? 0.6 : 1, 
-            cursor: (isClaimed || !isSameCollege || isFinder) ? 'not-allowed' : 'pointer' 
-          }}
-        >
-          {isClaimed 
-            ? '🔐 Already Claimed' 
-            : isFinder 
-              ? '✅ You reported this item' 
-              : isSameCollege 
-                ? '🙋 This is Mine — Claim It' 
-                : '🚫 Not from your college'}
-          {!isClaimed && !isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
-        </button>
-      </div>
-    </div>
+          {/* Right: Info */}
+          <div className={styles.cardInfo}>
+            {/* Top row: category + status */}
+            <div className={styles.cardTopRow}>
+              <span className={styles.categoryPill}>
+                {catConfig.icon} {catConfig.label}
+              </span>
+              {isClaimed && (
+                <span className={styles.claimedBadge}>🔐 Claimed</span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className={styles.cardTitle}>{item.shortTitle}</h3>
+
+            {/* Location + Date */}
+            <div className={styles.cardMeta}>
+              <span>📍 {item.location}</span>
+              <span>📅 {formatDate(item.dateFound)}</span>
+            </div>
+
+            {/* Blur info */}
+            {item.blurZones && item.blurZones.length > 0 ? (
+              <div className={styles.blurInfo}>
+                🔒 {item.blurZones.length} sensitive area{item.blurZones.length > 1 ? 's' : ''} hidden
+              </div>
+            ) : (
+              <div className={styles.noBlurInfo}>
+                ⚠️ No blur zones — full image visible
+              </div>
+            )}
+
+            {/* Claim button */}
+            <button
+              className={styles.claimBtn}
+              id={`claim-btn-${item._id}`}
+              onClick={() => {
+                if (isClaimed || isFinder) return;
+                if (isSameCollege) {
+                  navigate(`/claim/${item._id}`);
+                } else {
+                  alert('Sorry, you can only claim items found by students from your own college domain.');
+                }
+              }}
+              disabled={isClaimed || !isSameCollege || isFinder}
+              style={{
+                opacity: (isClaimed || !isSameCollege || isFinder) ? 0.6 : 1,
+                cursor: (isClaimed || !isSameCollege || isFinder) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isClaimed
+                ? '🔐 Already Claimed'
+                : isFinder
+                  ? '✅ You reported this'
+                  : isSameCollege
+                    ? '🙋 This is Mine — Claim It'
+                    : '🚫 Not from your college'}
+              {!isClaimed && !isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
+            </button>
+          </div>
+        </div>
   );
 }
 

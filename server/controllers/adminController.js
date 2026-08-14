@@ -69,13 +69,28 @@ exports.resolveDispute = async (req, res) => {
         escrow.adminResolvedAt = new Date();
         escrow.adminResolution = resolution;
 
+        const item = await itemModel.findById(escrow.itemId);
+        const owner = await userModel.findById(escrow.depositorId);
+        const finder = await userModel.findById(escrow.finderId);
+
         if (resolution === "release_to_finder") {
             escrow.status = "released";
+            if (item && finder) {
+                const { sendRewardReleasedEmail } = require('../utils/emailUtils');
+                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+            }
             await itemModel.deleteOne({ _id: escrow.itemId });
             await claimModel.deleteMany({itemId: escrow.itemId})
             await chatModel.deleteMany({escrowId: escrow._id})
         } else if (resolution === "refund_to_owner") {
             escrow.status = "refunded";
+            if (item && owner) {
+                const { sendRefundEmail } = require('../utils/emailUtils');
+                sendRefundEmail(owner.email, item.shortTitle, escrow.amount).catch(console.error);
+            }
+            // Reset the item so it can be claimed again
+            await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
+            await claimModel.deleteMany({ itemId: escrow.itemId });
         }
 
         await escrow.save();

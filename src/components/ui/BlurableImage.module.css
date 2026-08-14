@@ -49,6 +49,11 @@
   border-radius: 6px;
   transition: opacity 0.2s ease;
   cursor: default;
+  
+  /* GPU Acceleration for smooth scrolling with backdrop-filter */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform, backdrop-filter;
 }
 
 /* The lock icon shown in the center of each blur zone */

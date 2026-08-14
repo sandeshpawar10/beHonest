@@ -26,6 +26,7 @@ function ClaimItemPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep]       = useState('quiz'); // 'quiz' (chat) | 'result'
   const [error, setError]     = useState('');
+  const [errorCount, setErrorCount] = useState(0); // Track consecutive API errors
 
   // Chat State
   const [chatHistory, setChatHistory] = useState([]);
@@ -102,10 +103,11 @@ function ClaimItemPage() {
     try {
       const response = await runInteractiveInterrogation(item, []);
       setChatHistory([{ role: 'ai', text: response.message }]);
+      setErrorCount(0); // Reset on success
       setVerifying(false);
     } catch (err) {
       console.error(err);
-      setError(`Failed to connect to the security AI: ${err.message || 'Unknown error'}`);
+      setError(`⚠️ Sorry for the inconvenience. The AI is currently experiencing heavy traffic. Please try again. (Error: ${err.message})`);
       setStarted(false);
       setVerifying(false);
     }
@@ -135,11 +137,21 @@ function ClaimItemPage() {
           handleVerdict(response, finalHistory);
         }, 2000); // Wait 2 seconds so user can read the final message before switching screens
       } else {
+        setErrorCount(0); // Reset on success
         setVerifying(false);
       }
     } catch (err) {
       console.error(err);
-      setChatHistory(prev => [...prev, { role: 'ai', text: `Sorry, I encountered an error: ${err.message || 'Unknown error'}` }]);
+      if (errorCount >= 1) {
+        // This is the second consecutive error -> Restart the test
+        setError(`⚠️ The AI servers are severely overloaded right now. We have restarted your interview to clear the session. Please try again.`);
+        setStarted(false);
+        setChatHistory([]);
+        setErrorCount(0);
+      } else {
+        setChatHistory(prev => [...prev, { role: 'ai', text: `⚠️ Sorry for the inconvenience, but the AI is currently experiencing heavy traffic. Please try sending your last answer again.` }]);
+        setErrorCount(prev => prev + 1);
+      }
       setVerifying(false);
     }
   };
