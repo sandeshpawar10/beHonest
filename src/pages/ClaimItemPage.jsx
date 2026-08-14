@@ -13,7 +13,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import { getFoundItemById, CATEGORY_CONFIG } from '../utils/itemUtils';
-import { runInteractiveInterrogation } from '../utils/geminiService';
 import styles from './ClaimItemPage.module.css';
 
 function ClaimItemPage() {
@@ -101,7 +100,16 @@ function ClaimItemPage() {
     setError('');
 
     try {
-      const response = await runInteractiveInterrogation(item, []);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/evaluate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ itemId: item._id, chatHistory: [] })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to start interview');
+      
+      const response = data.aiResponse;
       setChatHistory([{ role: 'ai', text: response.message }]);
       setErrorCount(0); // Reset on success
       setVerifying(false);
@@ -126,15 +134,23 @@ function ClaimItemPage() {
     setVerifying(true);
 
     try {
-      const response = await runInteractiveInterrogation(item, newHistory);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/evaluate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ itemId: item._id, chatHistory: newHistory })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to verify answer');
       
+      const response = data.aiResponse;
       const finalHistory = [...newHistory, { role: 'ai', text: response.message }];
       setChatHistory(finalHistory);
 
       if (response.status !== 'continue') {
         // AI has reached a verdict
         setTimeout(() => {
-          handleVerdict(response, finalHistory);
+          handleVerdict(response, data.claim);
         }, 2000); // Wait 2 seconds so user can read the final message before switching screens
       } else {
         setErrorCount(0); // Reset on success
@@ -157,7 +173,7 @@ function ClaimItemPage() {
   };
 
   // ── Handle Verdict ────────────────────────────────────────
-  const handleVerdict = async (response, finalHistory) => {
+  const handleVerdict = (response, claimData) => {
     let verdictLabel = '';
     let finalVerdict = response.status;
     
@@ -170,43 +186,17 @@ function ClaimItemPage() {
       finalVerdict = 'rejected';
     }
 
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          itemId: item._id,
-          answers: finalHistory,
-          verdict: finalVerdict,
-          score: response.score || 0,
-          verdictMessage: response.message
-        })
-      });
-      
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save claim');
-      }
+    const verificationResult = {
+      overallScore: response.score || 0,
+      verdict: finalVerdict,
+      verdictLabel,
+      verdictMessage: response.message,
+      claimId: claimData ? claimData._id : null
+    };
 
-      const verificationResult = {
-        overallScore: response.score || 0,
-        verdict: finalVerdict,
-        verdictLabel,
-        verdictMessage: response.message,
-        claimId: data.claim._id
-      };
-
-      setResult(verificationResult);
-      setStep('result');
-    } catch (err) {
-      console.error("Error saving claim:", err);
-      setError("Error saving claim: " + err.message);
-    } finally {
-      setVerifying(false);
-    }
+    setResult(verificationResult);
+    setStep('result');
+    setVerifying(false);
   };
 
   // ── Loading state ─────────────────────────────────────────

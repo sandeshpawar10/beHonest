@@ -1,64 +1,65 @@
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
 
-// ── Create a new claim (save AI interview result) ──────────────
-exports.createClaim = async function(req, res) {
-    try {
-        const { itemId, answers, verdict, score, verdictMessage } = req.body;
+const { runInteractiveInterrogation } = require("../utils/geminiUtils");
 
-        if (!itemId || !verdict) {
-            return res.status(400).json({
-                error: "Missing required fields: itemId and verdict are required."
-            });
+// ── Securely Evaluate Claim via Server-Side AI ──────────────
+exports.evaluateClaim = async function(req, res) {
+    try {
+        const { itemId, chatHistory } = req.body;
+
+        if (!itemId) {
+            return res.status(400).json({ error: "Missing required field: itemId" });
         }
 
         // Ensure the user is authenticated
         if (!req.user || !req.user._id) {
-            return res.status(401).json({
-                error: "Unauthorized. You must be logged in."
-            });
+            return res.status(401).json({ error: "Unauthorized. You must be logged in." });
         }
 
         // Verify the item exists
         const item = await itemModel.findById(itemId);
         if (!item) {
-            return res.status(404).json({
-                error: "Item not found."
-            });
+            return res.status(404).json({ error: "Item not found." });
         }
 
         // Prevent claiming your own item
         if (item.reportedBy.toString() === req.user._id.toString()) {
-            return res.status(403).json({
-                error: "You cannot claim an item you reported yourself."
+            return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
+        }
+
+        // Run the AI interrogation securely on the server
+        const aiResponse = await runInteractiveInterrogation(item, chatHistory || []);
+
+        let claim = null;
+        
+        // If the AI has made a final verdict, save it to the database
+        if (aiResponse.status !== 'continue') {
+            claim = await claimModel.create({
+                itemId,
+                claimantId: req.user._id,
+                answers: chatHistory || [],
+                verdict: aiResponse.status === 'verified' || aiResponse.status === 'needs_review' ? aiResponse.status : 'rejected',
+                score: aiResponse.score || 0,
+                verdictMessage: aiResponse.message || ""
             });
+
+            // Update item status if verified
+            if (aiResponse.status === "verified") {
+                await itemModel.findByIdAndUpdate(itemId, { status: "claimed" });
+            }
         }
 
-        // Create the claim record
-        const newClaim = await claimModel.create({
-            itemId,
-            claimantId: req.user._id,
-            answers: answers || [],
-            verdict,
-            score: score || 0,
-            verdictMessage: verdictMessage || ""
-        });
-
-        // If the AI verified the owner, update the item status to "claimed"
-        if (verdict === "verified") {
-            await itemModel.findByIdAndUpdate(itemId, { status: "claimed" });
-        }
-
-        return res.status(201).json({
+        return res.status(200).json({
             status: "success",
-            message: "Claim saved successfully.",
-            claim: newClaim
+            aiResponse: aiResponse,
+            claim: claim
         });
 
     } catch (error) {
-        console.error("Error creating claim:", error);
+        console.error("Error evaluating claim:", error);
         return res.status(500).json({
-            error: "Internal server error while saving claim."
+            error: "Internal server error while evaluating claim."
         });
     }
 };
