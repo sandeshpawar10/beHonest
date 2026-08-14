@@ -34,6 +34,7 @@ exports.addItem = async function(req,res){
 exports.getAllFoundItems = async function(req,res){
     try {
         const allItems = await itemModel.find()
+            .select('-secretIdentity')
             .populate('reportedBy', 'email')
             .sort({ createdAt: -1 });
         return res.status(200).json({
@@ -53,7 +54,9 @@ exports.getFoundItemById = async function(req,res){
         if(!itemid){
             return res.status(400).json({Status: "item id not found"})
         }
-        const item = await itemModel.findById(itemid).populate('reportedBy', 'email')
+        const item = await itemModel.findById(itemid)
+            .select('-secretIdentity')
+            .populate('reportedBy', 'email');
         if(!item){
             return res.status(400).json({
                 errorMsg: "item not found"
