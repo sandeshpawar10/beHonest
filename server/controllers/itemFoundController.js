@@ -1,4 +1,5 @@
 const itemModel = require("../models/foundItemModel")
+const { analyzeImageForFraud } = require("../utils/geminiUtils");
 
 exports.addItem = async function(req,res){
     try {
@@ -70,5 +71,29 @@ exports.getFoundItemById = async function(req,res){
         return res.status(400).json({
             errorMsg: error
         })
+    }
+}
+
+exports.scanFraud = async function(req, res) {
+    try {
+        const { base64ImageData, description, category } = req.body;
+        
+        if (!base64ImageData) {
+            return res.status(400).json({ error: "Missing image data for fraud scan." });
+        }
+
+        // Ensure the user is authenticated to use this endpoint (prevent abuse)
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ error: "Unauthorized. You must be logged in to run fraud detection." });
+        }
+
+        const aiResult = await analyzeImageForFraud(base64ImageData, description || "", category || "other");
+        
+        return res.status(200).json(aiResult);
+    } catch (error) {
+        console.error("Error in scanFraud:", error);
+        return res.status(500).json({
+            error: "Internal server error during fraud scan."
+        });
     }
 }

@@ -26,7 +26,6 @@
 
 import { getAllFoundItems } from './itemUtils';
 import { getAllEscrows } from './rewardUtils';
-import { analyzeImageForFraud } from './geminiService';
 // Import from shared module (avoids circular dependency with itemUtils)
 import { generateImageFingerprint } from './imageFingerprint';
 
@@ -292,11 +291,22 @@ export async function runFullFraudScan(item, email, options = {}) {
   // - The caller didn't explicitly disable AI (options.runAI !== false)
   if (item.imageData && options.runAI !== false) {
     try {
-      const aiResult = await analyzeImageForFraud(
-        item.imageData,
-        item.description || '',
-        item.category || 'other'
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/fraud-scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          base64ImageData: item.imageData,
+          description: item.description || '',
+          category: item.category || 'other'
+        })
+      });
+      
+      const aiResult = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(aiResult.error || 'Backend API error');
+      }
 
       // Save the raw Gemini response
       report.aiAnalysis = aiResult;
