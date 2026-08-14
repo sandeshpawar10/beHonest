@@ -17,6 +17,7 @@ import { useAuth }    from '../context/AuthContext';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { saveFoundItem, CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
+import { generateImageFingerprint } from '../utils/imageFingerprint';
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
@@ -163,6 +164,7 @@ function ReportFoundPage() {
           // We are temporarily sending the raw Base64 string to the DB.
           // Later, you should upload this to Cloudinary and send the URL instead!
           images: [imageData], 
+          imageFingerprint: generateImageFingerprint(imageData),
           blurZones: blurZones, // 🔥 CRITICAL: Actually send the blur zones to the DB!
         }) 
       });

@@ -45,6 +45,11 @@ const itemSchema = new Schema({
         type: [String],
         default: []
     },
+    // Used to detect duplicate image uploads
+    imageFingerprint: {
+        type: String,
+        default: ""
+    },
     // Array to store the X, Y, W, H coordinates for the privacy blur overlay
     blurZones: {
         type: Array,
