@@ -9,6 +9,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
 import { getAllFoundItems } from '../utils/itemUtils'; // Get real count of found items
+import NotificationDropdown from '../components/ui/NotificationDropdown';
 import styles from './DashboardPage.module.css';
 
 // ── Action cards data ──────────────────────────────────────────
@@ -175,8 +176,11 @@ function DashboardPage() {
           <span className={styles.navName}>beHonest</span>
         </div>
 
-        {/* Right: User pill + logout button */}
-        <div className={styles.navRight}>
+        {/* Right: Notifications + User pill + logout button */}
+        <div className={styles.navRight} style={{ display: 'flex', alignItems: 'center' }}>
+          
+          <NotificationDropdown />
+          
           {/* Logout button */}
           <button
             className={styles.logoutBtn}

@@ -2,7 +2,8 @@ const escrowModel = require("../models/escrowModel");
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
 const userModel = require("../models/userModel");
-const chatModel = require("../models/chatModel")
+const chatModel = require("../models/chatModel");
+const { createNotification } = require("./notificationController");
 
 // ── Create a new escrow (after verified claim + reward selection) ─
 exports.createEscrow = async function(req, res) {
@@ -63,6 +64,15 @@ exports.createEscrow = async function(req, res) {
         if (!emailSent) {
             return res.status(500).json({ error: "Failed to send notification email. Please try again." });
         }
+
+        // In-app notification
+        await createNotification(
+            finderId,
+            'CLAIM_VERDICT',
+            'Item Claimed & Reward Deposited!',
+            `The owner of ${item.shortTitle} passed verification and deposited ₹${amount}. Chat with them now!`,
+            newEscrow._id
+        );
         return res.status(201).json({
             status: "success",
             message: "Escrow created successfully.",
@@ -177,6 +187,14 @@ exports.confirmHandover = async function(req, res) {
                 const { sendRewardReleasedEmail } = require('../utils/emailUtils');
                 // send the email asynchronously so we don't block
                 sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+
+                await createNotification(
+                    finder._id,
+                    'REWARD_RELEASED',
+                    'Reward Released!',
+                    `Both you and the owner confirmed the handover for ${item.shortTitle}. ₹${escrow.amount} has been released!`,
+                    escrow._id
+                );
             }
 
             await itemModel.deleteOne({ _id: escrow.itemId });
@@ -247,6 +265,17 @@ exports.raiseDispute = async function(req, res) {
         if (!emailSentToAdmin) {
             return res.status(500).json({ error: "Failed to send notification email to admin. Please try again." });
         }
+
+        // Notify the other party in-app
+        const otherUserId = req.user._id.toString() === escrow.depositorId.toString() ? escrow.finderId : escrow.depositorId;
+        await createNotification(
+            otherUserId,
+            'DISPUTE_RAISED',
+            'A Dispute Has Been Raised',
+            `${u.username} has raised a dispute regarding ${i.shortTitle}. Reason: ${escrow.disputeReason}.`,
+            escrowId
+        );
+
         return res.status(200).json({
             status: "success",
             message: "Dispute raised successfully.",

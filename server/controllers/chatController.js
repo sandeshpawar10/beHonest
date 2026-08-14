@@ -1,5 +1,6 @@
 const chatModel = require("../models/chatModel");
 const escrowModel = require("../models/escrowModel");
+const { createNotification } = require("./notificationController");
 
 // ── Send a new chat message ─────────────────────────────────────
 exports.sendMessage = async function(req, res) {
@@ -42,6 +43,16 @@ exports.sendMessage = async function(req, res) {
             senderAlias: alias,
             message: message.trim()
         });
+
+        // Notify the recipient
+        const recipientId = isDepositor ? escrow.finderId : escrow.depositorId;
+        await createNotification(
+            recipientId,
+            'CHAT_MESSAGE',
+            `New message from ${alias}`,
+            message.trim().substring(0, 50) + (message.length > 50 ? '...' : ''),
+            escrowId
+        );
 
         return res.status(201).json({
             status: "success",

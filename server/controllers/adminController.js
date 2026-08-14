@@ -3,8 +3,9 @@ const crypto = require("crypto");
 const escrowModel = require("../models/escrowModel");
 const userModel = require("../models/userModel");
 const itemModel = require("../models/foundItemModel");
-const chatModel = require("../models/chatModel")
-const claimModel = require("../models/claimModel")
+const chatModel = require("../models/chatModel");
+const claimModel = require("../models/claimModel");
+const { createNotification } = require("./notificationController");
 
 exports.adminLogin = async (req, res) => {
     try {
@@ -95,6 +96,14 @@ exports.resolveDispute = async (req, res) => {
             if (item && finder) {
                 const { sendRewardReleasedEmail } = require('../utils/emailUtils');
                 sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+
+                await createNotification(
+                    finder._id,
+                    'REWARD_RELEASED',
+                    'Reward Released by Admin',
+                    `The dispute for ${item.shortTitle} was resolved in your favor. ₹${escrow.amount} has been released to you.`,
+                    escrow._id
+                );
             }
             await itemModel.deleteOne({ _id: escrow.itemId });
             await claimModel.deleteMany({itemId: escrow.itemId})
@@ -104,6 +113,14 @@ exports.resolveDispute = async (req, res) => {
             if (item && owner) {
                 const { sendRefundEmail } = require('../utils/emailUtils');
                 sendRefundEmail(owner.email, item.shortTitle, escrow.amount).catch(console.error);
+
+                await createNotification(
+                    owner._id,
+                    'REFUND',
+                    'Refund Issued by Admin',
+                    `The dispute for ${item.shortTitle} was resolved in your favor. ₹${escrow.amount} has been refunded to you.`,
+                    escrow._id
+                );
             }
             // Reset the item so it can be claimed again
             await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
