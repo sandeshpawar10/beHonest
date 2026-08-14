@@ -177,10 +177,12 @@ function LoginPage() {
               autoComplete="current-password"
               required
             />
-            {/* Forgot password link — tucked right below the field */}
-            <a href="#" className={styles.forgotLink} id="forgot-password-link">
-              Forgot your password?
-            </a>
+            {/* Forgot Password Link */}
+            <div className={styles.forgotPassword}>
+              <Link to="/forgot-password" className={styles.forgotLink}>
+                Forgot your password?
+              </Link>
+            </div>
           </div>
 
           {/* Submit button */}

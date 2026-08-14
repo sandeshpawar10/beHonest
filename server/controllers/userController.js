@@ -189,3 +189,62 @@ exports.resendOTP = async function(req, res) {
         return res.status(500).json({ error: "An error occurred while resending OTP" });
     }
 }
+
+exports.forgotPassword = async function(req, res) {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    try {
+        const u = await user.findOne({ email });
+        if (!u) {
+            // Do not reveal whether the email is registered or not for security reasons
+            return res.status(200).json({ message: "If that email is registered, a reset OTP has been sent." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        u.passwordResetOTP = otp;
+        u.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        await u.save({ validateBeforeSave: false });
+
+        const { sendPasswordResetOTP } = require('../utils/emailUtils');
+        await sendPasswordResetOTP(email, otp);
+
+        return res.status(200).json({ message: "If that email is registered, a reset OTP has been sent." });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        return res.status(500).json({ error: "An error occurred while processing your request." });
+    }
+};
+
+exports.resetPassword = async function(req, res) {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ error: "Email, OTP, and new password are required" });
+    }
+
+    try {
+        const u = await user.findOne({ email });
+        if (!u) return res.status(404).json({ error: "User not found" });
+
+        if (u.passwordResetOTP !== otp.trim()) {
+            return res.status(400).json({ error: "Invalid OTP" });
+        }
+
+        if (u.passwordResetExpires < Date.now()) {
+            return res.status(400).json({ error: "OTP has expired. Please request a new one." });
+        }
+
+        // OTP is valid. Update password.
+        u.password = newPassword;
+        u.passwordResetOTP = null;
+        u.passwordResetExpires = null;
+        
+        // Save (the pre-save hook will hash the new password)
+        await u.save();
+
+        return res.status(200).json({ message: "Password has been successfully reset. You can now log in." });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        return res.status(500).json({ error: "An error occurred while resetting the password." });
+    }
+};

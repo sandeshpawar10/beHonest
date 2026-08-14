@@ -28,6 +28,8 @@ import { useAuth } from './context/AuthContext'; //Access authentication data fr
 import LoginPage       from './pages/LoginPage';
 import RegisterPage    from './pages/RegisterPage';
 import VerifyOTPPage   from './pages/VerifyOTPPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage  from './pages/ResetPasswordPage';
 import DashboardPage   from './pages/DashboardPage';
 import ReportFoundPage from './pages/ReportFoundPage'; // Feature 2: finder uploads item
 import FoundItemsPage  from './pages/FoundItemsPage';  // Feature 2: public listing with blur
@@ -133,6 +135,26 @@ function App() {
           element={
             <PublicRoute>
               <VerifyOTPPage />
+            </PublicRoute>
+          }
+        />
+
+        {/* Forgot Password page — public only */}
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+
+        {/* Reset Password page — public only */}
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
             </PublicRoute>
           }
         />

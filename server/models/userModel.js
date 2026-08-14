@@ -34,6 +34,14 @@ const userSchema = new Schema({
         type: Date,
         default: null // e.g., expires 10 minutes after generation
     },
+    passwordResetOTP: {
+        type: String,
+        default: null
+    },
+    passwordResetExpires: {
+        type: Date,
+        default: null
+    },
     role: {
         type: String,
         enum: ["user", "admin"],
