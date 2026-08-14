@@ -1,5 +1,6 @@
 const itemModel = require("../models/foundItemModel")
 const { analyzeImageForFraud } = require("../utils/geminiUtils");
+const { uploadImage } = require("../utils/cloudinary");
 
 exports.addItem = async function(req,res){
     try {
@@ -16,8 +17,30 @@ exports.addItem = async function(req,res){
                 error: "Unauthorized. You must be logged in to report an item."
             });
         }
+
+        // Intercept base64 images and upload to Cloudinary
+        let uploadedImageUrls = [];
+        if (images && Array.isArray(images)) {
+            for (let i = 0; i < images.length; i++) {
+                const imgData = images[i];
+                // Check if it looks like a base64 string
+                if (imgData && imgData.startsWith('data:image')) {
+                    try {
+                        const url = await uploadImage(imgData);
+                        if (url) uploadedImageUrls.push(url);
+                    } catch (uploadErr) {
+                        console.error("Cloudinary upload failed for an image:", uploadErr);
+                        return res.status(500).json({ error: "Failed to upload image to secure storage." });
+                    }
+                } else {
+                    // It might already be a URL or something else, just keep it
+                    uploadedImageUrls.push(imgData);
+                }
+            }
+        }
+
         const newItem = await itemModel.create({
-            reportedBy: req.user._id, category,shortTitle,description,location,secretIdentity,status:status || "found",images: images || [], blurZones: blurZones || [],dateFound: dateFound || Date.now()
+            reportedBy: req.user._id, category,shortTitle,description,location,secretIdentity,status:status || "found",images: uploadedImageUrls, blurZones: blurZones || [],dateFound: dateFound || Date.now()
         })
         return res.status(201).json({
             status: "success",
