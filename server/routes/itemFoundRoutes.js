@@ -6,4 +6,5 @@ router.post('/api/item/add', verifyJWT,controller.addItem)
 router.post('/api/item/fraud-scan', verifyJWT, controller.scanFraud)
 router.get('/api/item/getAllFoundItems', verifyJWT, controller.getAllFoundItems)
 router.get('/api/item/getFoundItemById/:itemid', verifyJWT, controller.getFoundItemById)
+router.delete('/api/item/delete/:id', verifyJWT, controller.deleteItem)
 module.exports = router

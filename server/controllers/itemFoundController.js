@@ -57,10 +57,33 @@ exports.addItem = async function(req,res){
 
 exports.getAllFoundItems = async function(req,res){
     try {
-        const allItems = await itemModel.find()
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        
+        const { search, category } = req.query;
+        
+        let query = {};
+        
+        if (category) {
+            query.category = category;
+        }
+        
+        if (search) {
+            query.$or = [
+                { shortTitle: { $regex: search, $options: 'i' } },
+                { location: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const totalItems = await itemModel.countDocuments(query);
+
+        const allItems = await itemModel.find(query)
             .select('-secretIdentity')
             .populate('reportedBy', 'email')
-            .sort({ createdAt: -1 });
+            .sort({ dateFound: -1 })
+            .skip(skip)
+            .limit(limit);
 
         const userEmail = req.user ? req.user.email : null;
         const userDomain = userEmail ? userEmail.split('@')[1].toLowerCase() : null;
@@ -83,8 +106,14 @@ exports.getAllFoundItems = async function(req,res){
 
         return res.status(200).json({
             status: "success",
-            items: sanitizedItems
-        })
+            items: sanitizedItems,
+            pagination: {
+                totalItems,
+                currentPage: page,
+                totalPages: Math.ceil(totalItems / limit),
+                hasMore: (page * limit) < totalItems
+            }
+        });
     } catch (error) {
         return res.status(400).json({
             errorMsg: error
@@ -154,6 +183,43 @@ exports.scanFraud = async function(req, res) {
         console.error("Error in scanFraud:", error);
         return res.status(500).json({
             error: "Internal server error during fraud scan."
+        });
+    }
+}
+
+exports.deleteItem = async function(req, res) {
+    try {
+        const { id } = req.params;
+        
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const item = await itemModel.findById(id);
+        
+        if (!item) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+
+        if (item.reportedBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "You can only delete your own reported items." });
+        }
+
+        if (item.status === 'claimed') {
+            return res.status(400).json({ error: "Cannot delete an item that has already been claimed." });
+        }
+
+        await itemModel.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Item deleted successfully"
+        });
+
+    } catch (error) {
+        console.error("Error deleting item:", error);
+        return res.status(500).json({
+            error: "Internal server error"
         });
     }
 }

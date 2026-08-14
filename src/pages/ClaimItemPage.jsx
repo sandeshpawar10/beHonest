@@ -59,6 +59,12 @@ function ClaimItemPage() {
             setLoading(false);
             return;
           }
+          
+          if (fetchedItem.status === 'claimed') {
+            setError('This item has already been successfully claimed and verified.');
+            setLoading(false);
+            return;
+          }
 
           if (fetchedItem.isFinder) {
             setError('You cannot claim an item you reported yourself.');

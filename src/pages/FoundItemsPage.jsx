@@ -22,52 +22,79 @@ function FoundItemsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Filter state — which category is selected ('' means show all)
+  // Filter state
   const [activeFilter, setActiveFilter] = useState('');
-
-  // Search text state — filter by title or location
+  
+  // Search text state
   const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  useEffect(()=>{
-    const fetchItems = async ()=>{
-        try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
-            method: 'GET',
-            credentials: 'include'
-          })
-          if(!response.ok){
-            setError("Could not fetch items from the server.")
-            setLoading(false)
-            return
-          }
-          const data = await response.json();
-          setAllItems(data.items || data || [])
-        }
-        catch (error) {
-          console.error("Error occurred during fetching items:", error);
-          setError("A network error occurred")
-        }
-        finally{
-          setLoading(false)
-        }
-    }
-    fetchItems()
-  },[])
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
 
-  const filteredItems = allItems
-    .filter(item => {
-      if (activeFilter && item.category !== activeFilter) return false;
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-      if (searchText.trim()) {
-        const query = searchText.toLowerCase();
-        const matchTitle    = (item.shortTitle || '').toLowerCase().includes(query);
-        const matchLocation = (item.location || '').toLowerCase().includes(query);
-        if (!matchTitle && !matchLocation) return false;
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter, debouncedSearch]);
+
+  const fetchItems = async (pageNum) => {
+    try {
+      if (pageNum === 1) setLoading(true);
+      else setIsLoadingMore(true);
+
+      const queryParams = new URLSearchParams({
+        page: pageNum,
+        limit: 10,
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(activeFilter && { category: activeFilter })
+      });
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems?${queryParams}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        setError("Could not fetch items from the server.");
+        return;
       }
+      
+      const data = await response.json();
+      const newItems = data.items || [];
+      
+      if (pageNum === 1) {
+        setAllItems(newItems);
+      } else {
+        setAllItems(prev => [...prev, ...newItems]);
+      }
+      
+      setHasMore(data.pagination?.hasMore || false);
+      setTotalItems(data.pagination?.totalItems || 0);
+      
+    } catch (error) {
+      console.error("Error occurred during fetching items:", error);
+      setError("A network error occurred");
+    } finally {
+      setLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
 
-      return true;
-    })
-    .sort((a, b) => new Date(b.dateFound) - new Date(a.dateFound));
+  useEffect(() => {
+    fetchItems(page);
+  }, [page, activeFilter, debouncedSearch]);
+
+  // We don't filter client-side anymore; backend handles it.
+  const filteredItems = allItems;
 
   /* ── Format date for display ── */
   const formatDate = (isoString) => {
@@ -75,6 +102,26 @@ function FoundItemsPage() {
     return date.toLocaleDateString('en-IN', {
       day: 'numeric', month: 'short', year: 'numeric'
     });
+  };
+
+  const handleDelete = async (itemId) => {
+    if (!window.confirm("Are you sure you want to delete this found item post?")) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/delete/${itemId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        setAllItems(prev => prev.filter(item => item._id !== itemId));
+        setTotalItems(prev => Math.max(0, prev - 1));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete item.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("A network error occurred.");
+    }
   };
 
   /* ── Render ── */
@@ -151,9 +198,9 @@ function FoundItemsPage() {
       ) : (
         <>
           <p className={styles.resultsCount}>
-            {filteredItems.length === 0
+            {totalItems === 0
               ? 'No items found'
-              : `Showing ${filteredItems.length} item${filteredItems.length > 1 ? 's' : ''}`
+              : `Showing ${filteredItems.length} of ${totalItems} item${totalItems > 1 ? 's' : ''}`
             }
           </p>
 
@@ -162,12 +209,12 @@ function FoundItemsPage() {
               <span className={styles.emptyIcon}>🔎</span>
               <h3>No items here yet</h3>
               <p>
-                {allItems.length === 0
+                {(!activeFilter && !debouncedSearch)
                   ? 'Nobody has reported a found item yet. Be the first!'
                   : 'Try changing your search or filter.'
                 }
               </p>
-              {allItems.length === 0 && (
+              {(!activeFilter && !debouncedSearch) && (
                 <button
                   className={styles.emptyBtn}
                   onClick={() => navigate('/report-found')}
@@ -183,8 +230,21 @@ function FoundItemsPage() {
                   key={item._id}
                   item={item}
                   formatDate={formatDate}
+                  onDelete={() => handleDelete(item._id)}
                 />
               ))}
+              
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                  <button 
+                    className={styles.reportBtn} 
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={isLoadingMore}
+                  >
+                    {isLoadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -196,7 +256,7 @@ function FoundItemsPage() {
 /* ============================================================
    StackCard Component (Inner content)
    ============================================================ */
-function StackCard({ item, formatDate }) {
+function StackCard({ item, formatDate, onDelete }) {
   const navigate = useNavigate();
   
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
@@ -297,6 +357,28 @@ function StackCard({ item, formatDate }) {
                     : '🚫 Not from your college'}
               {!isClaimed && !isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
             </button>
+            
+            {/* Delete button for finder */}
+            {isFinder && !isClaimed && (
+              <button 
+                onClick={onDelete}
+                style={{
+                  marginTop: '10px',
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 77, 109, 0.3)',
+                  backgroundColor: 'rgba(255, 77, 109, 0.05)',
+                  color: '#ff4d6d',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '0.9rem'
+                }}
+              >
+                🗑️ Delete Post
+              </button>
+            )}
           </div>
         </div>
   );

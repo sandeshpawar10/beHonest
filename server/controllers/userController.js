@@ -52,7 +52,7 @@ exports.loginUser = async function(req,res){
     const validationResult = await loginValidationFunction.safeParseAsync(req.body)
     if(validationResult.error){
         return res.status(400).json({
-            error: validationResult.error.format()
+            message: validationResult.error.format()
         })
     }
     const {email,password} = validationResult.data
@@ -78,7 +78,7 @@ exports.loginUser = async function(req,res){
         await existingUser.save({validateBeforeSave:false})
     } catch (error) {
         return res.status(400).json({
-            errorMsg: error
+            message: error.message || error.toString()
         })
     }
     const options = {
@@ -100,7 +100,7 @@ exports.logoutUser = async function(req,res){
            } 
         },
         {
-            new: true
+            returnDocument: 'after'
         }
     )
     const options = {

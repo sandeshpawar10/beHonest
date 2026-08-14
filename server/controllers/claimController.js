@@ -28,6 +28,11 @@ exports.evaluateClaim = async function(req, res) {
             return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
         }
 
+        // Prevent claiming an item that is already claimed
+        if (item.status === 'claimed') {
+            return res.status(400).json({ error: "This item has already been claimed and verified." });
+        }
+
         // Run the AI interrogation securely on the server
         const aiResponse = await runInteractiveInterrogation(item, chatHistory || []);
 
