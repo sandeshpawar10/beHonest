@@ -40,6 +40,7 @@ import ChatPage        from './pages/ChatPage';        // Feature 6: Anonymous c
 import AdminLoginPage  from './pages/AdminLoginPage';  // Admin: separate login
 import AdminPage       from './pages/AdminPage';       // Admin: dispute dashboard
 import SplashScreen    from './components/ui/SplashScreen'; // Logo splash animation
+import ScrollToTop     from './components/ui/ScrollToTop';  // Auto-scroll to top on route change
 
 // Legal pages
 import AboutPage from './pages/legal/AboutPage';
@@ -110,6 +111,7 @@ function App() {
       {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
 
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
 
         {/* Default route → redirect to login */}
