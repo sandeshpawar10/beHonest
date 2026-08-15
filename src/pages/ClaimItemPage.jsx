@@ -12,6 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import styles from './ClaimItemPage.module.css';
 
@@ -338,7 +339,7 @@ function ClaimItemPage() {
                     </div>
 
                     <button className={styles.startBtn} onClick={startInterrogation} disabled={verifying}>
-                      {verifying ? <><span className="btnSpinner"></span> Starting AI session...</> : 'Start Verification Interview'}
+                      {verifying ? <><ButtonSpinner /> Starting AI session...</> : 'Start Verification Interview'}
                     </button>
                   </div>
                 ) : (
@@ -386,7 +387,7 @@ function ClaimItemPage() {
                           className={styles.sendBtn}
                           disabled={verifying || !inputText.trim()}
                         >
-                          {verifying ? <><span className="btnSpinner"></span></> : 'Send'}
+                          {verifying ? <ButtonSpinner /> : 'Send'}
                         </button>
                       </form>
                     </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import { isValidEmailFormat } from '../utils/authUtils';
 import styles from './AuthPages.module.css';
 
@@ -85,7 +86,7 @@ function ForgotPasswordPage() {
         />
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
-          {loading ? <><span className="btnSpinner"></span> Sending...</> : 'Send Reset Code'}
+          {loading ? <><ButtonSpinner /> Sending...</> : 'Send Reset Code'}
         </button>
 
         <p className={styles.authSwitchText}>

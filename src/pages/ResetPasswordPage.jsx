@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './AuthPages.module.css';
 
 function ResetPasswordPage() {
@@ -120,7 +121,7 @@ function ResetPasswordPage() {
         />
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
-          {loading ? <><span className="btnSpinner"></span> Updating...</> : 'Reset Password'}
+          {loading ? <><ButtonSpinner /> Updating...</> : 'Reset Password'}
         </button>
       </form>
     </AuthLayout>

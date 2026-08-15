@@ -14,6 +14,7 @@ import {
   formatCountdown,  // Formats seconds as MM:SS
   AUTH_CONFIG,      // Config constants (cooldown, expiry)
 } from '../utils/authUtils';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './VerifyOTPPage.module.css';
 
 // Total OTP expiry in seconds (must match AUTH_CONFIG.OTP_EXPIRY_MS)
@@ -318,7 +319,7 @@ function VerifyOTPPage() {
           disabled={loading || digits.join('').length < 6}
         >
           {loading
-            ? <><span className="btnSpinner"></span> Verifying...</>
+            ? <><ButtonSpinner /> Verifying...</>
             : 'Verify OTP ✓'
           }
         </button>

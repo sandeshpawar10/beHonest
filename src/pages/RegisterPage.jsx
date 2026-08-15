@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import {
   validateCollegeEmail, // Full college email check
   validatePassword,     // Password strength evaluator
@@ -270,7 +271,7 @@ function RegisterPage() {
             disabled={loading}
           >
             {loading
-              ? <><span className="btnSpinner"></span> Sending OTP...</>
+              ? <><ButtonSpinner /> Sending OTP...</>
               : 'Send OTP to College Email 📧'
             }
           </button>

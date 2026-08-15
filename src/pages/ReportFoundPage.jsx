@@ -18,6 +18,7 @@ import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
 import { generateImageFingerprint } from '../utils/imageFingerprint';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
@@ -435,7 +436,7 @@ function ReportFoundPage() {
               disabled={loading}
             >
               {loading
-                ? <><span className="btnSpinner"></span> AI is checking your item...</>
+                ? <><ButtonSpinner /> AI is checking your item...</>
                 : '🚀 Submit Found Item Report'
               }
             </button>
