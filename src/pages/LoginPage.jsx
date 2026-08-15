@@ -118,9 +118,11 @@ function LoginPage() {
         return;
       }
 
-    } catch {
-      //console.log(error.response.data);
-      console.error("Failed to connect to the backend server.");
+    } catch (err) {
+      console.error("Failed to connect to the backend server:", err);
+      setError("Failed to connect to the server. Please check your internet connection or try again later.");
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
     }
   }
 
