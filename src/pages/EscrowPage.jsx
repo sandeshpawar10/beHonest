@@ -185,7 +185,7 @@ function EscrowPage() {
     const configs = {
       held:     { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
       pending:  { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
-      released: { label: '✅ Reward Released',   color: '#00ff88', bgColor: 'rgba(0, 255, 136, 0.08)' },
+      released: { label: '✅ Reward Released',   color: 'var(--color-success)', bgColor: 'rgba(16, 185, 129, 0.08)' },
       refunded: { label: '↩️ Refunded',          color: '#ff8fa3', bgColor: 'rgba(255, 77, 109, 0.08)' },
       disputed: { label: '⚠️ Under Dispute',    color: '#ff4d6d', bgColor: 'rgba(255, 77, 109, 0.08)' },
     };
@@ -352,7 +352,7 @@ function EscrowPage() {
                   <div className={styles.ecDetailGrid}>
                     <div className={styles.ecDetail}>
                       <span className={styles.ecDetailLabel}>Reward</span>
-                      <span className={styles.ecDetailValue} style={{ color: '#00ff88' }}>
+                      <span className={styles.ecDetailValue} style={{ color: 'var(--color-success)' }}>
                         ₹{escrow.amount}
                       </span>
                     </div>
@@ -373,7 +373,7 @@ function EscrowPage() {
                     {escrow.releasedAt && (
                       <div className={styles.ecDetail}>
                         <span className={styles.ecDetailLabel}>Released On</span>
-                        <span className={styles.ecDetailValue} style={{ color: '#00ff88' }}>
+                        <span className={styles.ecDetailValue} style={{ color: 'var(--color-success)' }}>
                           {formatDate(escrow.releasedAt)}
                         </span>
                       </div>

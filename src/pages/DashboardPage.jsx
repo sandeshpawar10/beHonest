@@ -6,6 +6,7 @@
    ============================================================ */
 
 
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
 
@@ -79,7 +80,25 @@ function DashboardPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate(); // Hook for programmatic navigation
 
-
+  // Trap the hardware back button: if pressed on dashboard, log the user out.
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (window.confirm("Do you want to log out?")) {
+        logout();
+      } else {
+        // Push state again to prevent going back
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+    
+    // Push a dummy state so popstate fires when they press back
+    window.history.pushState(null, '', window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [logout]);
 
   return (
     <div className={styles.page}>

@@ -99,9 +99,10 @@ function PublicRoute({ children }) {
 
 // ── Main App Component with Router ────────────────────────────
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(!sessionStorage.getItem('splashShown'));
 
   const handleSplashFinish = useCallback(() => {
+    sessionStorage.setItem('splashShown', 'true');
     setShowSplash(false);
   }, []);
 
