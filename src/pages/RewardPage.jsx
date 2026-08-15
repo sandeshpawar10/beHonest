@@ -83,8 +83,10 @@ function RewardPage() {
     };
     
     if (!claimId) {
-      setError('Invalid claim session. You must start the claim process from the beginning. Please go back to Found Items and claim the item again.');
-      setLoading(false);
+      setTimeout(() => {
+        setError('Invalid claim session. You must start the claim process from the beginning. Please go back to Found Items and claim the item again.');
+        setLoading(false);
+      }, 0);
       return;
     }
 
