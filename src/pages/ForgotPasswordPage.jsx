@@ -84,12 +84,8 @@ function ForgotPasswordPage() {
           required
         />
 
-        <button 
-          type="submit" 
-          className={styles.submitBtn} 
-          disabled={loading}
-        >
-          {loading ? 'Sending Code...' : 'Send Reset Code'}
+        <button type="submit" className={styles.submitBtn} disabled={loading}>
+          {loading ? <><span className="btnSpinner"></span> Sending...</> : 'Send Reset Code'}
         </button>
 
         <p className={styles.authSwitchText}>

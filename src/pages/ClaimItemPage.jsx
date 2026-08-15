@@ -338,7 +338,7 @@ function ClaimItemPage() {
                     </div>
 
                     <button className={styles.startBtn} onClick={startInterrogation} disabled={verifying}>
-                      {verifying ? 'Starting...' : 'Start Verification'}
+                      {verifying ? <><span className="btnSpinner"></span> Starting AI session...</> : 'Start Verification Interview'}
                     </button>
                   </div>
                 ) : (
@@ -386,7 +386,7 @@ function ClaimItemPage() {
                           className={styles.sendBtn}
                           disabled={verifying || !inputText.trim()}
                         >
-                          Send
+                          {verifying ? <><span className="btnSpinner"></span></> : 'Send'}
                         </button>
                       </form>
                     </div>

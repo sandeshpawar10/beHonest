@@ -435,7 +435,7 @@ function ReportFoundPage() {
               disabled={loading}
             >
               {loading
-                ? <><span className={styles.spinner} /> AI is checking your item...</>
+                ? <><span className="btnSpinner"></span> AI is checking your item...</>
                 : '🚀 Submit Found Item Report'
               }
             </button>

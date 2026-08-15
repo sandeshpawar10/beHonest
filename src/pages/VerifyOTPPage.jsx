@@ -318,7 +318,7 @@ function VerifyOTPPage() {
           disabled={loading || digits.join('').length < 6}
         >
           {loading
-            ? <><span className={styles.spinner}></span> Verifying...</>
+            ? <><span className="btnSpinner"></span> Verifying...</>
             : 'Verify OTP ✓'
           }
         </button>

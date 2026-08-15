@@ -270,7 +270,7 @@ function RegisterPage() {
             disabled={loading}
           >
             {loading
-              ? <><span className={styles.spinner}></span> Sending OTP...</>
+              ? <><span className="btnSpinner"></span> Sending OTP...</>
               : 'Send OTP to College Email 📧'
             }
           </button>

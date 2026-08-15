@@ -119,12 +119,8 @@ function ResetPasswordPage() {
           required
         />
 
-        <button 
-          type="submit" 
-          className={styles.submitBtn} 
-          disabled={loading}
-        >
-          {loading ? 'Resetting Password...' : 'Reset Password'}
+        <button type="submit" className={styles.submitBtn} disabled={loading}>
+          {loading ? <><span className="btnSpinner"></span> Updating...</> : 'Reset Password'}
         </button>
       </form>
     </AuthLayout>

@@ -188,16 +188,8 @@ function LoginPage() {
           </div>
 
           {/* Submit button */}
-          <button
-            type="submit"
-            id="login-submit-btn"
-            className={styles.submitBtn}
-            disabled={loading}
-          >
-            {loading
-              ? <><span className={styles.spinner}></span> Signing in...</>
-              : 'Sign In to beHonest'
-            }
+          <button type="submit" className={styles.submitBtn} disabled={loading}>
+            {loading ? <><span className="btnSpinner"></span> Logging in...</> : 'Login securely'}
           </button>
 
         </form>
