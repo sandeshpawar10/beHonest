@@ -40,15 +40,16 @@ function EscrowPage() {
   // New State for Mutual Confirmation and Dispute
   const [disputeModal, setDisputeModal] = useState(null);
   const [disputeReason, setDisputeReason] = useState('');
-  const [itemPossession, setItemPossession] = useState(''); // 'me', 'other_party', 'unknown'
+  const [itemPossession, setItemPossession] = useState('');
+
+  // ── Safety Check Modal state ──
+  const [safetyCheckModal, setSafetyCheckModal] = useState(null);
+  const [safetyCheck1, setSafetyCheck1] = useState(false);
+  const [safetyCheck2, setSafetyCheck2] = useState(false);
+  const [safetyCheck3, setSafetyCheck3] = useState(false); // 'me', 'other_party', 'unknown'
   const [confirmingId, setConfirmingId] = useState(null);
 
-  // ── Load escrows on mount ─────────────────────────────────
-  useEffect(() => {
-    fetchEscrows();
-  }, []);
-
-  const fetchEscrows = async () => {
+  async function fetchEscrows() {
     try {
       setLoading(true);
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/my-escrows`, {
@@ -65,7 +66,14 @@ function EscrowPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  // ── Load escrows on mount ─────────────────────────────────
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      fetchEscrows();
+    });
+  }, []);
 
   // ── Refresh escrows (re-read from backend) ───────────
   const refreshEscrows = () => {
@@ -110,9 +118,11 @@ function EscrowPage() {
     }
   };
 
-  // ── Handle Mutual Confirmation ───────────────────────────
+  // ── Handle Confirm (Release) ──────────────────────────────
   const handleConfirm = async (escrowId) => {
     setConfirmingId(escrowId);
+    setSafetyCheckModal(null); // Close modal if open
+    
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/confirm/${escrowId}`, {
         method: 'POST',
@@ -425,7 +435,12 @@ function EscrowPage() {
                         )}
                         
                         <button
-                          onClick={() => handleConfirm(escrow._id)}
+                          onClick={() => {
+                            setSafetyCheck1(false);
+                            setSafetyCheck2(false);
+                            setSafetyCheck3(false);
+                            setSafetyCheckModal(escrow);
+                          }}
                           disabled={escrow.ownerConfirmed || confirmingId === escrow._id}
                           style={{
                             width: '100%',
@@ -471,8 +486,6 @@ function EscrowPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* ── Action buttons (Owner View, Counter Dispute) ── */}
 
                   {/* ── Action buttons (Finder View) ── */}
                   {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
@@ -527,8 +540,6 @@ function EscrowPage() {
                       </button>
                     </div>
                   )}
-
-                  {/* ── Action buttons (Finder View, Counter Dispute) ── */}
 
                   {/* ── Disputed View ── */}
                   {escrow.status === 'disputed' && (
@@ -590,13 +601,10 @@ function EscrowPage() {
       {confirmModal && (
         <div className={styles.modalOverlay} onClick={closeConfirmModal}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            {/* Header */}
             <div className={styles.modalHeader}>
               <h2>↩️ Request Refund</h2>
               <button className={styles.modalClose} onClick={closeConfirmModal}>✕</button>
             </div>
-
-            {/* Body */}
             <div className={styles.modalBody}>
               <div className={styles.modalIcon}>↩️</div>
               <p className={styles.modalText}>
@@ -614,8 +622,6 @@ function EscrowPage() {
                 The finder will not receive any reward.
               </p>
             </div>
-
-            {/* Footer buttons */}
             <div className={styles.modalFooter}>
               <button className={styles.modalCancel} onClick={closeConfirmModal}>
                 Cancel
@@ -708,6 +714,64 @@ function EscrowPage() {
         </div>
       )}
 
+      {/* ══════════ Meetup Safety Check Modal ══════════ */}
+      {safetyCheckModal && (
+        <div className={styles.modalOverlay} onClick={() => setSafetyCheckModal(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>🛡️ Meetup Safety Check</h2>
+              <button className={styles.modalClose} onClick={() => setSafetyCheckModal(null)}>✕</button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+                Before we release your money to the finder, please confirm the following:
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px' }}>
+                  <input type="checkbox" checked={safetyCheck1} onChange={e => setSafetyCheck1(e.target.checked)} style={{ marginTop: '4px', width: '18px', height: '18px' }} />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    <strong>I am holding the item.</strong> I am currently physically holding the item in my hands.
+                  </span>
+                </label>
+                
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px' }}>
+                  <input type="checkbox" checked={safetyCheck2} onChange={e => setSafetyCheck2(e.target.checked)} style={{ marginTop: '4px', width: '18px', height: '18px' }} />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    <strong>It is genuine.</strong> I have thoroughly inspected it, checked the contents/serial number, and confirm it is my exact original item (not a dummy or fake).
+                  </span>
+                </label>
+                
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px' }}>
+                  <input type="checkbox" checked={safetyCheck3} onChange={e => setSafetyCheck3(e.target.checked)} style={{ marginTop: '4px', width: '18px', height: '18px' }} />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    <strong>This is irreversible.</strong> I understand that clicking Release is 100% final. The funds will leave escrow instantly and cannot be refunded.
+                  </span>
+                </label>
+              </div>
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <button className={styles.modalCancel} onClick={() => setSafetyCheckModal(null)}>Cancel</button>
+              <button 
+                className={styles.primaryBtn} 
+                onClick={() => handleConfirm(safetyCheckModal._id)}
+                disabled={!safetyCheck1 || !safetyCheck2 || !safetyCheck3}
+                style={{ 
+                  background: (!safetyCheck1 || !safetyCheck2 || !safetyCheck3) ? 'rgba(0, 0, 0, 0.1)' : 'linear-gradient(135deg, #00ff88, #00d4ff)',
+                  color: (!safetyCheck1 || !safetyCheck2 || !safetyCheck3) ? 'rgba(0, 0, 0, 0.3)' : '#000',
+                  opacity: (!safetyCheck1 || !safetyCheck2 || !safetyCheck3) ? 0.7 : 1,
+                  cursor: (!safetyCheck1 || !safetyCheck2 || !safetyCheck3) ? 'not-allowed' : 'pointer',
+                  border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold'
+                }}
+              >
+                Release Reward
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

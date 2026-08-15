@@ -787,9 +787,32 @@
 
 .startBtnBox {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
+  gap: 24px;
+  padding: 24px;
+  text-align: center;
+}
+
+.introRules {
+  background: var(--bg-tertiary);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  line-height: 1.6;
+  width: 100%;
+  max-width: 400px;
+}
+
+.introRules p {
+  margin-bottom: 8px;
+}
+
+.introRules p:last-child {
+  margin-bottom: 0;
 }
 
 .startBtn {

@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
 import {
@@ -18,7 +18,7 @@ import styles from './AuthPages.module.css';
 
 function RegisterPage() {
   const navigate  = useNavigate();
-  const { sendOTP } = useAuth(); // Get sendOTP action from context
+
 
   // ── Form field state ──────────────────────────────────────
   const [fullName,    setFullName]    = useState('');
@@ -28,7 +28,7 @@ function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   // ── Loading and global message state ─────────────────────
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [alert,   setAlert]   = useState({ msg: '', type: '' }); // { msg, type: 'error'|'success' }
 
   // ── Per-field error messages ──────────────────────────────
@@ -74,7 +74,7 @@ function RegisterPage() {
         setAlert({ msg: errorMsg, type: "error" })
       }
 
-    } catch (error) {
+    } catch {
       //console.log(error.response.data);
       console.error("Failed to connect to the backend server.");
     }

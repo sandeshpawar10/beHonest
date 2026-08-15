@@ -6,6 +6,9 @@ const controller = require("../controllers/claimController");
 // Evaluate a new AI verification claim result
 router.post('/api/claim/evaluate', verifyJWT, controller.evaluateClaim);
 
+// Finalize the claim with proof image
+router.post('/api/claim/finalize', verifyJWT, controller.finalizeClaim);
+
 // Get all claims for a specific item
 router.get('/api/claim/item/:itemId', verifyJWT, controller.getClaimsForItem);
 

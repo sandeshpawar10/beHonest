@@ -24,7 +24,7 @@
    The admin reviews flags on the dashboard and decides.
    ============================================================ */
 
-import { getAllFoundItems } from './itemUtils';
+
 import { getAllEscrows } from './rewardUtils';
 // Import from shared module (avoids circular dependency with itemUtils)
 import { generateImageFingerprint } from './imageFingerprint';
@@ -167,7 +167,7 @@ export async function checkDuplicateImage(fingerprint, excludeItemId = null) {
    
    Returns an ARRAY of flags (could have 0, 1, or 2 flags)
    ---------------------------------------------------------- */
-export function checkDescriptionQuality(description, title) {
+export function checkDescriptionQuality(description) {
   const flags = [];
 
   // ── Check: Too short ──
@@ -277,7 +277,7 @@ export async function runFullFraudScan(item, email, options = {}) {
   if (dupCheck.flagged) report.heuristicFlags.push(dupCheck);
 
   // 3. Description quality
-  const descFlags = checkDescriptionQuality(item.description, item.title);
+  const descFlags = checkDescriptionQuality(item.description);
   report.heuristicFlags.push(...descFlags);
 
   // 4. Reward patterns

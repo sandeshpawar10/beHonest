@@ -75,13 +75,36 @@ function RewardPage() {
         setItem(data.items || data.item || data);
         setLoading(false);
       } catch (err) {
-        setError('Item not found.');
+        console.error(err);
+        setError('Failed to fetch item details.');
+      } finally {
         setLoading(false);
       }
     };
     
+    if (!claimId) {
+      setError('Invalid claim session. You must start the claim process from the beginning. Please go back to Found Items and claim the item again.');
+      setLoading(false);
+      return;
+    }
+
     fetchItem();
-  }, [itemId]);
+  }, [itemId, claimId]);
+
+  // Load Razorpay script dynamically
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => {
+        resolve(true);
+      };
+      script.onerror = () => {
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  };
 
   // ── Handle category selection ─────────────────────────────
   const handleCategorySelect = (categoryKey) => {
@@ -108,9 +131,21 @@ function RewardPage() {
 
   // ── Confirm and create escrow ─────────────────────────────
   const handleConfirmReward = async () => {
+    if (!claimId) {
+      setError('Invalid claim session. Please go back to Found Items and restart your claim.');
+      return;
+    }
+    
     setProcessing(true);
 
     try {
+      // 1. Load Razorpay script
+      const res = await loadRazorpayScript();
+      if (!res) {
+        throw new Error('Razorpay SDK failed to load. Are you online?');
+      }
+
+      // 2. Create Order
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,17 +159,78 @@ function RewardPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create escrow');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create payment order. Are your Razorpay API keys correct?');
       }
 
       const data = await response.json();
-      setEscrowRecord(data.escrow || data);
-      setStep('done');
+      const { orderId, escrowId, amount, currency } = data;
+
+      // 3. Initialize Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
+        amount: amount,
+        currency: currency,
+        name: "BeHonest Rewards",
+        description: `Reward for ${item.shortTitle}`,
+        image: "https://behonest.app/logo.png", // fallback logo
+        order_id: orderId,
+        modal: {
+          ondismiss: function() {
+            setProcessing(false);
+          }
+        },
+        handler: async function (response) {
+          try {
+            // 4. Verify Payment
+            const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                escrowId: escrowId
+              })
+            });
+
+            if (!verifyRes.ok) {
+              throw new Error("Payment verification failed");
+            }
+            
+            const verifyData = await verifyRes.json();
+            setEscrowRecord(verifyData.escrow);
+            setStep('done');
+            setProcessing(false);
+          } catch (err) {
+            console.error(err);
+            setError("Payment verified by gateway, but failed to sync with our servers. Please contact support.");
+            setProcessing(false);
+          }
+        },
+        prefill: {
+          name: session?.user?.username || "",
+          email: session?.user?.email || ""
+        },
+        theme: {
+          color: "#00d2ff"
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on("payment.failed", function (response) {
+        setError(`Payment failed: ${response.error.description}`);
+        setProcessing(false);
+      });
+      
+      paymentObject.open();
+
     } catch (err) {
       console.error(err);
-      setError('Failed to process escrow. Please try again.');
-    } finally {
+      setError(err.message || 'Failed to process escrow. Please try again.');
       setProcessing(false);
+    } finally {
       window.scrollTo(0, 0);
     }
   };
@@ -266,14 +362,16 @@ function RewardPage() {
       {/* ══════════ STEP 2: AI Recommendation ══════════ */}
       {step === 'recommend' && recommendation && (
         <div className={styles.stepCard}>
-          <h2 className={styles.stepTitle}>🤖 Step 2: AI Recommendation</h2>
-          <p className={styles.stepDesc}>
-            The AI analyzed the item and recommends a fair reward.
-            You can adjust it within the safe range using the slider.
+          <h2 className={styles.stepTitle}>AI Recommendation</h2>
+          <p className={styles.stepSubtitle}>
+            Based on the item type and BeHonest marketplace data, here is the
+            suggested reward. You can adjust this before depositing to escrow.
           </p>
 
-          {/* Recommended amount — big display */}
-          <div className={styles.bigAmount}>
+          {error && <div className={styles.errorAlert}>{error}</div>}
+
+          {/* Slider card */}
+          <div className={styles.sliderCard}>
             <span className={styles.rupee}>₹</span>
             <span className={styles.amountValue}>{chosenReward}</span>
           </div>

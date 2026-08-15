@@ -54,9 +54,14 @@ const escrowSchema = new Schema({
     // Current escrow state
     status: {
         type: String,
-        enum: ["pending", "released", "refunded", "disputed"],
-        default: "pending"
-    }
+        enum: ["payment_pending", "pending", "released", "refunded", "disputed"],
+        default: "payment_pending"
+    },
+
+    // Razorpay Fields
+    razorpayOrderId: { type: String, default: null },
+    razorpayPaymentId: { type: String, default: null },
+    razorpaySignature: { type: String, default: null }
 },
 {
     timestamps: true

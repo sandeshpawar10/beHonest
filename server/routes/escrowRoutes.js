@@ -6,6 +6,9 @@ const controller = require("../controllers/escrowController");
 // Create a new escrow (after verified claim + reward selection)
 router.post('/api/escrow/create', verifyJWT, controller.createEscrow);
 
+// Verify Razorpay payment
+router.post('/api/escrow/verify-payment', verifyJWT, controller.verifyPayment);
+
 // Get all escrows for the logged-in user (as owner OR finder)
 router.get('/api/escrow/my-escrows', verifyJWT, controller.getMyEscrows);
 

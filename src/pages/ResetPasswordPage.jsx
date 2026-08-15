@@ -7,7 +7,7 @@ import styles from './AuthPages.module.css';
 function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const [email] = useState(location.state?.email || '');
 
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -18,9 +18,7 @@ function ResetPasswordPage() {
 
   useEffect(() => {
     // If the user didn't come from the ForgotPassword page, redirect them back
-    if (location.state && location.state.email) {
-      setEmail(location.state.email);
-    } else {
+    if (!location.state?.email) {
       navigate('/forgot-password');
     }
   }, [location, navigate]);

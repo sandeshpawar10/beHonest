@@ -1,0 +1,204 @@
+[
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\context\\AuthContext.jsx",
+    "errors": [
+      {
+        "line": 12,
+        "message": "'createAndStoreOTP' is defined but never used."
+      },
+      {
+        "line": 12,
+        "message": "'verifyOTP' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\AdminLoginPage.jsx",
+    "errors": [
+      {
+        "line": 49,
+        "message": "'err' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\ChatPage.jsx",
+    "errors": [
+      {
+        "line": 139,
+        "message": "'myRole' is assigned a value but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\ClaimItemPage.jsx",
+    "errors": [
+      {
+        "line": 15,
+        "message": "'getFoundItemById' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\DashboardPage.jsx",
+    "errors": [
+      {
+        "line": 11,
+        "message": "'getAllFoundItems' is defined but never used."
+      },
+      {
+        "line": 76,
+        "message": "'STATS' is assigned a value but never used."
+      },
+      {
+        "line": 115,
+        "message": "'StatCard' is defined but never used."
+      },
+      {
+        "line": 132,
+        "message": "'firstName' is assigned a value but never used."
+      },
+      {
+        "line": 136,
+        "message": "'loading' is assigned a value but never used."
+      },
+      {
+        "line": 137,
+        "message": "'error' is assigned a value but never used."
+      },
+      {
+        "line": 165,
+        "message": "'foundItemsCount' is assigned a value but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\FoundItemsPage.jsx",
+    "errors": [
+      {
+        "line": 14,
+        "message": "'getAllFoundItems' is defined but never used."
+      },
+      {
+        "line": 19,
+        "message": "'session' is assigned a value but never used."
+      },
+      {
+        "line": 266,
+        "message": "'session' is assigned a value but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\LoginPage.jsx",
+    "errors": [
+      {
+        "line": 13,
+        "message": "'isValidEmailFormat' is defined but never used."
+      },
+      {
+        "line": 13,
+        "message": "'isCollegeEmail' is defined but never used."
+      },
+      {
+        "line": 18,
+        "message": "'loginSuccess' is assigned a value but never used."
+      },
+      {
+        "line": 23,
+        "message": "'setLoading' is assigned a value but never used."
+      },
+      {
+        "line": 121,
+        "message": "'error' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\RegisterPage.jsx",
+    "errors": [
+      {
+        "line": 21,
+        "message": "'sendOTP' is assigned a value but never used."
+      },
+      {
+        "line": 31,
+        "message": "'setLoading' is assigned a value but never used."
+      },
+      {
+        "line": 77,
+        "message": "'error' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\ReportFoundPage.jsx",
+    "errors": [
+      {
+        "line": 18,
+        "message": "'saveFoundItem' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\ResetPasswordPage.jsx",
+    "errors": [
+      {
+        "line": 10,
+        "message": "'setEmail' is assigned a value but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\RewardPage.jsx",
+    "errors": [
+      {
+        "line": 77,
+        "message": "'err' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\pages\\VerifyOTPPage.jsx",
+    "errors": [
+      {
+        "line": 30,
+        "message": "'confirmOTP' is assigned a value but never used."
+      },
+      {
+        "line": 30,
+        "message": "'sendOTP' is assigned a value but never used."
+      },
+      {
+        "line": 179,
+        "message": "'err' is defined but never used."
+      },
+      {
+        "line": 212,
+        "message": "'err' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\utils\\chatUtils.js",
+    "errors": [
+      {
+        "line": 48,
+        "message": "'err' is defined but never used."
+      }
+    ]
+  },
+  {
+    "path": "D:\\babbar-webD\\beHonest Project\\src\\utils\\fraudUtils.js",
+    "errors": [
+      {
+        "line": 27,
+        "message": "'getAllFoundItems' is defined but never used."
+      },
+      {
+        "line": 170,
+        "message": "'title' is defined but never used."
+      }
+    ]
+  }
+]

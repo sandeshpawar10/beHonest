@@ -1,5 +1,6 @@
 const {userValidation,loginValidationFunction,passwordValidations} = require("../validation/userValidation")
 const user = require("../models/userModel")
+const jwt = require("jsonwebtoken");
 
 exports.registerUser = async function(req,res){
     //console.log(req.body)
@@ -74,7 +75,11 @@ exports.loginUser = async function(req,res){
     try {
         accesstoken = existingUser.generateAccesstoken()
         refreshtoken = existingUser.generateRefreshToken()
-        existingUser.refreshToken = refreshtoken
+        existingUser.refreshTokens = existingUser.refreshTokens || [];
+        existingUser.refreshTokens.push(refreshtoken);
+        if (existingUser.refreshTokens.length > 5) {
+            existingUser.refreshTokens.shift(); // Keep max 5 sessions
+        }
         await existingUser.save({validateBeforeSave:false})
     } catch (error) {
         return res.status(400).json({
@@ -83,7 +88,9 @@ exports.loginUser = async function(req,res){
     }
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
     }
     return res.status(200).cookie("accesstoken",accesstoken,options)
         .cookie("refreshtoken",refreshtoken,options)
@@ -93,24 +100,68 @@ exports.loginUser = async function(req,res){
 }
 
 exports.logoutUser = async function(req,res){
+    const refreshToken = req.cookies?.refreshtoken;
     await user.findByIdAndUpdate(req.user._id,
         {
-           $set:{
-                refreshToken: ""
+           $pull:{
+                refreshTokens: refreshToken
            } 
         },
-        {
-            returnDocument: 'after'
-        }
+        { returnDocument: 'after' }
     )
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
     }
     return res.status(200).clearCookie("accesstoken",options)
         .clearCookie("refreshtoken",options)
         .end("user is successfully logged out.")
 }
+
+exports.refreshAccessToken = async function(req, res) {
+    try {
+        const incomingRefreshToken = req.cookies?.refreshtoken;
+        if (!incomingRefreshToken) {
+            return res.status(401).json({ error: "Unauthorized request" });
+        }
+
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        
+        const existingUser = await user.findById(decodedToken._id);
+        if (!existingUser) {
+            return res.status(401).json({ error: "Invalid refresh token" });
+        }
+
+        if (!existingUser.refreshTokens.includes(incomingRefreshToken)) {
+            return res.status(401).json({ error: "Refresh token is expired or used" });
+        }
+
+        const accesstoken = existingUser.generateAccesstoken();
+        const newRefreshToken = existingUser.generateRefreshToken();
+
+        // Rotate token
+        existingUser.refreshTokens = existingUser.refreshTokens.filter(t => t !== incomingRefreshToken);
+        existingUser.refreshTokens.push(newRefreshToken);
+        await existingUser.save({ validateBeforeSave: false });
+
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/'
+        };
+
+        return res.status(200)
+            .cookie("accesstoken", accesstoken, options)
+            .cookie("refreshtoken", newRefreshToken, options)
+            .json({ message: "Access token refreshed" });
+
+    } catch (error) {
+        return res.status(401).json({ error: error?.message || "Invalid refresh token" });
+    }
+};
 
 exports.verifyEmail = async function(req, res){
     const { email, otp } = req.body;

@@ -41,6 +41,12 @@ import AdminLoginPage  from './pages/AdminLoginPage';  // Admin: separate login
 import AdminPage       from './pages/AdminPage';       // Admin: dispute dashboard
 import SplashScreen    from './components/ui/SplashScreen'; // Logo splash animation
 
+// Legal pages
+import AboutPage from './pages/legal/AboutPage';
+import ContactPage from './pages/legal/ContactPage';
+import TermsPage from './pages/legal/TermsPage';
+import RefundPolicyPage from './pages/legal/RefundPolicyPage';
+
 // ── ProtectedRoute Component ───────────────────────────────────
 // Wraps any route that requires authentication.
 // If the user is NOT logged in → redirects to /login
@@ -108,6 +114,12 @@ function App() {
 
         {/* Default route → redirect to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Legal Pages - Public */}
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
         {/* Login page — public only (redirects to dashboard if logged in) */}
         <Route

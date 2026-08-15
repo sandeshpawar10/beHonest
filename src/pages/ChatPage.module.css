@@ -1,11 +1,12 @@
 .page {
-  min-height: 100vh;
-  padding: 80px 20px 40px;
+  height: 100dvh; /* use dvh for mobile browsers */
+  padding: 80px 20px 20px;
   max-width: 800px;
   margin: 0 auto;
   animation: fadeInUp 0.4s ease-out;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 @keyframes fadeInUp {
@@ -53,23 +54,23 @@
 /* Chat container acts as a flex column holding messages and input */
 .chatContainer {
   flex: 1;
-  background: rgba(18, 18, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 0; /* allows flex item to shrink below content size so inner scroll works */
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  min-height: 500px;
 }
 
 /* Header inside the chat box */
 .chatHeader {
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -113,11 +114,12 @@
   margin: auto;
   text-align: center;
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  background: rgba(255,255,255,0.03);
-  padding: 20px;
+  font-size: 0.95rem;
+  background: rgba(255,255,255,0.8);
+  padding: 24px;
   border-radius: 12px;
-  max-width: 300px;
+  max-width: 350px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 /* Individual message bubble container */
@@ -159,14 +161,15 @@
 }
 
 .received .messageBubble {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
   border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .messageTime {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: #888;
   margin-top: 4px;
   padding: 0 4px;
 }
@@ -174,32 +177,35 @@
 /* Input area */
 .inputArea {
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   gap: 12px;
 }
 
 .chatInput {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 0; /* allows input to shrink below its intrinsic width */
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 24px;
   padding: 12px 20px;
-  color: var(--text-primary);
+  color: #333;
   font-size: 1rem;
   outline: none;
   transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .chatInput:focus {
   border-color: var(--accent-cyan);
-  background: rgba(0, 0, 0, 0.5);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.2);
 }
 
 .sendBtn {
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-  color: #000;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+  color: #fff;
   border: none;
   width: 48px;
   height: 48px;
@@ -210,6 +216,7 @@
   font-size: 1.2rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .sendBtn:hover:not(:disabled) {
@@ -218,8 +225,8 @@
 }
 
 .sendBtn:disabled {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.2);
   cursor: not-allowed;
 }
 
@@ -231,11 +238,11 @@
   background: transparent;
 }
 .messagesArea::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
 }
 .messagesArea::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Error state styling */
@@ -252,10 +259,9 @@
 
 @media (max-width: 600px) {
   .page {
-    padding: 20px 10px;
+    padding: 70px 10px 10px;
   }
   .chatContainer {
-    min-height: calc(100vh - 100px);
     border-radius: 12px;
   }
   .messageWrapper {

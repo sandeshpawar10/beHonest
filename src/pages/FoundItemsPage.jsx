@@ -9,14 +9,14 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import BlurableImage   from '../components/ui/BlurableImage';
-import { getAllFoundItems, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {
   const navigate = useNavigate();
-  const { session } = useAuth();
+
 
   const [allItems, setAllItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -35,62 +35,65 @@ function FoundItemsPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Debounce search input
+  // Debounce search input and reset page
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchText);
+      if (searchText !== debouncedSearch) {
+        setPage(1);
+      }
+    }, 500);
     return () => clearTimeout(timer);
-  }, [searchText]);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [activeFilter, debouncedSearch]);
-
-  const fetchItems = async (pageNum) => {
-    try {
-      if (pageNum === 1) setLoading(true);
-      else setIsLoadingMore(true);
-
-      const queryParams = new URLSearchParams({
-        page: pageNum,
-        limit: 10,
-        ...(debouncedSearch && { search: debouncedSearch }),
-        ...(activeFilter && { category: activeFilter })
-      });
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems?${queryParams}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        setError("Could not fetch items from the server.");
-        return;
-      }
-      
-      const data = await response.json();
-      const newItems = data.items || [];
-      
-      if (pageNum === 1) {
-        setAllItems(newItems);
-      } else {
-        setAllItems(prev => [...prev, ...newItems]);
-      }
-      
-      setHasMore(data.pagination?.hasMore || false);
-      setTotalItems(data.pagination?.totalItems || 0);
-      
-    } catch (error) {
-      console.error("Error occurred during fetching items:", error);
-      setError("A network error occurred");
-    } finally {
-      setLoading(false);
-      setIsLoadingMore(false);
-    }
-  };
+  }, [searchText, debouncedSearch]);
 
   useEffect(() => {
-    fetchItems(page);
+    const fetchItems = async (pageNum) => {
+      try {
+        if (pageNum === 1) setLoading(true);
+        else setIsLoadingMore(true);
+
+        const queryParams = new URLSearchParams({
+          page: pageNum,
+          limit: 10,
+          ...(debouncedSearch && { search: debouncedSearch }),
+          ...(activeFilter && { category: activeFilter })
+        });
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems?${queryParams}`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          setError("Could not fetch items from the server.");
+          return;
+        }
+        
+        const data = await response.json();
+        const newItems = data.items || [];
+        
+        if (pageNum === 1) {
+          setAllItems(newItems);
+        } else {
+          setAllItems(prev => [...prev, ...newItems]);
+        }
+        
+        setHasMore(data.pagination?.hasMore || false);
+        setTotalItems(data.pagination?.totalItems || 0);
+        
+      } catch (error) {
+        console.error("Error occurred during fetching items:", error);
+        setError("A network error occurred");
+      } finally {
+        setLoading(false);
+        setIsLoadingMore(false);
+      }
+    };
+
+    // Use a microtask to avoid synchronous setState inside effect warning
+    Promise.resolve().then(() => {
+      fetchItems(page);
+    });
   }, [page, activeFilter, debouncedSearch]);
 
   // We don't filter client-side anymore; backend handles it.
@@ -260,7 +263,7 @@ function StackCard({ item, formatDate, onDelete }) {
   const navigate = useNavigate();
   
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
-  const { session } = useAuth();
+
 
   const isFinder = Boolean(item.isFinder);
   const isSameCollege = Boolean(item.isSameCollege);

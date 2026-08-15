@@ -5,10 +5,10 @@
              animated stat counters, action cards grid
    ============================================================ */
 
-import { useEffect, useState, useRef } from 'react';
+
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
-import { getAllFoundItems } from '../utils/itemUtils'; // Get real count of found items
+
 import NotificationDropdown from '../components/ui/NotificationDropdown';
 import styles from './DashboardPage.module.css';
 
@@ -72,97 +72,14 @@ const ACTION_CARDS = [
   },
 ];
 
-// ── Stat data ──────────────────────────────────────────────────
-const STATS = [
-  { id: 'stat-found',    target: 42,  label: 'Items Found & Returned' },
-  { id: 'stat-active',   target: 8,   label: 'Active Lost Reports'    },
-  { id: 'stat-students', target: 127, label: 'Verified Students'      },
-];
 
-// ── Custom hook: animated number counter ──────────────────────
-// Counts from 0 to `target` over `duration` ms using requestAnimationFrame
-function useCountUp(target, duration = 1500) {
-  const [count, setCount] = useState(0); // Current displayed number
-  const started = useRef(false);         // Prevents re-running the animation
-
-  useEffect(() => {
-    if (started.current) return; // Don't restart if already running
-    started.current = true;
-
-    const startTime = performance.now(); // Animation start timestamp
-
-    function tick(currentTime) {
-      const elapsed  = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1); // 0 to 1
-
-      // Ease-out cubic: fast start, slows to a stop
-      const eased  = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(target * eased);
-
-      setCount(current); // Update displayed number
-
-      if (progress < 1) requestAnimationFrame(tick); // Continue until done
-    }
-
-    requestAnimationFrame(tick); // Kick off the animation loop
-  }, [target, duration]);
-
-  return count;
-}
-
-// ── StatCard component ─────────────────────────────────────────
-// Renders a single stat number with a count-up animation
-function StatCard({ target, label }) {
-  const count = useCountUp(target); // Animated count value
-
-  return (
-    <div className={styles.statCard}>
-      <span className={styles.statNumber}>{count}</span>
-      <span className={styles.statLabel}>{label}</span>
-    </div>
-  );
-}
 
 // ── DashboardPage component ────────────────────────────────────
 function DashboardPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate(); // Hook for programmatic navigation
 
-  // Extract user's first name for the personalized greeting
-  const firstName = session?.fullName?.split(' ')[0] || 'Student';
 
-  // Get the real count of found items from localStorage
-  const [allItems, setAllItems] = useState([])
-  const [loading, setLoading] = useState()
-  const [error, setError] = useState()
-
-  useEffect(()=>{
-    const fetchItems = async ()=>{
-        try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/getAllFoundItems`,{
-            method: 'GET',
-            credentials: 'include'
-          })
-          if(!response.ok){
-            setError("Could not fetch items from the server.")
-            setLoading(false)
-            return
-          }
-          const data = await response.json();
-          setAllItems(data.items || data || [])
-        }
-        catch (error) {
-          console.error("Error occurred during fetching items:", error);
-          setError("A network error occurred")
-        }
-        finally{
-          setLoading(false)
-        }
-    }
-    fetchItems()
-  },[])
-
-  const foundItemsCount = allItems.length;
 
   return (
     <div className={styles.page}>

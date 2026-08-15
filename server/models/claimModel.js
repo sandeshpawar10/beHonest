@@ -39,6 +39,25 @@ const claimSchema = new Schema({
     verdictMessage: {
         type: String,
         default: ""
+    },
+    // Audit fields for AI versioning
+    aiModelUsed: {
+        type: String,
+        default: "none"
+    },
+    aiVersion: {
+        type: String,
+        default: "none"
+    },
+    // The user's optional direct guess at the secret identity
+    secretGuess: {
+        type: String,
+        default: ""
+    },
+    // The claimant's uploaded proof image (receipt, bill, old photo) URL via Cloudinary
+    proofImage: {
+        type: String,
+        default: ""
     }
 },
 {

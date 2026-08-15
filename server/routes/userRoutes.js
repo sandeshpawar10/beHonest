@@ -24,6 +24,7 @@ const otpLimiter = rateLimit({
 router.post('/api/user/register', authLimiter, controller.registerUser)
 router.post('/api/user/login', authLimiter, controller.loginUser)
 router.post('/api/user/logout',verifyJWT,controller.logoutUser)
+router.post('/api/user/refresh', controller.refreshAccessToken)
 router.post('/api/user/resend-otp', otpLimiter, controller.resendOTP)
 router.post('/api/user/verify-email', otpLimiter, controller.verifyEmail)
 router.post('/api/user/forgot-password', otpLimiter, controller.forgotPassword)

@@ -468,6 +468,9 @@
   border-radius: 24px;
   width: 100%;
   max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   animation: slideUp 0.3s ease;
 }
@@ -499,6 +502,7 @@
 .modalBody {
   padding: 28px 24px;
   text-align: center;
+  overflow-y: auto;
 }
 
 .modalIcon {

@@ -136,7 +136,7 @@ function ChatPage() {
 
   // Determine who the current user is in this context
   const iAmOwner = userRole === 'owner';
-  const myRole = iAmOwner ? 'Owner' : 'Finder';
+
   const theirRole = iAmOwner ? 'Finder' : 'Owner';
 
   return (

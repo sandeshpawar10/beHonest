@@ -18,6 +18,7 @@ const adminLoginLimiter = rateLimit({
 
 router.post("/api/admin/login", adminLoginLimiter, adminController.adminLogin);
 router.post("/api/admin/logout", verifyAdmin, adminController.adminLogout);
+router.post("/api/admin/refresh", adminController.refreshAdminToken);
 router.get("/api/admin/disputes", verifyAdmin, adminController.getAllDisputes);
 router.post("/api/admin/resolve/:escrowId", verifyAdmin, adminController.resolveDispute);
 router.get("/api/admin/stats", verifyAdmin, adminController.getAdminStats);

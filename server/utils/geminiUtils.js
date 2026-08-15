@@ -1,29 +1,60 @@
 const { GoogleGenAI } = require('@google/genai');
 
+const z = require('zod');
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-exports.runInteractiveInterrogation = async function(item, chatHistory) {
+// Schema for valid AI response
+const aiResponseSchema = z.object({
+  message: z.string(),
+  status: z.enum(["continue", "verified", "needs_review", "rejected"]),
+  score: z.number().min(0).max(100).optional()
+});
+
+// Helper function to safely fetch an image (either URL or raw base64) and return its base64 data and mimeType
+async function fetchImageAsBase64(imageStr) {
+  let base64Data = '';
+  let mimeType = 'image/jpeg';
+
+  if (!imageStr) return { base64Data, mimeType };
+
+  if (imageStr.startsWith('http://') || imageStr.startsWith('https://')) {
+    try {
+      const response = await fetch(imageStr);
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        base64Data = Buffer.from(arrayBuffer).toString('base64');
+        const contentType = response.headers.get('content-type');
+        if (contentType) mimeType = contentType;
+      } else {
+        console.warn(`Failed to fetch image from URL: ${imageStr}`);
+      }
+    } catch (err) {
+      console.error(`Error fetching image from URL (${imageStr}):`, err);
+    }
+  } else {
+    base64Data = imageStr.includes(',') ? imageStr.split(',')[1] : imageStr;
+    mimeType = imageStr.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+  }
+
+  return { base64Data, mimeType };
+}
+
+exports.runInteractiveInterrogation = async function(item, chatHistory, proofImage = null) {
   if (!GEMINI_API_KEY) {
     throw new Error('Gemini API key is not configured.');
   }
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  const modelName = 'gemini-3.1-flash-lite';
   
   // Safe extraction of the first image
   const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
   
-  let base64Data = '';
-  let mimeType = 'image/jpeg';
-  
-  if (firstImage) {
-    base64Data = firstImage.includes(',')
-      ? firstImage.split(',')[1]
-      : firstImage;
+  const { base64Data, mimeType } = await fetchImageAsBase64(firstImage);
 
-    mimeType = firstImage.startsWith('data:image/png')
-      ? 'image/png'
-      : 'image/jpeg';
-  }
+  // Fetch and convert Cloudinary proofImage to base64
+  const { base64Data: proofBase64Data, mimeType: proofMimeType } = await fetchImageAsBase64(proofImage);
 
   const systemPrompt = `You are a strict security AI for a lost-and-found platform.
 We need to verify if the person claiming this item is the true owner through a conversation.
@@ -31,67 +62,102 @@ We need to verify if the person claiming this item is the true owner through a c
 A student found this item and provided the following details:
 - Title: ${item.shortTitle || item.title}
 - Description: ${item.description}
-- Secret Identifier (Hidden from public): ${item.secretIdentity || item.secretDetails || "None provided"}
 
-You are conducting an interactive interview. You must ask ONE highly specific question at a time based on what the finder gave information about item.
-Do NOT ask generic questions like "What color is it?". Ask about unique visual details in the image (scratches, stickers, precise colors, brand, serial number) or the Secret Identifier that is given in the Description or in the Secret Identifier by the finder.
+You are conducting an interactive interview. You must ask ONE highly specific question at a time based on the visual details in the image (if provided) or the description.
+Do NOT ask generic questions like "What color is it?". Ask about unique visual details (scratches, stickers, precise colors, brand, serial number).
 
 The user's chat history is provided. Analyze their latest answer.
 If they answered correctly, proceed to the next question.
-If they answered incorrectly, you can give them one more chance or end the interview.
-You MUST ask between 7 and 10 questions to thoroughly interrogate them before making a final verdict (unless they completely fail early on). Do not pass them after just 1 or 2 questions.
+If they answered incorrectly, you can give them one more chance or simply continue to the next question.
+You MUST ask between 4 and 10 questions to thoroughly interrogate them before making a final verdict. Do not pass them after just 1 or 2 questions.
 
-Return ONLY a valid JSON object (no markdown, no extra text):
+GRADING RULES FOR FINAL VERDICT:
+1. Start with a baseline score of 100.
+2. For every minor mistake or slight inaccuracy, deduct 5 to 10 points.
+3. For every completely wrong answer, deduct 20 points.
+4. If the final score is 80 or above, set status to "verified".
+5. If the final score is between 50 and 79, set status to "needs_review".
+6. If the final score is below 50, set status to "rejected".
+
+Return ONLY a valid JSON object matching this schema:
 {
   "message": "Your next question OR your final verdict explanation",
   "status": "continue" | "verified" | "needs_review" | "rejected",
-  "score": a number from 0 to 100 representing confidence (only required if status is NOT 'continue')
+  "score": a number from 0 to 100 representing your calculated grade (only required if status is NOT 'continue')
 }`;
 
   const contents = [];
   
-  const formattedHistory = chatHistory.map(msg => 
-    `${msg.role === 'ai' ? 'AI' : 'Claimant'}: ${msg.text}`
-  ).join('\n');
+  // Enforce Max Chat History to prevent context exhaustion/injection
+  const MAX_HISTORY = 15;
+  const truncatedHistory = chatHistory.slice(-MAX_HISTORY);
+  
+  const formattedHistory = truncatedHistory.map(msg => {
+    // Basic sanitization
+    const cleanText = msg.text.replace(/[\<\>\{\}]/g, ''); 
+    return `${msg.role === 'ai' ? 'AI' : 'Claimant'}: ${cleanText}`;
+  }).join('\n');
 
-  const fullPrompt = systemPrompt + "\n\nChat History:\n" + (formattedHistory || "(No history yet. Start by asking the first question.)");
+  let fullPrompt = systemPrompt + "\n\nChat History:\n" + (formattedHistory || "(No history yet. Start by asking the first question.)");
 
-  try {
-    const parts = [
-      { text: fullPrompt }
-    ];
-    
-    // Only attach image if it exists
-    if (base64Data) {
-        parts.push({ inlineData: { mimeType, data: base64Data } });
-    }
+  let retries = 0;
+  const MAX_RETRIES = 2;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: [
-        {
-          role: 'user',
-          parts: parts,
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
+  while (retries <= MAX_RETRIES) {
+    try {
+      const parts = [
+        { text: fullPrompt }
+      ];
+      
+      if (base64Data) {
+          parts.push({ inlineData: { mimeType, data: base64Data } });
       }
-    });
+      
+      if (proofBase64Data) {
+          parts.push({ inlineData: { mimeType: proofMimeType, data: proofBase64Data } });
+      }
 
-    const text = response.text.trim();
-    let jsonStr = text;
-    
-    // Fallback regex to extract JSON just in case it still wraps it
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      jsonStr = match[0];
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            role: 'user',
+            parts: parts,
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+        }
+      });
+
+      let jsonStr = response.text.trim();
+      
+      const match = jsonStr.match(/\{[\s\S]*\}/);
+      if (match) {
+        jsonStr = match[0];
+      }
+
+      const rawJson = JSON.parse(jsonStr);
+      
+      // Zod validation
+      const validatedData = aiResponseSchema.parse(rawJson);
+      
+      return {
+        ...validatedData,
+        aiModelUsed: modelName,
+        aiVersion: '1.0'
+      };
+
+    } catch (err) {
+      console.warn(`Gemini interrogation warning (Attempt ${retries + 1}):`, err.message);
+      retries++;
+      if (retries > MAX_RETRIES) {
+        console.error('Gemini interrogation failed after max retries:', err);
+        throw new Error('AI verification service is temporarily unstable or returned invalid responses. Please try again.');
+      }
+      // Add error correction instructions to prompt for the next retry
+      fullPrompt += "\n\n[SYSTEM]: Your previous response was invalid JSON or failed schema validation. You MUST return valid JSON exactly matching the schema.";
     }
-
-    return JSON.parse(jsonStr);
-  } catch (err) {
-    console.error('Gemini interrogation error:', err);
-    throw err;
   }
 }
 
@@ -192,3 +258,88 @@ Be strict but fair — don't flag genuine photos.`;
     };
   }
 }
+
+exports.runFinalCombinedScoring = async function(item, chatHistory, tentativeVerdict, proofImage) {
+  if (!proofImage) {
+    // If no proof image is uploaded, just return the tentative verdict as final
+    return {
+      message: tentativeVerdict.message,
+      status: tentativeVerdict.status,
+      score: tentativeVerdict.score || 0,
+      aiModelUsed: 'gemini-3.1-flash-lite',
+      aiVersion: 'v1'
+    };
+  }
+
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key is not configured.');
+  }
+
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  const modelName = 'gemini-3.1-flash-lite';
+  
+  const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
+  
+  const { base64Data, mimeType } = await fetchImageAsBase64(firstImage);
+  const { base64Data: proofBase64Data, mimeType: proofMimeType } = await fetchImageAsBase64(proofImage);
+
+  const systemPrompt = `You are a strict security AI for a lost-and-found platform.
+We are finalizing a claim verification. The user has already completed a chat interview.
+Based purely on their chat, the tentative verdict was: "${tentativeVerdict.status}" with a score of ${tentativeVerdict.score}.
+
+The user has now uploaded photographic proof of ownership (a receipt, bill, or an old photo of them with the item). This is the SECOND image.
+The FIRST image is the actual found item.
+
+CRITICAL INSTRUCTIONS:
+1. Cross-reference the proof image with the found item image.
+2. Look for matching serial numbers, visual defects, exact product models.
+3. FORENSIC CHECK: If the proof image appears to be a generic stock photo downloaded from the internet, or AI-generated, immediately set status to "needs_review" and explain the fraud.
+4. If the proof image strongly matches the item, boost their final score and set status to "verified".
+5. If the proof image clearly does NOT match the item, set status to "rejected" or "needs_review".
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "message": "Your final verdict explanation, mentioning the photo proof.",
+  "status": "verified" | "needs_review" | "rejected",
+  "score": a number from 0 to 100 representing the FINAL COMBINED confidence score.
+}`;
+
+  try {
+    const parts = [
+      { text: systemPrompt }
+    ];
+    if (base64Data) {
+        parts.push({ inlineData: { mimeType, data: base64Data } });
+    }
+    if (proofBase64Data) {
+        parts.push({ inlineData: { mimeType: proofMimeType, data: proofBase64Data } });
+    }
+
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: [
+        { role: 'user', parts: parts }
+      ],
+      config: { responseMimeType: "application/json" }
+    });
+
+    let jsonStr = response.text.trim();
+    if (jsonStr.startsWith('\`\`\`json')) {
+      jsonStr = jsonStr.replace(/^\`\`\`json/, '').replace(/\`\`\`$/, '').trim();
+    }
+    
+    const result = aiResponseSchema.parse(JSON.parse(jsonStr));
+    return { ...result, aiModelUsed: modelName, aiVersion: 'v1' };
+
+  } catch (error) {
+    console.error('Final Gemini Evaluation Error:', error);
+    // Fallback if AI fails: use the tentative verdict but flag for review just in case
+    return {
+      message: "AI evaluation of the proof photo failed. Using chat score and flagging for manual review.",
+      status: "needs_review",
+      score: tentativeVerdict.score || 0,
+      aiModelUsed: modelName,
+      aiVersion: 'v1'
+    };
+  }
+};

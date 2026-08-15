@@ -7,44 +7,44 @@ const chatModel = require("../models/chatModel");
 const claimModel = require("../models/claimModel");
 const { createNotification } = require("./notificationController");
 
+const adminModel = require("../models/adminModel");
+
 exports.adminLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const envEmail = process.env.ADMIN_EMAIL || "";
-        const envPassword = process.env.ADMIN_PASSWORD || "";
-
-        // Prevent timing attacks using crypto.timingSafeEqual
-        // Both strings must be converted to Buffers of the EXACT same length to be compared safely
-        let isEmailMatch = false;
-        let isPasswordMatch = false;
-
-        if (email && envEmail && email.length === envEmail.length) {
-            isEmailMatch = crypto.timingSafeEqual(Buffer.from(email), Buffer.from(envEmail));
-        }
-
-        if (password && envPassword && password.length === envPassword.length) {
-            isPasswordMatch = crypto.timingSafeEqual(Buffer.from(password), Buffer.from(envPassword));
-        }
-
-        if (isEmailMatch && isPasswordMatch) {
-            const token = jwt.sign(
-                { email, role: "admin" },
-                process.env.access_token_secret,
-                { expiresIn: "1d" }
-            );
-
-            res.cookie("admintoken", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "strict",
-                maxAge: 24 * 60 * 60 * 1000 // 1 day
-            });
-
-            return res.status(200).json({ status: "success", message: "Admin logged in successfully" });
-        } else {
+        const admin = await adminModel.findOne({ email: email.toLowerCase() });
+        if (!admin) {
             return res.status(401).json({ error: "Invalid admin credentials" });
         }
+
+        const isMatch = await admin.isPasswordCorrect(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid admin credentials" });
+        }
+
+        const accesstoken = admin.generateAccesstoken();
+        const refreshtoken = admin.generateRefreshToken();
+
+        admin.refreshTokens = admin.refreshTokens || [];
+        admin.refreshTokens.push(refreshtoken);
+        if (admin.refreshTokens.length > 5) {
+            admin.refreshTokens.shift();
+        }
+        await admin.save({ validateBeforeSave: false });
+
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: '/'
+        };
+
+        return res.status(200)
+            .cookie("adminaccesstoken", accesstoken, options)
+            .cookie("adminrefreshtoken", refreshtoken, options)
+            .json({ status: "success", message: "Admin logged in successfully" });
+
     } catch (error) {
         console.error("Error in adminLogin:", error);
         return res.status(500).json({ error: "Internal server error" });
@@ -160,10 +160,68 @@ exports.getAdminStats = async (req, res) => {
 
 exports.adminLogout = async (req, res) => {
     try {
-        res.clearCookie("admintoken");
-        return res.status(200).json({ status: "success", message: "Admin logged out successfully" });
+        const refreshToken = req.cookies?.adminrefreshtoken;
+        if (req.user && req.user._id) {
+            await adminModel.findByIdAndUpdate(req.user._id, {
+                $pull: { refreshTokens: refreshToken }
+            });
+        }
+        
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/'
+        };
+
+        return res.status(200)
+            .clearCookie("adminaccesstoken", options)
+            .clearCookie("adminrefreshtoken", options)
+            .json({ status: "success", message: "Admin logged out successfully" });
     } catch (error) {
         console.error("Error in adminLogout:", error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.refreshAdminToken = async (req, res) => {
+    try {
+        const incomingRefreshToken = req.cookies?.adminrefreshtoken;
+        if (!incomingRefreshToken) {
+            return res.status(401).json({ error: "Unauthorized request" });
+        }
+
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        
+        const admin = await adminModel.findById(decodedToken._id);
+        if (!admin) {
+            return res.status(401).json({ error: "Invalid refresh token" });
+        }
+
+        if (!admin.refreshTokens.includes(incomingRefreshToken)) {
+            return res.status(401).json({ error: "Refresh token is expired or used" });
+        }
+
+        const accesstoken = admin.generateAccesstoken();
+        const newRefreshToken = admin.generateRefreshToken();
+
+        admin.refreshTokens = admin.refreshTokens.filter(t => t !== incomingRefreshToken);
+        admin.refreshTokens.push(newRefreshToken);
+        await admin.save({ validateBeforeSave: false });
+
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/'
+        };
+
+        return res.status(200)
+            .cookie("adminaccesstoken", accesstoken, options)
+            .cookie("adminrefreshtoken", newRefreshToken, options)
+            .json({ message: "Admin Access token refreshed" });
+
+    } catch (error) {
+        return res.status(401).json({ error: error?.message || "Invalid refresh token" });
     }
 };

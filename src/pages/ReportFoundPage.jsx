@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
-import { saveFoundItem, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
 import { generateImageFingerprint } from '../utils/imageFingerprint';
 import styles from './ReportFoundPage.module.css';

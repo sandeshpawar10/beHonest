@@ -5,6 +5,7 @@
    ============================================================ */
 
 import styles from './AuthLayout.module.css';
+import Footer from './Footer';
 
 // Feature pills shown on the left branding panel
 const FEATURES = [
@@ -59,7 +60,11 @@ function AuthLayout({ children, tagline }) {
           />
         </div>
         
+        
         {children}
+        <div style={{ marginTop: 'auto', paddingTop: '40px' }}>
+          <Footer />
+        </div>
       </section>
 
     </main>

@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import {
   maskEmail,        // Masks email for privacy display
   formatCountdown,  // Formats seconds as MM:SS
@@ -27,7 +27,7 @@ function VerifyOTPPage() {
   const email   = searchParams.get('email')   || '';
   const context = searchParams.get('context') || 'register';
 
-  const { confirmOTP, sendOTP } = useAuth();
+
 
   // ── OTP input state ───────────────────────────────────────
   // Array of 6 strings — one digit per box
@@ -176,7 +176,7 @@ function VerifyOTPPage() {
         // Future contexts (e.g., password reset)
         navigate('/dashboard', { replace: true });
       }
-    } catch (err) {
+    } catch {
       setAlert({ msg: 'Failed to connect to server.', type: 'error' });
       setLoading(false);
     }
@@ -209,7 +209,7 @@ function VerifyOTPPage() {
       setResendCooldown(AUTH_CONFIG.OTP_RESEND_COOLDOWN);
       setTimeLeft(OTP_TOTAL_SECONDS);
       setAlert({ msg: 'New OTP sent! Check your email.', type: 'success' });
-    } catch (err) {
+    } catch {
       setAlert({ msg: 'Failed to connect to server.', type: 'error' });
       setCanResend(true);
       return;

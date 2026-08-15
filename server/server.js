@@ -10,6 +10,7 @@ const chatRoute = require("./routes/chatRoutes")
 const adminRoute = require('./routes/adminRoutes')
 const notificationRoute = require('./routes/notificationRoutes')
 const cookieParser = require("cookie-parser")
+const { requireCustomHeaderCSRF } = require("./middlewares/csrfMiddleware");
 dotenv.config()
 const app = express()
 const port = process.env.port || 8000
@@ -36,6 +37,10 @@ app.use(
 );
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+
+// Apply CSRF Protection to all API routes
+app.use('/api', requireCustomHeaderCSRF);
+
 app.use('/', userRoute)
 app.use('/', itemRoute)
 app.use('/', claimRoute)
@@ -43,6 +48,22 @@ app.use('/', escrowRoute)
 app.use('/', chatRoute)
 app.use('/', adminRoute)
 app.use('/', notificationRoute)
-app.listen(port,()=>{
+
+// Seed Superadmin
+const seedAdmin = async () => {
+    const adminModel = require("./models/adminModel");
+    const count = await adminModel.countDocuments();
+    if (count === 0 && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+        await adminModel.create({
+            email: process.env.ADMIN_EMAIL,
+            password: process.env.ADMIN_PASSWORD,
+            role: "superadmin"
+        });
+        console.log("Seeded initial superadmin account from environment variables.");
+    }
+};
+
+app.listen(port, async () => {
+    await seedAdmin();
     console.log("server is started")
 })

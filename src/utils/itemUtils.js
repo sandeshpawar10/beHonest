@@ -115,6 +115,11 @@ export const CATEGORY_CONFIG = {
     icon: '💻',
     blurHint: 'Blur: stickers with personal info, screen content, serial number'
   },
+  mouse: {
+    label: 'Mouse / Keyboard',
+    icon: '🖱️',
+    blurHint: 'Blur: serial number or unique identifying stickers'
+  },
   headphones: {
     label: 'Headphones',
     icon: '🎧',

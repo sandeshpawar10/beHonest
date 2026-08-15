@@ -4,17 +4,38 @@ const itemModel = require("../models/foundItemModel");
 const userModel = require("../models/userModel");
 const chatModel = require("../models/chatModel");
 const { createNotification } = require("./notificationController");
+const z = require("zod");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || "dummy_key",
+    key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret"
+});
+
+const createEscrowSchema = z.object({
+    itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Item ID"),
+    claimId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Claim ID"),
+    amount: z.number().min(0, "Amount cannot be negative"),
+    rewardCategory: z.string().optional().default("standard")
+});
+
+const raiseDisputeSchema = z.object({
+    reason: z.string().min(10, "Dispute reason must be at least 10 characters").max(2000),
+    itemPossession: z.enum(["me", "other_party", "unknown"]).optional().default("unknown")
+});
 
 // ── Create a new escrow (after verified claim + reward selection) ─
 exports.createEscrow = async function(req, res) {
     try {
-        const { itemId, claimId, amount, rewardCategory } = req.body;
-
-        if (!itemId || !claimId || amount === undefined) {
-            return res.status(400).json({
-                error: "Missing required fields: itemId, claimId, and amount."
-            });
+        const validation = createEscrowSchema.safeParse(req.body);
+        if (!validation.success) {
+            const issues = validation.error?.issues || validation.error?.errors || [];
+            return res.status(400).json({ error: issues.map(e => e.message).join(", ") || validation.error?.message || "Invalid request payload" });
         }
+        
+        const { itemId, claimId, amount, rewardCategory } = validation.data;
 
         if (!req.user || !req.user._id) {
             return res.status(401).json({ error: "Unauthorized." });
@@ -29,11 +50,30 @@ exports.createEscrow = async function(req, res) {
             return res.status(400).json({ error: "Escrow can only be created for verified claims." });
         }
 
+        if (claim.claimantId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Only the verified claimant can create an escrow." });
+        }
+        
+        if (claim.itemId.toString() !== itemId) {
+            return res.status(400).json({ error: "Item ID mismatch. The provided item does not match the claim." });
+        }
+
+        const existingEscrow = await escrowModel.findOne({ 
+            $or: [{ claimId }, { itemId }] 
+        });
+        if (existingEscrow) {
+            return res.status(400).json({ error: "An escrow already exists for this item or claim." });
+        }
+
         // The depositor is the person who claimed (the owner)
         // The finder is the person who reported the item
         const item = await itemModel.findById(itemId);
         if (!item) {
             return res.status(404).json({ error: "Item not found." });
+        }
+        
+        if (item.status !== "claimed") {
+            return res.status(400).json({ error: "Item is no longer available for escrow." });
         }
 
         const finderId = item.reportedBy;
@@ -44,6 +84,11 @@ exports.createEscrow = async function(req, res) {
             return res.status(403).json({ error: "Finder cannot create an escrow for themselves." });
         }
 
+        if (amount < 1) {
+            return res.status(400).json({ error: "Amount must be at least ₹1." });
+        }
+
+        // Create the escrow with payment_pending status first
         const newEscrow = await escrowModel.create({
             itemId,
             claimId,
@@ -51,43 +96,86 @@ exports.createEscrow = async function(req, res) {
             finderId,
             amount,
             rewardCategory: rewardCategory || "standard",
-            status: "pending"
+            status: "payment_pending"
         });
-        const { sendClaimNotification } = require('../utils/emailUtils');
-        const finder = await userModel.findById(finderId)
-        if(!finder){
-            return res.status(404).json({
-                errorMsg: "Finder not found to the mail"
-            })
-        }
-        const emailSent = await sendClaimNotification(finder.email, item.shortTitle, amount)
-        if (!emailSent) {
-            return res.status(500).json({ error: "Failed to send notification email. Please try again." });
-        }
 
-        // In-app notification
-        await createNotification(
-            finderId,
-            'CLAIM_VERDICT',
-            'Item Claimed & Reward Deposited!',
-            `The owner of ${item.shortTitle} passed verification and deposited ₹${amount}. Chat with them now!`,
-            newEscrow._id
-        );
-        return res.status(201).json({
-            status: "success",
-            message: "Escrow created successfully.",
-            escrow: {
-                _id: newEscrow._id,
-                itemId: newEscrow.itemId,
-                amount: newEscrow.amount,
-                rewardCategory: newEscrow.rewardCategory,
-                status: newEscrow.status,
-                createdAt: newEscrow.createdAt
-            }
+        // Create Razorpay order
+        const options = {
+            amount: amount * 100, // amount in the smallest currency unit
+            currency: "INR",
+            receipt: newEscrow._id.toString()
+        };
+
+        const order = await razorpay.orders.create(options);
+        
+        // Update the escrow with the generated order ID
+        newEscrow.razorpayOrderId = order.id;
+        await newEscrow.save();
+
+        res.status(201).json({
+            message: "Payment order created successfully",
+            orderId: order.id,
+            escrowId: newEscrow._id,
+            amount: order.amount,
+            currency: order.currency
         });
 
     } catch (error) {
-        console.error("Error creating escrow:", error);
+        console.error("Error in createEscrow:", error);
+        res.status(500).json({ error: error.error?.description || error.message || "Failed to communicate with Razorpay. Check API Keys." });
+    }
+};
+
+// ── Verify Payment ──────────────────────────────────────────────────────────
+exports.verifyPayment = async function(req, res) {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, escrowId } = req.body;
+
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !escrowId) {
+            return res.status(400).json({ error: "Missing required payment details." });
+        }
+
+        const escrow = await escrowModel.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        // Verify signature
+        const secret = process.env.RAZORPAY_KEY_SECRET || "dummy_secret";
+        const generated_signature = crypto
+            .createHmac("sha256", secret)
+            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .digest("hex");
+
+        if (generated_signature !== razorpay_signature) {
+            return res.status(400).json({ error: "Invalid payment signature." });
+        }
+
+        // Signature is valid, update the escrow
+        escrow.status = "pending";
+        escrow.razorpayPaymentId = razorpay_payment_id;
+        escrow.razorpaySignature = razorpay_signature;
+        await escrow.save();
+
+        // Send notifications
+        const item = await itemModel.findById(escrow.itemId);
+        const { sendClaimNotification } = require('../utils/emailUtils');
+        const finder = await userModel.findById(escrow.finderId);
+        
+        if(finder){
+            await sendClaimNotification(finder.email, item.shortTitle, escrow.amount);
+        }
+
+        await createNotification(
+            escrow.finderId,
+            "GENERAL",
+            "Reward Deposited! 💰",
+            `The owner has verified their claim and deposited a reward of ₹${escrow.amount} into escrow for your found item: ${item.shortTitle}. Meet them to complete the handover!`,
+            `/escrow`
+        );
+        res.status(200).json({ message: "Payment verified successfully", escrow });
+    } catch (error) {
+        console.error("Error verifying payment:", error);
         return res.status(500).json({ error: "Internal server error." });
     }
 };
@@ -220,7 +308,14 @@ exports.confirmHandover = async function(req, res) {
 exports.raiseDispute = async function(req, res) {
     try {
         const { escrowId } = req.params;
-        const { reason, itemPossession } = req.body;
+        
+        const validation = raiseDisputeSchema.safeParse(req.body);
+        if (!validation.success) {
+            const issues = validation.error?.issues || validation.error?.errors || [];
+            return res.status(400).json({ error: issues.map(e => e.message).join(", ") || validation.error?.message || "Invalid request payload" });
+        }
+        
+        const { reason, itemPossession } = validation.data;
 
         const escrow = await escrowModel.findById(escrowId);
         if (!escrow) {

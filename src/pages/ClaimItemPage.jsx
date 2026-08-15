@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
-import { getFoundItemById, CATEGORY_CONFIG } from '../utils/itemUtils';
+import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import styles from './ClaimItemPage.module.css';
 
 function ClaimItemPage() {
@@ -36,6 +36,15 @@ function ClaimItemPage() {
 
   // Result State
   const [result, setResult] = useState(null);
+  
+  // Secret Guess State
+  const [secretGuess, setSecretGuess] = useState('');
+  
+  // Proof Image State
+  const [proofImageBase64, setProofImageBase64] = useState('');
+  
+  // Tentative Verdict from Chat
+  const [tentativeVerdict, setTentativeVerdict] = useState(null);
 
   // ── Load the item on mount ────────────────────────────────
   useEffect(() => {
@@ -114,8 +123,21 @@ function ClaimItemPage() {
       
       const response = data.aiResponse;
       setChatHistory([{ role: 'ai', text: response.message }]);
-      setErrorCount(0); // Reset on success
-      setVerifying(false);
+      
+      if (response.status !== 'continue') {
+        setTimeout(() => {
+          setTentativeVerdict({
+            status: response.status,
+            message: response.message,
+            score: response.score || 0
+          });
+          setStep('proof');
+          setVerifying(false);
+        }, 2000);
+      } else {
+        setErrorCount(0);
+        setVerifying(false);
+      }
     } catch (err) {
       console.error(err);
       setError(`⚠️ Sorry for the inconvenience. The AI is currently experiencing heavy traffic. Please try again. (Error: ${err.message})`);
@@ -124,16 +146,15 @@ function ClaimItemPage() {
     }
   };
 
-  // ── Send Message ──────────────────────────────────────────
+  // ── Handle Sending a Message ──────────────────────────────
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim() || verifying) return;
+    if (!inputText.trim()) return;
 
-    const userMessage = inputText.trim();
-    setInputText('');
-
-    const newHistory = [...chatHistory, { role: 'user', text: userMessage }];
+    const newMsg = { role: 'user', text: inputText };
+    const newHistory = [...chatHistory, newMsg];
     setChatHistory(newHistory);
+    setInputText('');
     setVerifying(true);
 
     try {
@@ -141,7 +162,11 @@ function ClaimItemPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ itemId: item._id, chatHistory: newHistory })
+        body: JSON.stringify({ 
+          itemId: item._id, 
+          chatHistory: newHistory,
+          secretGuess: secretGuess
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to verify answer');
@@ -151,9 +176,15 @@ function ClaimItemPage() {
       setChatHistory(finalHistory);
 
       if (response.status !== 'continue') {
-        // AI has reached a verdict
+        // AI has finished the chat portion.
         setTimeout(() => {
-          handleVerdict(response, data.claim);
+          setTentativeVerdict({
+            status: response.status,
+            message: response.message,
+            score: response.score || 0
+          });
+          setStep('proof');
+          setVerifying(false);
         }, 2000); // Wait 2 seconds so user can read the final message before switching screens
       } else {
         setErrorCount(0); // Reset on success
@@ -175,31 +206,50 @@ function ClaimItemPage() {
     }
   };
 
-  // ── Handle Verdict ────────────────────────────────────────
-  const handleVerdict = (response, claimData) => {
-    let verdictLabel = '';
-    let finalVerdict = response.status;
-    
-    if (finalVerdict === 'verified') {
-      verdictLabel = '✅ Verified Owner';
-    } else if (finalVerdict === 'needs_review') {
-      verdictLabel = '🔍 Needs Review';
-    } else {
-      verdictLabel = '❌ Verification Failed';
-      finalVerdict = 'rejected';
+  // ── Handle Finalize Proof ────────────────────────────────
+  const handleFinalizeProof = async (skipPhoto = false) => {
+    setVerifying(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          itemId: item._id, 
+          chatHistory: chatHistory,
+          secretGuess: secretGuess,
+          tentativeVerdict: tentativeVerdict,
+          proofImage: skipPhoto ? '' : proofImageBase64
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to finalize claim');
+      
+      const claimData = data.claim;
+      const finalStatus = claimData.verdict;
+      
+      let verdictLabel = "Review Required";
+      if (finalStatus === "verified") verdictLabel = "✅ Verified Owner";
+      else if (finalStatus === "rejected") verdictLabel = "❌ Claim Rejected";
+      
+      const verificationResult = {
+        overallScore: claimData.score || 0,
+        verdict: finalStatus,
+        verdictLabel,
+        verdictMessage: claimData.verdictMessage,
+        claimId: claimData._id
+      };
+
+      setResult(verificationResult);
+      setStep('result');
+    } catch (err) {
+      console.error(err);
+      setError(`⚠️ Failed to finalize proof. ${err.message}`);
+    } finally {
+      setVerifying(false);
     }
-
-    const verificationResult = {
-      overallScore: response.score || 0,
-      verdict: finalVerdict,
-      verdictLabel,
-      verdictMessage: response.message,
-      claimId: claimData ? claimData._id : null
-    };
-
-    setResult(verificationResult);
-    setStep('result');
-    setVerifying(false);
   };
 
   // ── Loading state ─────────────────────────────────────────
@@ -264,16 +314,32 @@ function ClaimItemPage() {
                 
                 {!started ? (
                   <div className={styles.startBtnBox}>
-                    {verifying ? (
-                      <div className={styles.centerMsg}>
-                        <div className={styles.spinner} />
-                        <p>Initializing AI Interview...</p>
-                      </div>
-                    ) : (
-                      <button className={styles.startBtn} onClick={startInterrogation}>
-                        Start Verification Interview
-                      </button>
-                    )}
+                    <div className={styles.introRules}>
+                      <p><strong>1.</strong> You will chat with our AI to prove ownership.</p>
+                      <p><strong>2.</strong> You must answer specific questions about the item.</p>
+                      <p><strong>3.</strong> The AI decides if you pass, fail, or need manual review.</p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '20px', textAlign: 'left', width: '100%', maxWidth: '300px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                        Secret Identifier (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="E.g., Serial number, unique mark..."
+                        value={secretGuess}
+                        onChange={(e) => setSecretGuess(e.target.value)}
+                        className={styles.chatInput}
+                        style={{ width: '100%', borderRadius: '8px', border: '1px solid #ccc' }}
+                      />
+                      <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
+                        If the finder provided a secret identifier, you must guess it correctly here to be verified.
+                      </p>
+                    </div>
+
+                    <button className={styles.startBtn} onClick={startInterrogation} disabled={verifying}>
+                      {verifying ? 'Starting...' : 'Start Verification'}
+                    </button>
                   </div>
                 ) : (
                   <>
@@ -338,6 +404,81 @@ function ClaimItemPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ════════════════ PROOF UPLOAD STEP ════════════════ */}
+      {step === 'proof' && (
+        <div className={styles.topBar}>
+           <h1 className={styles.pageTitle}>📸 Final Proof</h1>
+        </div>
+      )}
+      {step === 'proof' && (
+        <div className={styles.layout}>
+          <div className={styles.previewCard} style={{ margin: '0 auto', maxWidth: '600px', textAlign: 'center', padding: '2rem' }}>
+            <h2 style={{ marginBottom: '1rem', color: '#1a1a2e' }}>You completed the interview!</h2>
+            <p style={{ color: '#4a4a68', marginBottom: '2rem' }}>
+              Your chat performance was recorded. To boost your final score and complete the verification, please upload a supporting photo.
+            </p>
+
+            <div style={{ background: '#f8f9fa', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
+              <label style={{ display: 'block', marginBottom: '1rem', fontWeight: '600', color: '#333', fontSize: '1.1rem' }}>
+                Upload Proof of Ownership (Optional)
+              </label>
+              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
+                Upload a receipt, invoice, or an old photo of you with the item.
+              </p>
+              
+              <input
+                type="file"
+                accept="image/*"
+                id="proofUpload"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setProofImageBase64(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                  } else {
+                    setProofImageBase64('');
+                  }
+                }}
+              />
+              <label htmlFor="proofUpload" style={{
+                display: 'inline-block', padding: '12px 24px', background: '#00d2ff', 
+                color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold',
+                boxShadow: '0 4px 6px rgba(0, 210, 255, 0.2)'
+              }}>
+                Choose Photo
+              </label>
+
+              {proofImageBase64 && (
+                <div style={{ marginTop: '20px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxWidth: '300px', margin: '20px auto 0' }}>
+                  <img src={proofImageBase64} alt="Proof" style={{ width: '100%', display: 'block' }} />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => handleFinalizeProof(true)}
+                disabled={verifying}
+                style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Skip Photo
+              </button>
+              <button 
+                onClick={() => handleFinalizeProof(false)}
+                disabled={verifying || !proofImageBase64}
+                style={{ padding: '12px 24px', background: proofImageBase64 ? '#00d2ff' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: proofImageBase64 ? 'pointer' : 'not-allowed' }}
+              >
+                {verifying ? 'Verifying...' : 'Submit Final Proof'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ════════════════ RESULT STEP ════════════════ */}

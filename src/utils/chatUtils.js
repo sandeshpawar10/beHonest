@@ -45,7 +45,7 @@ export function sendMessage(escrowId, senderEmail, senderName, text) {
   if (raw) {
     try {
       allMessages = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       allMessages = [];
     }
   }

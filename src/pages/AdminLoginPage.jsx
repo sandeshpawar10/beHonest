@@ -46,7 +46,7 @@ function AdminLoginPage() {
         setShake(true);
         setTimeout(() => setShake(false), 500);
       }
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Failed to connect to the server.');
       setShake(true);

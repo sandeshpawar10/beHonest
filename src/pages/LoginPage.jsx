@@ -10,17 +10,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
-import { isValidEmailFormat, isCollegeEmail } from '../utils/authUtils';
+
 import styles from './AuthPages.module.css';
 
 function LoginPage() {
   const navigate  = useNavigate();  // For programmatic navigation after login
-  const { loginSuccess, refreshSession } = useAuth(); // Get the loginSuccess action from AuthContext
+  const { refreshSession } = useAuth(); // Get the loginSuccess action from AuthContext
 
   // ── Form State ────────────────────────────────────────────
   const [email,    setEmail]    = useState(''); // College email input
   const [password, setPassword] = useState(''); // Password input
-  const [loading,  setLoading]  = useState(false); // Button loading state
+  const [loading]  = useState(false); // Button loading state
   const [error,    setError]    = useState('');     // Error message to display
   const [shake,    setShake]    = useState(false);  // Triggers shake animation on error
 
@@ -118,7 +118,7 @@ function LoginPage() {
         return;
       }
 
-    } catch (error) {
+    } catch {
       //console.log(error.response.data);
       console.error("Failed to connect to the backend server.");
     }

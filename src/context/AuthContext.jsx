@@ -9,7 +9,7 @@
    ============================================================ */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { createAndStoreOTP, verifyOTP } from '../utils/authUtils';
+
 
 const AuthContext = createContext(null);
 
@@ -42,7 +42,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshSession();
+    Promise.resolve().then(() => {
+      refreshSession();
+    });
   }, [refreshSession]);
 
   // Called after a successful backend login
@@ -80,10 +82,11 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth() must be used inside an <AuthProvider> component.');
   }
   return context;
-}
+};

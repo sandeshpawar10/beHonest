@@ -22,9 +22,9 @@ const userSchema = new Schema({
         type: Boolean,
         default: false // Prevents them from claiming items until verified
     },
-    refreshToken:{
+    refreshTokens: {
         type: [String],
-        default:[]
+        default: []
     },
     emailVerificationOTP: {
         type: String,

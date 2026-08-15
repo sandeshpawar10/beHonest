@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './AdminPage.module.css';
 
@@ -14,17 +14,12 @@ function AdminPage() {
   const [resolveAction, setResolveAction] = useState(''); // 'release_to_finder' or 'refund_to_owner'
   const [resolving, setResolving] = useState(false);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = useCallback(async () => {
     try {
       const statsRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/stats`, {
         method: 'GET',
         credentials: 'include'
       });
-
-      if (statsRes.status === 401 || statsRes.status === 403) {
-        navigate('/admin/login');
-        return;
-      }
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -45,11 +40,13 @@ function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchAdminData();
-  }, [navigate]);
+    Promise.resolve().then(() => {
+      fetchAdminData();
+    });
+  }, [fetchAdminData]);
 
   const handleLogout = async () => {
     try {

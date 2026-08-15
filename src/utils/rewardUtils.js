@@ -139,6 +139,13 @@ export const REWARD_CATEGORIES = {
     maxReward: 500,
     description: 'Ranges from basic earphones to premium ANC earbuds.'
   },
+  mouse: {
+    label: 'Mouse / Keyboard',
+    icon: '🖱️',
+    minReward: 50,
+    maxReward: 300,
+    description: 'Computer accessories vary in price. A fair reward encourages return.'
+  },
   phone: {
     label: 'Phone / Mobile',
     icon: '📱',
@@ -198,6 +205,13 @@ export const REWARD_CATEGORIES = {
     minReward: 50,
     maxReward: 300,
     description: 'Branded jackets and hoodies can be expensive.'
+  },
+  thank_you: {
+    label: 'Thank You Token',
+    icon: '🙏',
+    minReward: 1,
+    maxReward: 50,
+    description: 'A small token of gratitude. Razorpay requires a ₹1 minimum transaction.'
   },
   shoes: {
     label: 'Shoes / Footwear',

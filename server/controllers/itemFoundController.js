@@ -1,26 +1,58 @@
 const itemModel = require("../models/foundItemModel")
 const { analyzeImageForFraud } = require("../utils/geminiUtils");
 const { uploadImage } = require("../utils/cloudinary");
+const z = require("zod");
+
+const addItemSchema = z.object({
+    category: z.string().min(1, "Category is required").max(50),
+    shortTitle: z.string().min(3, "Title must be at least 3 characters").max(100),
+    description: z.string().min(10, "Description must be at least 10 characters").max(2000),
+    location: z.string().min(3, "Location must be at least 3 characters").max(100),
+    secretIdentity: z.string().max(500).optional(),
+    images: z.array(z.string()).max(5).optional(),
+    blurZones: z.array(z.any()).optional(),
+    dateFound: z.string().datetime().optional()
+});
+
+
+const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+};
 
 exports.addItem = async function(req,res){
     try {
-        //console.log("hello")
-        const {category,shortTitle,description,location,secretIdentity,status,images,blurZones,dateFound,imageFingerprint} = req.body
-
-        if(!category || !shortTitle || !description || !location){
-            return res.status(400).json({
-                error: "Incomplete data, Please fill all required fields."
-            })
+        const validation = addItemSchema.safeParse(req.body);
+        if (!validation.success) {
+            const issues = validation.error?.issues || validation.error?.errors || [];
+            return res.status(400).json({ 
+                error: issues.map(e => e.message).join(", ") || validation.error?.message || "Invalid request payload"
+            });
         }
+        
+        const {category, shortTitle, description, location, secretIdentity, images, blurZones, dateFound} = validation.data;
         if(!req.user || !req.user._id){
             return res.status(401).json({
                 error: "Unauthorized. You must be logged in to report an item."
             });
         }
 
-        // Intercept base64 images and upload to Cloudinary
+        
         let uploadedImageUrls = [];
-        if (images && Array.isArray(images)) {
+        if (images && Array.isArray(images) && images.length > 0) {
+            // Validate the first image for fraud using AI
+            const firstImageData = images[0];
+            if (firstImageData && firstImageData.startsWith('data:image')) {
+                const fraudAnalysis = await analyzeImageForFraud(firstImageData, description, category);
+                
+                if (!fraudAnalysis.skipped) {
+                    if (fraudAnalysis.isFakeImage || fraudAnalysis.isAIGenerated || fraudAnalysis.overallRiskScore > 70) {
+                        return res.status(400).json({ 
+                            error: `AI Security Flag: ${fraudAnalysis.reasoning}. Please upload a real, genuine photo taken with your camera. Stock photos and AI images are strictly prohibited.`
+                        });
+                    }
+                }
+            }
+
             for (let i = 0; i < images.length; i++) {
                 const imgData = images[i];
                 // Check if it looks like a base64 string
@@ -40,7 +72,17 @@ exports.addItem = async function(req,res){
         }
 
         const newItem = await itemModel.create({
-            reportedBy: req.user._id, category,shortTitle,description,location,secretIdentity,status:status || "found",images: uploadedImageUrls, blurZones: blurZones || [],dateFound: dateFound || Date.now(), imageFingerprint: imageFingerprint || ""
+            reportedBy: req.user._id, 
+            category,
+            shortTitle,
+            description,
+            location,
+            secretIdentity: secretIdentity || "",
+            status: "found", // Forcibly set to found
+            images: uploadedImageUrls, 
+            blurZones: blurZones || [],
+            dateFound: dateFound || Date.now(), 
+            imageFingerprint: "" // Computed server-side later if needed
         })
         return res.status(201).json({
             status: "success",
@@ -69,10 +111,12 @@ exports.getAllFoundItems = async function(req,res){
             query.category = category;
         }
         
-        if (search) {
+        if (search && typeof search === 'string') {
+            // ReDoS protection: trim, limit length, and escape special regex characters
+            const sanitizedSearch = escapeRegExp(search.substring(0, 100));
             query.$or = [
-                { shortTitle: { $regex: search, $options: 'i' } },
-                { location: { $regex: search, $options: 'i' } }
+                { shortTitle: { $regex: sanitizedSearch, $options: 'i' } },
+                { location: { $regex: sanitizedSearch, $options: 'i' } }
             ];
         }
 
@@ -96,11 +140,11 @@ exports.getAllFoundItems = async function(req,res){
                 const finderDomain = finderEmail.split('@')[1].toLowerCase();
                 itemObj.isFinder = userEmail ? (userEmail.toLowerCase() === finderEmail.toLowerCase()) : false;
                 itemObj.isSameCollege = userDomain ? (userDomain === finderDomain) : false;
-                delete itemObj.reportedBy.email; // Erase the email to protect privacy
             } else {
                 itemObj.isFinder = false;
                 itemObj.isSameCollege = false;
             }
+            delete itemObj.reportedBy; // Erase the entire reportedBy object to protect privacy
             return itemObj;
         });
 
@@ -146,11 +190,11 @@ exports.getFoundItemById = async function(req,res){
             const finderDomain = finderEmail.split('@')[1].toLowerCase();
             itemObj.isFinder = userEmail ? (userEmail.toLowerCase() === finderEmail.toLowerCase()) : false;
             itemObj.isSameCollege = userDomain ? (userDomain === finderDomain) : false;
-            delete itemObj.reportedBy.email; // Erase the email to protect privacy
         } else {
             itemObj.isFinder = false;
             itemObj.isSameCollege = false;
         }
+        delete itemObj.reportedBy; // Erase the entire reportedBy object to protect privacy
 
         return res.status(200).json({
             status: "success",
