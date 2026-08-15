@@ -21,7 +21,7 @@ function LoginPage() {
   // ── Form State ────────────────────────────────────────────
   const [email,    setEmail]    = useState(''); // College email input
   const [password, setPassword] = useState(''); // Password input
-  const [loading]  = useState(false); // Button loading state
+  const [loading,  setLoading]  = useState(false); // Button loading state
   const [error,    setError]    = useState('');     // Error message to display
   const [shake,    setShake]    = useState(false);  // Triggers shake animation on error
 
@@ -89,7 +89,9 @@ function LoginPage() {
   // };
 
   const handleLoginSubmit = async (e)=> {
-    e.preventDefault()
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
       console.log(email)
@@ -106,13 +108,22 @@ function LoginPage() {
         })
       })
       const data = await response.json()
+      setLoading(false);
+
       if(response.ok){
         await refreshSession(); // Fetch full user data including username
         console.log("Navigating to dashboard...");
         navigate('/dashboard', { replace: true });
       }
       else{
-        setError(data.message || "Login failed");
+        let errorMessage = "Login failed";
+        if (typeof data.error === 'string') {
+          errorMessage = data.error;
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        }
+        setError(errorMessage);
+        
         // Trigger the shake animation on the form card
         setShake(true);
         setTimeout(() => setShake(false), 500); // Remove class after animation
@@ -120,6 +131,7 @@ function LoginPage() {
       }
 
     } catch (err) {
+      setLoading(false);
       console.error("Failed to connect to the backend server:", err);
       setError("Failed to connect to the server. Please check your internet connection or try again later.");
       setShake(true);
