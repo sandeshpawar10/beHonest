@@ -106,6 +106,16 @@ function ClaimItemPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, verifying]);
 
+  // ── Helper to check if proof is mandatory ─────────────────
+  const isProofMandatory = () => {
+    if (!item) return false;
+    const cat = item.category?.toLowerCase() || '';
+    const title = item.title?.toLowerCase() || '';
+    const desc = item.description?.toLowerCase() || '';
+    const mandatoryKeywords = ['phone', 'tablet', 'laptop', 'ipad', 'headphones', 'earbuds', 'airpods', 'macbook', 'watch'];
+    return mandatoryKeywords.some(kw => cat.includes(kw) || title.includes(kw) || desc.includes(kw));
+  };
+
   // ── Start Interrogation ───────────────────────────────────
   const startInterrogation = async () => {
     setStarted(true);
@@ -423,10 +433,12 @@ function ClaimItemPage() {
 
             <div style={{ background: '#f8f9fa', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
               <label style={{ display: 'block', marginBottom: '1rem', fontWeight: '600', color: '#333', fontSize: '1.1rem' }}>
-                Upload Proof of Ownership (Optional)
+                Upload Proof of Ownership {isProofMandatory() ? <span style={{ color: '#e74c3c' }}>(Mandatory)</span> : '(Optional)'}
               </label>
               <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
-                Upload a receipt, invoice, or an old photo of you with the item.
+                {isProofMandatory() 
+                  ? 'For high-value items like electronics, you MUST upload a receipt, invoice, or an old photo of you with the item to claim it.'
+                  : 'Upload a receipt, invoice, or an old photo of you with the item.'}
               </p>
               
               <input
@@ -463,13 +475,15 @@ function ClaimItemPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button 
-                onClick={() => handleFinalizeProof(true)}
-                disabled={verifying}
-                style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Skip Photo
-              </button>
+              {!isProofMandatory() && (
+                <button 
+                  onClick={() => handleFinalizeProof(true)}
+                  disabled={verifying}
+                  style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Skip Photo
+                </button>
+              )}
               <button 
                 onClick={() => handleFinalizeProof(false)}
                 disabled={verifying || !proofImageBase64}
