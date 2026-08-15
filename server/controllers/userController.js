@@ -89,7 +89,7 @@ exports.loginUser = async function(req,res){
     const options = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         path: '/'
     }
     return res.status(200).cookie("accesstoken",accesstoken,options)
@@ -112,7 +112,7 @@ exports.logoutUser = async function(req,res){
     const options = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         path: '/'
     }
     return res.status(200).clearCookie("accesstoken",options)
@@ -149,7 +149,7 @@ exports.refreshAccessToken = async function(req, res) {
         const options = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             path: '/'
         };
 
