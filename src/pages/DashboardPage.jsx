@@ -6,11 +6,12 @@
    ============================================================ */
 
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
 
 import NotificationDropdown from '../components/ui/NotificationDropdown';
+import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './DashboardPage.module.css';
 
 // ── Action cards data ──────────────────────────────────────────
@@ -79,6 +80,12 @@ const ACTION_CARDS = [
 function DashboardPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate(); // Hook for programmatic navigation
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogoutClick = async () => {
+    setLoggingOut(true);
+    await logout();
+  };
 
   // Trap the hardware back button: if pressed on dashboard, log the user out.
   useEffect(() => {
@@ -120,11 +127,12 @@ function DashboardPage() {
           {/* Logout button */}
           <button
             className={styles.logoutBtn}
-            onClick={logout}  /* Calls logout() from AuthContext → clears session → redirect */
+            onClick={handleLogoutClick}
             id="logout-btn"
             aria-label="Log out"
+            disabled={loggingOut}
           >
-            Logout
+            {loggingOut ? <ButtonSpinner /> : 'Logout'}
           </button>
 
         </div>
