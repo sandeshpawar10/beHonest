@@ -82,7 +82,7 @@ function DashboardPage() {
 
   // Trap the hardware back button: if pressed on dashboard, log the user out.
   useEffect(() => {
-    const handlePopState = (e) => {
+    const handlePopState = () => {
       if (window.confirm("Do you want to log out?")) {
         logout();
       } else {
