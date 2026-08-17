@@ -22,6 +22,7 @@ import {
   calculateReward,       // AI recommendation function
 } from '../utils/rewardUtils';
 import styles from './RewardPage.module.css';
+import { load } from '@cashfreepayments/cashfree-js';
 
 function RewardPage() {
   const { itemId }  = useParams();   // Item ID from URL
@@ -57,6 +58,9 @@ function RewardPage() {
   // Processing state for the confirm button
   const [processing, setProcessing]             = useState(false);
 
+  // Cashfree SDK instance
+  const [cashfree, setCashfree]                 = useState(null);
+
   // ── Load item on mount ────────────────────────────────────
   useEffect(() => {
     const fetchItem = async () => {
@@ -91,22 +95,21 @@ function RewardPage() {
     }
 
     fetchItem();
-  }, [itemId, claimId]);
+    
+    // Initialize Cashfree SDK
+    const initCashfree = async () => {
+      try {
+        const cf = await load({
+          mode: import.meta.env.VITE_CASHFREE_ENV === "PRODUCTION" ? "production" : "sandbox"
+        });
+        setCashfree(cf);
+      } catch (err) {
+        console.error("Failed to load Cashfree SDK", err);
+      }
+    };
+    initCashfree();
 
-  // Load Razorpay script dynamically
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => {
-        resolve(true);
-      };
-      script.onerror = () => {
-        resolve(false);
-      };
-      document.body.appendChild(script);
-    });
-  };
+  }, [itemId, claimId]);
 
   // ── Handle category selection ─────────────────────────────
   const handleCategorySelect = (categoryKey) => {
@@ -141,10 +144,8 @@ function RewardPage() {
     setProcessing(true);
 
     try {
-      // 1. Load Razorpay script
-      const res = await loadRazorpayScript();
-      if (!res) {
-        throw new Error('Razorpay SDK failed to load. Are you online?');
+      if (!cashfree) {
+        throw new Error('Payment gateway SDK failed to load. Are you online?');
       }
 
       // 2. Create Order
@@ -162,71 +163,61 @@ function RewardPage() {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to create payment order. Are your Razorpay API keys correct?');
+        throw new Error(errData.error || 'Failed to create payment order. Are your API keys correct?');
       }
 
       const data = await response.json();
-      const { orderId, escrowId, amount, currency } = data;
+      const { paymentSessionId, escrowId } = data;
 
-      // 3. Initialize Razorpay Checkout
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
-        amount: amount,
-        currency: currency,
-        name: "BeHonest Rewards",
-        description: `Reward for ${item.shortTitle}`,
-        image: "https://behonest.app/logo.png", // fallback logo
-        order_id: orderId,
-        modal: {
-          ondismiss: function() {
-            setProcessing(false);
-          }
-        },
-        handler: async function (response) {
-          try {
-            // 4. Verify Payment
-            const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                escrowId: escrowId
-              })
-            });
-
-            if (!verifyRes.ok) {
-              throw new Error("Payment verification failed");
-            }
-            
-            const verifyData = await verifyRes.json();
-            setEscrowRecord(verifyData.escrow);
-            setStep('done');
-            setProcessing(false);
-          } catch (err) {
-            console.error(err);
-            setError("Payment verified by gateway, but failed to sync with our servers. Please contact support.");
-            setProcessing(false);
-          }
-        },
-        prefill: {
-          name: session?.user?.username || "",
-          email: session?.user?.email || ""
-        },
-        theme: {
-          color: "#00d2ff"
-        }
+      // 3. Initialize Cashfree Checkout
+      let checkoutOptions = {
+        paymentSessionId: paymentSessionId,
+        redirectTarget: "_modal",
       };
-
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.on("payment.failed", function (response) {
-        setError(`Payment failed: ${response.error.description}`);
-        setProcessing(false);
-      });
       
-      paymentObject.open();
+      cashfree.checkout(checkoutOptions).then(async (result) => {
+        if(result.error){
+            // Payment failed or modal closed
+            console.error("Cashfree Checkout Error:", result.error);
+            setError(`Payment incomplete: ${result.error.message}`);
+            setProcessing(false);
+        }
+        if(result.redirect){
+            // This happens if redirectTarget is _self or _blank
+            console.log("Redirection", result.redirect);
+        }
+        if(result.paymentDetails){
+            // Payment completed (either success or failed inside modal, we must verify)
+            console.log("Payment Details:", result.paymentDetails);
+            
+            try {
+              // 4. Verify Payment with our backend
+              const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  order_id: data.orderId, // We use the internal order ID to verify
+                  escrowId: escrowId
+                })
+              });
+  
+              if (!verifyRes.ok) {
+                const errData = await verifyRes.json().catch(() => ({}));
+                throw new Error(errData.error || "Payment verification failed");
+              }
+              
+              const verifyData = await verifyRes.json();
+              setEscrowRecord(verifyData.escrow);
+              setStep('done');
+              setProcessing(false);
+            } catch (err) {
+              console.error(err);
+              setError("Payment verified by gateway, but failed to sync with our servers. Please contact support.");
+              setProcessing(false);
+            }
+        }
+      });
 
     } catch (err) {
       console.error(err);

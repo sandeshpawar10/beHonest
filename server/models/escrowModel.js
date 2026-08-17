@@ -58,10 +58,9 @@ const escrowSchema = new Schema({
         default: "payment_pending"
     },
 
-    // Razorpay Fields
-    razorpayOrderId: { type: String, default: null },
-    razorpayPaymentId: { type: String, default: null },
-    razorpaySignature: { type: String, default: null }
+    // Cashfree fields
+    cashfreeOrderId: { type: String, default: null },
+    cashfreePaymentSessionId: { type: String, default: null }
 },
 {
     timestamps: true

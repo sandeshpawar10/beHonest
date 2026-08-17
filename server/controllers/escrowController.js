@@ -5,14 +5,7 @@ const userModel = require("../models/userModel");
 const chatModel = require("../models/chatModel");
 const { createNotification } = require("./notificationController");
 const z = require("zod");
-const Razorpay = require("razorpay");
 const crypto = require("crypto");
-
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "dummy_key",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret"
-});
 
 const createEscrowSchema = z.object({
     itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Item ID"),
@@ -99,39 +92,65 @@ exports.createEscrow = async function(req, res) {
             status: "payment_pending"
         });
 
-        // Create Razorpay order
-        const options = {
-            amount: amount * 100, // amount in the smallest currency unit
-            currency: "INR",
-            receipt: newEscrow._id.toString()
-        };
-
-        const order = await razorpay.orders.create(options);
+        // Create Cashfree order
+        const cashfreeEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
         
-        // Update the escrow with the generated order ID
-        newEscrow.razorpayOrderId = order.id;
+        const response = await fetch(`${cashfreeEnv}/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-version': '2023-08-01',
+                'x-client-id': process.env.CASHFREE_APP_ID,
+                'x-client-secret': process.env.CASHFREE_SECRET_KEY
+            },
+            body: JSON.stringify({
+                order_amount: amount,
+                order_currency: "INR",
+                order_id: `escrow_${newEscrow._id}`,
+                customer_details: {
+                    customer_id: depositorId.toString(),
+                    customer_phone: "9999999999" // Dummy phone required by CF
+                },
+                order_meta: {
+                    // For drop-in checkout, return_url isn't strictly necessary but good practice
+                    return_url: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5173'}/escrow?order_id={order_id}`
+                }
+            })
+        });
+
+        const orderData = await response.json();
+        
+        if (!response.ok) {
+            console.error("Cashfree API Error:", orderData);
+            throw new Error(orderData.message || "Failed to create Cashfree Order");
+        }
+
+        // Update the escrow with the generated IDs
+        newEscrow.cashfreeOrderId = orderData.order_id;
+        newEscrow.cashfreePaymentSessionId = orderData.payment_session_id;
         await newEscrow.save();
 
         res.status(201).json({
             message: "Payment order created successfully",
-            orderId: order.id,
+            orderId: orderData.order_id,
+            paymentSessionId: orderData.payment_session_id,
             escrowId: newEscrow._id,
-            amount: order.amount,
-            currency: order.currency
+            amount: amount,
+            currency: "INR"
         });
 
     } catch (error) {
         console.error("Error in createEscrow:", error);
-        res.status(500).json({ error: error.error?.description || error.message || "Failed to communicate with Razorpay. Check API Keys." });
+        res.status(500).json({ error: error.message || "Failed to communicate with Cashfree. Check API Keys." });
     }
 };
 
 // ── Verify Payment ──────────────────────────────────────────────────────────
 exports.verifyPayment = async function(req, res) {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, escrowId } = req.body;
+        const { order_id, escrowId } = req.body;
 
-        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !escrowId) {
+        if (!order_id || !escrowId) {
             return res.status(400).json({ error: "Missing required payment details." });
         }
 
@@ -140,21 +159,30 @@ exports.verifyPayment = async function(req, res) {
             return res.status(404).json({ error: "Escrow not found." });
         }
 
-        // Verify signature
-        const secret = process.env.RAZORPAY_KEY_SECRET || "dummy_secret";
-        const generated_signature = crypto
-            .createHmac("sha256", secret)
-            .update(razorpay_order_id + "|" + razorpay_payment_id)
-            .digest("hex");
+        // Verify with Cashfree API
+        const cashfreeEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
+        
+        const response = await fetch(`${cashfreeEnv}/orders/${order_id}`, {
+            method: 'GET',
+            headers: {
+                'x-api-version': '2023-08-01',
+                'x-client-id': process.env.CASHFREE_APP_ID,
+                'x-client-secret': process.env.CASHFREE_SECRET_KEY
+            }
+        });
 
-        if (generated_signature !== razorpay_signature) {
-            return res.status(400).json({ error: "Invalid payment signature." });
+        const orderData = await response.json();
+        
+        if (!response.ok) {
+            return res.status(400).json({ error: "Failed to verify order with Cashfree." });
         }
 
-        // Signature is valid, update the escrow
+        if (orderData.order_status !== "PAID") {
+            return res.status(400).json({ error: "Payment not completed or failed." });
+        }
+
+        // Signature is valid (since we queried CF directly), update the escrow
         escrow.status = "pending";
-        escrow.razorpayPaymentId = razorpay_payment_id;
-        escrow.razorpaySignature = razorpay_signature;
         await escrow.save();
 
         // Send notifications
