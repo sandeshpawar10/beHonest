@@ -339,8 +339,8 @@ export async function runFullFraudScan(item, email, options = {}) {
           report.aiFlags.push({
             flagged: true,
             type: 'DESCRIPTION_MISMATCH',
-            severity: 'medium',
-            message: 'Image does not match the provided description',
+            severity: 'high',
+            message: 'Image does not match the provided description/category',
             details: aiResult.reasoning || 'The image content doesn\'t match the description.',
           });
         }
