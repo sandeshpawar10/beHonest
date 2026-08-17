@@ -11,6 +11,7 @@ const adminRoute = require('./routes/adminRoutes')
 const notificationRoute = require('./routes/notificationRoutes')
 const cookieParser = require("cookie-parser")
 const { requireCustomHeaderCSRF } = require("./middlewares/csrfMiddleware");
+const https = require('https');
 dotenv.config()
 const app = express()
 const port = process.env.port || 8000
@@ -49,6 +50,11 @@ app.use('/', chatRoute)
 app.use('/', adminRoute)
 app.use('/', notificationRoute)
 
+// Simple ping route to keep the server awake
+app.get('/api/ping', (req, res) => {
+    res.status(200).json({ status: "alive", message: "Server is awake!" });
+});
+
 // Seed Superadmin
 const seedAdmin = async () => {
     const adminModel = require("./models/adminModel");
@@ -66,4 +72,22 @@ const seedAdmin = async () => {
 app.listen(port, async () => {
     await seedAdmin();
     console.log("server is started")
+
+    // --- Self-Ping Cron Job for Render Free Tier ---
+    // Render free tier spins down the server after 15 minutes of inactivity.
+    // This internal interval pings the server's own public URL every 14 minutes to keep it awake.
+    // Ensure you set RENDER_EXTERNAL_URL in your Render dashboard environment variables if it's not automatically set.
+    const renderUrl = process.env.RENDER_EXTERNAL_URL;
+    if (renderUrl) {
+        setInterval(() => {
+            https.get(`${renderUrl}/api/ping`, (res) => {
+                console.log(`[Self-Ping] Kept server awake. Status: ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.error(`[Self-Ping] Failed to ping server:`, err.message);
+            });
+        }, 14 * 60 * 1000); // 14 minutes
+        console.log(`[Self-Ping] Cron job started for ${renderUrl}`);
+    } else {
+        console.log(`[Self-Ping] RENDER_EXTERNAL_URL is not set. Self-ping cron job is disabled.`);
+    }
 })
