@@ -30,6 +30,7 @@ function AuthLayout({ children, tagline }) {
           src="/logo.png"
           alt="beHonest logo"
           className={styles.logo}
+          fetchpriority="high"
         />
 
         {/* Tagline — can differ between login/register pages */}
@@ -57,6 +58,7 @@ function AuthLayout({ children, tagline }) {
             src="/logo.png"
             alt="beHonest logo"
             className={styles.logoMobile}
+            fetchpriority="high"
           />
         </div>
         
