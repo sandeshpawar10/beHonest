@@ -46,6 +46,7 @@ import ScrollToTop     from './components/ui/ScrollToTop';  // Auto-scroll to to
 import AboutPage from './pages/legal/AboutPage';
 import ContactPage from './pages/legal/ContactPage';
 import TermsPage from './pages/legal/TermsPage';
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
 import RefundPolicyPage from './pages/legal/RefundPolicyPage';
 
 // ── ProtectedRoute Component ───────────────────────────────────
@@ -122,6 +123,7 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
         {/* Login page — public only (redirects to dashboard if logged in) */}

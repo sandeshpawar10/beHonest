@@ -260,9 +260,9 @@ function RegisterPage() {
             />
             <span>
               I agree to the{' '}
-              <a href="#" id="terms-link" className={styles.link}>Terms of Service</a>
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" id="terms-link" className={styles.link}>Terms of Service</Link>
               {' '}and{' '}
-              <a href="#" id="privacy-link" className={styles.link}>Privacy Policy</a>.
+              <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" id="privacy-link" className={styles.link}>Privacy Policy</Link>.
               Platform is for college students only.
             </span>
           </label>
