@@ -75,7 +75,7 @@ app.listen(port, async () => {
 
     // --- Self-Ping Cron Job for Render Free Tier ---
     // Render free tier spins down the server after 15 minutes of inactivity.
-    // This internal interval pings the server's own public URL every 14 minutes to keep it awake.
+    // This internal interval pings the server's own public URL every 12 minutes to keep it awake.
     // Ensure you set RENDER_EXTERNAL_URL in your Render dashboard environment variables if it's not automatically set.
     const renderUrl = process.env.RENDER_EXTERNAL_URL;
     if (renderUrl) {
@@ -85,7 +85,7 @@ app.listen(port, async () => {
             }).on('error', (err) => {
                 console.error(`[Self-Ping] Failed to ping server:`, err.message);
             });
-        }, 14 * 60 * 1000); // 14 minutes
+        }, 12 * 60 * 1000); // 12 minutes
         console.log(`[Self-Ping] Cron job started for ${renderUrl}`);
     } else {
         console.log(`[Self-Ping] RENDER_EXTERNAL_URL is not set. Self-ping cron job is disabled.`);
