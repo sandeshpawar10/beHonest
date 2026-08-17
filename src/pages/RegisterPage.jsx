@@ -65,8 +65,12 @@ function RegisterPage() {
         navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`)
       }
       else{
-        let errorMsg = data.message || "An error occurred";
-        if (data.error) {
+        let errorMsg = "An error occurred";
+        if (typeof data.error === 'string') {
+          errorMsg = data.error;
+        } else if (data.message) {
+          errorMsg = data.message;
+        } else if (data.error) {
            // Extract specific field errors from Zod format
            if (data.error.username) errorMsg = "Name error: " + data.error.username._errors[0];
            else if (data.error.email) errorMsg = "Email error: " + data.error.email._errors[0];

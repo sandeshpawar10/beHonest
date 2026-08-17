@@ -21,6 +21,11 @@ function AdminPage() {
         credentials: 'include'
       });
 
+      if (statsRes.status === 401 || statsRes.status === 403) {
+        navigate('/admin/login');
+        return;
+      }
+
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
