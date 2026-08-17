@@ -13,68 +13,93 @@
    - blurStrength: how strong the blur is (default: 12px)
    ============================================================ */
 
+import { useEffect, useRef } from 'react';
 import styles from './BlurableImage.module.css';
 
 function BlurableImage({ imageSrc, blurZones = [], alt = 'Found item', blurStrength = 12 }) {
-  return (
-    /*
-      The wrapper div is "position: relative" so that the
-      blur overlay divs can be positioned OVER the image
-      using "position: absolute".
-    */
-    <div className={styles.wrapper}>
+  const canvasRef = useRef(null);
 
-      {/* The actual image — fills the wrapper completely */}
-      <img
-        src={imageSrc}
-        alt={alt}
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = imageSrc;
+    
+    img.onload = () => {
+      // Set canvas dimensions to match the actual image resolution
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw the crisp original image first
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+      
+      // Apply blur zones
+      if (blurZones && blurZones.length > 0) {
+        blurZones.forEach(zone => {
+          // Convert percentages back to actual pixel coordinates
+          const x = (zone.x / 100) * img.width;
+          const y = (zone.y / 100) * img.height;
+          const w = (zone.w / 100) * img.width;
+          const h = (zone.h / 100) * img.height;
+          
+          ctx.save();
+          
+          // Create a clipping path for this specific zone
+          ctx.beginPath();
+          ctx.rect(x, y, w, h);
+          ctx.clip();
+          
+          // Draw the image again inside the clipped area, but blurred!
+          // We scale the blur strength relative to the image size so it always looks uniformly blurred
+          const scaledBlur = Math.max(blurStrength, (img.width / 500) * blurStrength);
+          ctx.filter = `blur(${scaledBlur}px)`;
+          
+          // We draw the image slightly larger to avoid unblurred edges creeping in
+          const margin = scaledBlur * 2;
+          ctx.drawImage(img, -margin, -margin, img.width + (margin*2), img.height + (margin*2));
+          
+          // Add a dark overlay and lock icon
+          ctx.filter = 'none'; // reset filter for text
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+          ctx.fillRect(x, y, w, h);
+          
+          const fontSize = Math.max(20, Math.min(w, h) * 0.3);
+          ctx.font = `${fontSize}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'white';
+          ctx.fillText('🔒', x + w/2, y + h/2);
+          
+          ctx.restore();
+        });
+      }
+    };
+  }, [imageSrc, blurZones, blurStrength]);
+
+  return (
+    <div className={styles.wrapper}>
+      {/* 
+        By using a Canvas instead of an <img> tag, the user CANNOT right-click 
+        and 'Open image in new tab' to see the raw unblurred image source.
+        The blur is literally baked into the pixels being rendered!
+      */}
+      <canvas
+        ref={canvasRef}
         className={styles.image}
+        style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 'inherit' }}
+        aria-label={alt}
+        role="img"
       />
 
-      {/*
-        Loop through every blur zone and render a blurred div on top.
-        Each zone uses percentage-based position (x, y) and size (w, h)
-        so it works correctly even when the image is resized.
-      */}
-      {blurZones.map((zone, index) => (
-        <div
-          key={index}  // React needs a unique key for each item in a list
-
-          className={styles.blurOverlay}
-
-          style={{
-            /*
-              Position and size are in percentage of the image container.
-              Example: x=10, y=20, w=30, h=15 means:
-              - starts 10% from left, 20% from top
-              - is 30% wide, 15% tall
-            */
-            left:   zone.x + '%',
-            top:    zone.y + '%',
-            width:  zone.w + '%',
-            height: zone.h + '%',
-
-            // backdropFilter blurs everything BEHIND this div (i.e., the image)
-            backdropFilter: `blur(${blurStrength}px)`,
-            WebkitBackdropFilter: `blur(${blurStrength}px)`, // Safari support
-          }}
-
-          // Tell screen readers this region is intentionally hidden
-          aria-label="Sensitive area — hidden for privacy"
-          role="img"
-        >
-          {/* Small lock icon in the centre of every blurred zone */}
-          <span className={styles.lockIcon} aria-hidden="true">🔒</span>
-        </div>
-      ))}
-
       {/* Badge shown at the bottom of the image */}
-      {blurZones.length > 0 && (
+      {blurZones && blurZones.length > 0 && (
         <div className={styles.badge}>
           🔒 {blurZones.length} sensitive area{blurZones.length > 1 ? 's' : ''} hidden
         </div>
       )}
-
     </div>
   );
 }
