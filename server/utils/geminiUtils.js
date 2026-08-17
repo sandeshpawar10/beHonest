@@ -183,18 +183,20 @@ exports.analyzeImageForFraud = async function(base64ImageData, description, cate
       ? 'image/png'
       : 'image/jpeg';
 
-    const prompt = `You are a fraud detection AI for a college lost-and-found platform called "beHonest".
+    const prompt = `You are a strict fraud detection AI for a college lost-and-found platform called "beHonest".
 
-A student uploaded this image with the following details:
+A student uploaded this image with the following details, claiming they FOUND this physical item:
 - Category: ${category}
 - Description: "${description}"
 
+You must reject anything that is NOT a genuine, real-world photograph of a physical lost item.
+
 Analyze the image carefully and check for these fraud indicators:
 
-1. **AI_GENERATED**: Does this image look AI-generated? (Look for: unnatural textures, weird fingers/text, too-perfect lighting, uncanny valley effects, watermarks from AI tools like DALL-E, Midjourney, etc.)
-2. **FAKE_IMAGE**: Does this image look like a stock photo, screenshot from the internet, or not a genuine photo of a real found item? (Look for: watermarks, professional studio lighting, promotional composition, screenshots)
-3. **DESCRIPTION_MISMATCH**: Does the description NOT match what is actually shown in the image? (e.g., description says "laptop" but image shows a wallet)
-4. **SUSPICIOUS_QUALITY**: Is the image too blurry, too small, clearly a screenshot of a screenshot, or visually unusable?
+1. **AI_GENERATED**: Does this image look AI-generated? (Look for: unnatural textures, weird fingers/text, too-perfect lighting, uncanny valley effects).
+2. **FAKE_IMAGE**: Is this a digital screenshot (like a screenshot of an app, UPI receipt, website, or chat), a digital document/table, a meme, a stock photo, or generally NOT a real photograph taken by a camera of a physical object?
+3. **DESCRIPTION_MISMATCH**: Does the description/category NOT match what is actually shown in the image? (e.g., description says "laptop" but image shows a wallet)
+4. **SUSPICIOUS_QUALITY**: Is the image too blurry, completely unreadable, or severely distorted?
 
 Respond ONLY with valid JSON (no markdown, no code fences, no extra text):
 {
@@ -207,9 +209,7 @@ Respond ONLY with valid JSON (no markdown, no code fences, no extra text):
   "flags": ["AI_GENERATED", "FAKE_IMAGE"]
 }
 
-The "flags" array should ONLY contain the names of checks that are suspicious.
-If everything looks legitimate, return an empty flags array and a low riskScore (0-20).
-Be strict but fair — don't flag genuine photos.`;
+CRITICAL RULE: If the image is a screenshot of a phone screen, a digital payment receipt (like GPay/PhonePe/Razorpay), a spreadsheet, or purely digital text, you MUST set "isFakeImage": true and "overallRiskScore": 90. Only real photographs of physical objects resting in the real world are acceptable.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
