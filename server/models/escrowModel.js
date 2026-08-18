@@ -60,7 +60,8 @@ const escrowSchema = new Schema({
 
     // Cashfree fields
     cashfreeOrderId: { type: String, default: null },
-    cashfreePaymentSessionId: { type: String, default: null }
+    cashfreePaymentSessionId: { type: String, default: null },
+    finderUpiId: { type: String, default: null }
 },
 {
     timestamps: true

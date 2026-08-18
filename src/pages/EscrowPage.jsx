@@ -49,6 +49,10 @@ function EscrowPage() {
   const [safetyCheck3, setSafetyCheck3] = useState(false); // 'me', 'other_party', 'unknown'
   const [confirmingId, setConfirmingId] = useState(null);
 
+  // UPI state for finder
+  const [upiInputs, setUpiInputs] = useState({});
+  const [savingUpi, setSavingUpi] = useState(null);
+
   async function fetchEscrows() {
     try {
       setLoading(true);
@@ -199,6 +203,33 @@ function EscrowPage() {
       alert(err.message);
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // ── Save Finder UPI ID ──────────────────────────────
+  const handleSaveUpi = async (escrowId) => {
+    const upiId = upiInputs[escrowId];
+    if (!upiId || upiId.trim().length < 3) {
+      alert('Please enter a valid UPI ID');
+      return;
+    }
+    setSavingUpi(escrowId);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/save-upi/${escrowId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ upiId: upiId.trim() })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to save UPI ID');
+      }
+      refreshEscrows();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingUpi(null);
     }
   };
 
@@ -523,6 +554,59 @@ function EscrowPage() {
                   {activeTab === 'finder' && (escrow.status === 'held' || escrow.status === 'pending') && (
                     <div className={styles.ecActions}>
                       
+                      {/* UPI ID Input for Finder */}
+                      <div style={{ padding: '16px', background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.05), rgba(0, 255, 136, 0.05))', border: '1px solid rgba(0, 210, 255, 0.2)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
+                        <p style={{ marginBottom: '8px', fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                          💳 Your UPI ID {escrow.finderUpiId ? '(Saved)' : '(Required to receive payout)'}
+                        </p>
+                        {escrow.finderUpiId ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ padding: '10px 16px', background: 'rgba(0, 255, 136, 0.1)', border: '1px solid rgba(0, 255, 136, 0.3)', borderRadius: '8px', color: '#00ff88', fontWeight: '600', flex: 1 }}>
+                              ✅ {escrow.finderUpiId}
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                              type="text"
+                              placeholder="e.g. yourname@upi"
+                              value={upiInputs[escrow._id] || ''}
+                              onChange={(e) => setUpiInputs(prev => ({ ...prev, [escrow._id]: e.target.value }))}
+                              style={{
+                                flex: 1,
+                                padding: '10px 14px',
+                                background: 'var(--bg-primary)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.95rem',
+                                outline: 'none'
+                              }}
+                            />
+                            <button
+                              onClick={() => handleSaveUpi(escrow._id)}
+                              disabled={savingUpi === escrow._id}
+                              style={{
+                                padding: '10px 20px',
+                                background: 'linear-gradient(135deg, #00ff88, #00d4ff)',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: '#000',
+                                fontWeight: 'bold',
+                                cursor: savingUpi === escrow._id ? 'not-allowed' : 'pointer',
+                                opacity: savingUpi === escrow._id ? 0.6 : 1,
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {savingUpi === escrow._id ? '...' : 'Save'}
+                            </button>
+                          </div>
+                        )}
+                        <p style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          When both parties confirm handover, ₹{escrow.amount} will be instantly sent to this UPI ID.
+                        </p>
+                      </div>
+
                       <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
                           <strong>Status:</strong> {escrow.finderConfirmed ? 'You confirmed ✅' : 'Waiting for your confirmation'}

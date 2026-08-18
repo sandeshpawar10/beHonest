@@ -21,4 +21,7 @@ router.post('/api/escrow/dispute/:escrowId', verifyJWT, controller.raiseDispute)
 // Refund escrow (owner requests refund)
 router.post('/api/escrow/refund/:escrowId', verifyJWT, controller.refundEscrow);
 
+// Save finder UPI ID
+router.post('/api/escrow/save-upi/:escrowId', verifyJWT, controller.saveFinderUpi);
+
 module.exports = router;

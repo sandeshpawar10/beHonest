@@ -300,6 +300,37 @@ exports.confirmHandover = async function(req, res) {
             escrow.status = "released";
             bothConfirmed = true;
             
+            // Trigger Cashfree Payout to Finder's UPI
+            if (escrow.finderUpiId) {
+                try {
+                    const payoutEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/payout" : "https://sandbox.cashfree.com/payout";
+                    const payoutRes = await fetch(`${payoutEnv}/transfers`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-version': '2024-01-01',
+                            'x-client-id': process.env.CASHFREE_APP_ID,
+                            'x-client-secret': process.env.CASHFREE_SECRET_KEY
+                        },
+                        body: JSON.stringify({
+                            transfer_id: `payout_${escrow._id}_${Date.now()}`,
+                            transfer_amount: escrow.amount,
+                            transfer_currency: "INR",
+                            transfer_mode: "upi",
+                            beneficiary_details: {
+                                beneficiary_id: `finder_${escrow.finderId}`,
+                                beneficiary_name: finder?.username || "Finder",
+                                beneficiary_vpa: escrow.finderUpiId
+                            }
+                        })
+                    });
+                    const payoutData = await payoutRes.json();
+                    console.log("Cashfree Payout Result:", payoutData);
+                } catch (payoutErr) {
+                    console.error("Payout failed (escrow still released):", payoutErr);
+                }
+            }
+
             const item = await itemModel.findById(escrow.itemId);
             const finder = await userModel.findById(escrow.finderId);
             
@@ -332,6 +363,51 @@ exports.confirmHandover = async function(req, res) {
 
     } catch (error) {
         console.error("Error confirming handover:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+};
+
+// ── Save Finder UPI ID ──────────
+exports.saveFinderUpi = async function(req, res) {
+    try {
+        const { escrowId } = req.params;
+        const { upiId } = req.body;
+
+        if (!upiId || typeof upiId !== 'string' || upiId.trim().length < 3) {
+            return res.status(400).json({ error: "Please enter a valid UPI ID." });
+        }
+
+        // Basic UPI format validation (something@something)
+        const upiRegex = /^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+$/;
+        if (!upiRegex.test(upiId.trim())) {
+            return res.status(400).json({ error: "Invalid UPI ID format. Example: yourname@upi" });
+        }
+
+        const escrow = await escrowModel.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        // Only the finder can save their UPI
+        if (escrow.finderId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Only the finder can save their UPI ID." });
+        }
+
+        if (escrow.status !== 'pending') {
+            return res.status(400).json({ error: "UPI can only be saved for active escrows." });
+        }
+
+        escrow.finderUpiId = upiId.trim();
+        await escrow.save();
+
+        return res.status(200).json({
+            status: "success",
+            message: "UPI ID saved successfully.",
+            finderUpiId: escrow.finderUpiId
+        });
+
+    } catch (error) {
+        console.error("Error saving finder UPI:", error);
         return res.status(500).json({ error: "Internal server error." });
     }
 };
