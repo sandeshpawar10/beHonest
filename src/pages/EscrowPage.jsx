@@ -566,21 +566,23 @@ function EscrowPage() {
                             </span>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <input
                               type="text"
                               placeholder="e.g. yourname@upi"
                               value={upiInputs[escrow._id] || ''}
                               onChange={(e) => setUpiInputs(prev => ({ ...prev, [escrow._id]: e.target.value }))}
                               style={{
-                                flex: 1,
+                                flex: '1 1 150px',
+                                minWidth: 0,
                                 padding: '10px 14px',
                                 background: 'var(--bg-primary)',
                                 border: '1px solid var(--border)',
                                 borderRadius: '8px',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.95rem',
-                                outline: 'none'
+                                outline: 'none',
+                                boxSizing: 'border-box'
                               }}
                             />
                             <button
