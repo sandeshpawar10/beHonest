@@ -53,7 +53,7 @@ function RewardPage() {
   const [chosenReward, setChosenReward]         = useState(0);
 
   // Escrow record after confirmation
-  const [escrowRecord, setEscrowRecord]         = useState(null);
+  const [escrowRecord] = useState(null);
 
   // Processing state for the confirm button
   const [processing, setProcessing]             = useState(false);
@@ -167,7 +167,7 @@ function RewardPage() {
       }
 
       const data = await response.json();
-      const { paymentSessionId, escrowId } = data;
+      const { paymentSessionId } = data;
 
       // 3. Initialize Cashfree Checkout
       let checkoutOptions = {
