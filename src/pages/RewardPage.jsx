@@ -175,55 +175,53 @@ function RewardPage() {
         redirectTarget: "_modal",
       };
       
-      cashfree.checkout(checkoutOptions).then(async (result) => {
-        if(result.error){
-            // Payment failed or modal closed
-            console.error("Cashfree Checkout Error:", result.error);
-            setError(`Payment incomplete: ${result.error.message}`);
-            setProcessing(false);
+      const result = await cashfree.checkout(checkoutOptions);
+      
+      if (result.error) {
+        // Payment failed or modal closed
+        console.error("Cashfree Checkout Error:", result.error);
+        throw new Error(result.error.message || "Payment incomplete or cancelled.");
+      }
+      
+      if (result.redirect) {
+        // This happens if redirectTarget is _self or _blank
+        console.log("Redirection", result.redirect);
+        return; // wait for redirect
+      }
+      
+      if (result.paymentDetails) {
+        // Payment completed (either success or failed inside modal, we must verify)
+        console.log("Payment Details:", result.paymentDetails);
+        
+        // 4. Verify Payment with our backend
+        const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            order_id: data.orderId, // We use the internal order ID to verify
+            escrowId: escrowId
+          })
+        });
+
+        if (!verifyRes.ok) {
+          const errData = await verifyRes.json().catch(() => ({}));
+          throw new Error(errData.error || "Payment verification failed. Please contact support.");
         }
-        if(result.redirect){
-            // This happens if redirectTarget is _self or _blank
-            console.log("Redirection", result.redirect);
-        }
-        if(result.paymentDetails){
-            // Payment completed (either success or failed inside modal, we must verify)
-            console.log("Payment Details:", result.paymentDetails);
-            
-            try {
-              // 4. Verify Payment with our backend
-              const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                  order_id: data.orderId, // We use the internal order ID to verify
-                  escrowId: escrowId
-                })
-              });
-  
-              if (!verifyRes.ok) {
-                const errData = await verifyRes.json().catch(() => ({}));
-                throw new Error(errData.error || "Payment verification failed");
-              }
-              
-              const verifyData = await verifyRes.json();
-              setEscrowRecord(verifyData.escrow);
-              setStep('done');
-              setProcessing(false);
-            } catch (err) {
-              console.error(err);
-              setError("Payment verified by gateway, but failed to sync with our servers. Please contact support.");
-              setProcessing(false);
-            }
-        }
-      });
+        
+        const verifyData = await verifyRes.json();
+        setEscrowRecord(verifyData.escrow);
+        setStep('done');
+      } else {
+         // Fallback just in case result is completely empty
+         throw new Error("Payment popup closed unexpectedly.");
+      }
 
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to process escrow. Please try again.');
-      setProcessing(false);
     } finally {
+      setProcessing(false);
       window.scrollTo(0, 0);
     }
   };
