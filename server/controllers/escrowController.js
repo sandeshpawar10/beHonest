@@ -117,7 +117,7 @@ exports.createEscrow = async function(req, res) {
                     customer_phone: "9999999999" // Dummy phone required by CF
                 },
                 order_meta: {
-                    return_url: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5173'}/escrow?verify_order_id={order_id}&escrow_id=${newEscrow._id}`
+                    return_url: `${process.env.VITE_FRONTEND_URL || req.headers.origin || 'http://localhost:5173'}/escrow?verify_order_id={order_id}&escrow_id=${newEscrow._id}`
                 }
             })
         });
