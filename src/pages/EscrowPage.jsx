@@ -52,6 +52,7 @@ function EscrowPage() {
   // UPI state for finder
   const [upiInputs, setUpiInputs] = useState({});
   const [savingUpi, setSavingUpi] = useState(null);
+  const [editingUpi, setEditingUpi] = useState({});
 
   async function fetchEscrows() {
     try {
@@ -225,6 +226,7 @@ function EscrowPage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Failed to save UPI ID');
       }
+      setEditingUpi(prev => ({ ...prev, [escrowId]: false }));
       refreshEscrows();
     } catch (err) {
       alert(err.message);
@@ -559,11 +561,28 @@ function EscrowPage() {
                         <p style={{ marginBottom: '8px', fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                           💳 Your UPI ID {escrow.finderUpiId ? '(Saved)' : '(Required to receive payout)'}
                         </p>
-                        {escrow.finderUpiId ? (
+                        {escrow.finderUpiId && !editingUpi[escrow._id] ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ padding: '10px 16px', background: 'rgba(0, 255, 136, 0.1)', border: '1px solid rgba(0, 255, 136, 0.3)', borderRadius: '8px', color: '#00ff88', fontWeight: '600', flex: 1 }}>
                               ✅ {escrow.finderUpiId}
                             </span>
+                            <button
+                              onClick={() => {
+                                setUpiInputs(prev => ({ ...prev, [escrow._id]: escrow.finderUpiId }));
+                                setEditingUpi(prev => ({ ...prev, [escrow._id]: true }));
+                              }}
+                              style={{
+                                padding: '10px 16px',
+                                background: 'transparent',
+                                border: '1px solid rgba(0, 210, 255, 0.4)',
+                                borderRadius: '8px',
+                                color: '#00d4ff',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Edit
+                            </button>
                           </div>
                         ) : (
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -602,6 +621,23 @@ function EscrowPage() {
                             >
                               {savingUpi === escrow._id ? '...' : 'Save'}
                             </button>
+                            {editingUpi[escrow._id] && (
+                              <button
+                                onClick={() => setEditingUpi(prev => ({ ...prev, [escrow._id]: false }))}
+                                disabled={savingUpi === escrow._id}
+                                style={{
+                                  padding: '10px 16px',
+                                  background: 'var(--bg-tertiary)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: '8px',
+                                  color: 'var(--text-primary)',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            )}
                           </div>
                         )}
                         <p style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
