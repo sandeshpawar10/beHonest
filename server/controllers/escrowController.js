@@ -55,7 +55,12 @@ exports.createEscrow = async function(req, res) {
             $or: [{ claimId }, { itemId }] 
         });
         if (existingEscrow) {
-            return res.status(400).json({ error: "An escrow already exists for this item or claim." });
+            if (existingEscrow.status === "payment_pending") {
+                // Delete orphaned incomplete escrow so they can retry
+                await escrowModel.findByIdAndDelete(existingEscrow._id);
+            } else {
+                return res.status(400).json({ error: "An escrow already exists for this item or claim." });
+            }
         }
 
         // The depositor is the person who claimed (the owner)
