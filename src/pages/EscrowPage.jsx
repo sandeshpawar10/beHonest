@@ -68,10 +68,40 @@ function EscrowPage() {
     }
   }
 
-  // ── Load escrows on mount ─────────────────────────────────
+  // ── Load escrows on mount & Handle redirects ───────────────
   useEffect(() => {
+    const checkVerifyRedirect = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const verifyOrderId = params.get('verify_order_id');
+      const escrowId = params.get('escrow_id');
+
+      if (verifyOrderId && escrowId) {
+        try {
+          const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              order_id: verifyOrderId,
+              escrowId: escrowId
+            })
+          });
+
+          if (verifyRes.ok) {
+            alert("✅ Payment Successful! Your reward is now securely held in Escrow.");
+          }
+          // Remove params from URL so it doesn't re-trigger on refresh
+          window.history.replaceState({}, document.title, "/escrow");
+        } catch (err) {
+          console.error("Verification redirect error:", err);
+        }
+      }
+    };
+
     Promise.resolve().then(() => {
-      fetchEscrows();
+      checkVerifyRedirect().then(() => {
+        fetchEscrows();
+      });
     });
   }, []);
 

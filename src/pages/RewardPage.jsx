@@ -172,50 +172,13 @@ function RewardPage() {
       // 3. Initialize Cashfree Checkout
       let checkoutOptions = {
         paymentSessionId: paymentSessionId,
-        redirectTarget: "_modal",
+        redirectTarget: "_self", // Use _self for mobile reliability
       };
       
-      const result = await cashfree.checkout(checkoutOptions);
-      
-      if (result.error) {
-        // Payment failed or modal closed
-        console.error("Cashfree Checkout Error:", result.error);
-        throw new Error(result.error.message || "Payment incomplete or cancelled.");
-      }
-      
-      if (result.redirect) {
-        // This happens if redirectTarget is _self or _blank
-        console.log("Redirection", result.redirect);
-        return; // wait for redirect
-      }
-      
-      if (result.paymentDetails) {
-        // Payment completed (either success or failed inside modal, we must verify)
-        console.log("Payment Details:", result.paymentDetails);
-        
-        // 4. Verify Payment with our backend
-        const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            order_id: data.orderId, // We use the internal order ID to verify
-            escrowId: escrowId
-          })
-        });
+      // We do not await this, as the browser will redirect to the Cashfree payment page.
+      // After payment, Cashfree will redirect back to /escrow?verify_order_id=...
+      cashfree.checkout(checkoutOptions);
 
-        if (!verifyRes.ok) {
-          const errData = await verifyRes.json().catch(() => ({}));
-          throw new Error(errData.error || "Payment verification failed. Please contact support.");
-        }
-        
-        const verifyData = await verifyRes.json();
-        setEscrowRecord(verifyData.escrow);
-        setStep('done');
-      } else {
-         // Fallback just in case result is completely empty
-         throw new Error("Payment popup closed unexpectedly.");
-      }
 
     } catch (err) {
       console.error(err);
