@@ -109,12 +109,7 @@ exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo' // same cid value as in the html img src
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -148,12 +143,7 @@ exports.sendDisputeEmailToAdmin = async function(email, itemTitle, disputeReason
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo' // same cid value as in the html img src
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -187,12 +177,7 @@ exports.sendDisputeEmail = async function(email, itemTitle, disputeReason){
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo' // same cid value as in the html img src
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
