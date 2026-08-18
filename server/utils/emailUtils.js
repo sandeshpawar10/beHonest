@@ -19,9 +19,6 @@ exports.sendOTP = async function(email, otp) {
             subject: 'Your beHonest Verification Code',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Welcome to beHonest!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Thank you for registering. Please use the following 6-digit One-Time Password (OTP) to verify your email address:</p>
@@ -38,12 +35,7 @@ exports.sendOTP = async function(email, otp) {
                         If you did not request this code, please ignore this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo' // same cid value as in the html img src
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -62,9 +54,6 @@ exports.sendPasswordResetOTP = async function(email, otp) {
             subject: 'Your beHonest Password Reset Code',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Password Reset Request</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">We received a request to reset your password. Please use the following 6-digit One-Time Password (OTP) to reset it:</p>
@@ -81,12 +70,7 @@ exports.sendPasswordResetOTP = async function(email, otp) {
                         If you did not request a password reset, please ignore this email or contact support if you have concerns.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo'
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -105,9 +89,7 @@ exports.sendClaimNotification = async function(email, itemTitle, rewardAmount) {
             subject: `🎉 Great News! The owner has claimed the item ${itemTitle} you found`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
+                    
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Thank you for using the beHonest platform. The owner of ${itemTitle} has passed the verification interview and deposited a reward of ₹${rewardAmount}. They are waiting for you in the secure chat to arrange a meetup</p>
                     <p style="font-size: 14px; color: #666; text-align: center;">
@@ -142,9 +124,7 @@ exports.sendDisputeEmailToAdmin = async function(email, itemTitle, disputeReason
             subject: `⚠️ A Dispute Has Been Raised Regarding ${itemTitle} by ${name}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
+                    
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Dispute Raised!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">A new dispute has been raised regarding ${itemTitle} on the beHonest platform. <b>Dispute Reason: ${disputeReason}</b>. Please review the dispute and take the necessary action.</p>
@@ -180,9 +160,7 @@ exports.sendDisputeEmail = async function(email, itemTitle, disputeReason){
             subject: `⚠️ A Dispute Has Been Raised Regarding ${itemTitle}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
+                    
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Dispute Raised!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Thank you for using the beHonest platform.A dispute has been raised regarding ${itemTitle} by the owner. The reason provided for the dispute is: <b>${disputeReason}</b>. Our team will review the dispute and the relevant information before taking further action. Please check your secure chat and cooperate with the verification process if required. We’ll keep you updated once the dispute has been reviewed.</p>
@@ -218,9 +196,7 @@ exports.sendRefundEmail = async function(email, itemTitle, amount) {
             subject: `💸 Refund Processed for ${itemTitle}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
+                    
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Refund Successful</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Your escrow deposit of ₹${amount} for the item <b>${itemTitle}</b> has been successfully refunded.</p>
@@ -232,12 +208,7 @@ exports.sendRefundEmail = async function(email, itemTitle, amount) {
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo'
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -256,9 +227,7 @@ exports.sendRewardReleasedEmail = async function(email, itemTitle, amount) {
             subject: `🎉 Reward Released! You've received ₹${amount}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <img src="cid:behonestlogo" alt="beHonest Logo" style="height: 80px; width: auto;" />
-                    </div>
+                    
                     <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Money Sent!</h2>
                     <p style="font-size: 16px; color: #333;">Hello,</p>
                     <p style="font-size: 16px; color: #333;">Both you and the owner have confirmed the handover for <b>${itemTitle}</b>.</p>
@@ -271,12 +240,7 @@ exports.sendRewardReleasedEmail = async function(email, itemTitle, amount) {
                         This is an automated notification. Please do not reply to this email.
                     </p>
                 </div>
-            `,
-            attachments: [{
-                filename: 'logo.png',
-                path: logoPath,
-                cid: 'behonestlogo'
-            }]
+            `
         };
 
         const info = await transporter.sendMail(mailOptions);
