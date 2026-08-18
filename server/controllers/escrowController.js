@@ -115,10 +115,6 @@ exports.createEscrow = async function(req, res) {
                 customer_details: {
                     customer_id: depositorId.toString(),
                     customer_phone: "9999999999" // Dummy phone required by CF
-                },
-                order_meta: {
-                    // For drop-in checkout, return_url isn't strictly necessary but good practice
-                    return_url: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5173'}/escrow?order_id={order_id}`
                 }
             })
         });
