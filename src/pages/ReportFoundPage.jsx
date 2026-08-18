@@ -105,8 +105,34 @@ function ReportFoundPage() {
      handleNext() / handleBack()
      Move between the 3 steps of the form.
   */
-  const handleNext = () => {
+  const handleNext = async () => {
     if (validateStep()) {
+      // STRICT AI VALIDATION on Step 2 (Photo Upload)
+      if (step === 2 && imageData) {
+        setLoading(true);
+        setError('');
+        try {
+          const tempItem = { category, title, description, imageData };
+          const report = await runFullFraudScan(tempItem, session.email);
+          
+          if (report.overallRisk === 'high') {
+            const badFlag = report.aiFlags.find(f => f.severity === 'high');
+            if (badFlag && badFlag.type === 'DESCRIPTION_MISMATCH') {
+              setError(`AI Validation Failed: The uploaded photo does not look like a ${category} matching your description. Please upload a real photo of the actual item.`);
+              setLoading(false);
+              return; // Block moving to step 3
+            } else if (report.overallRisk === 'high') {
+              setError(`Upload blocked: ${badFlag ? badFlag.message : 'Suspicious photo detected.'}. Only real, physical items can be uploaded.`);
+              setLoading(false);
+              return; // Block moving to step 3
+            }
+          }
+        } catch (err) {
+          console.error('Fraud scan error:', err);
+        }
+        setLoading(false);
+      }
+      
       setStep(s => s + 1); // Go to next step
       window.scrollTo(0, 0); // Scroll to top
     }
@@ -127,27 +153,7 @@ function ReportFoundPage() {
     setError('');
 
     try {
-      // 1. Build a temporary item object for the AI scanner
-      // The AI expects exactly: category, title, description, imageData
-      const tempItem = {
-        category: category,
-        title: title, 
-        description: description,
-        imageData: imageData,
-      };
-
-      // 2. Run the fraud scan BEFORE saving
-      const report = await runFullFraudScan(tempItem, session.email);
-
-      // 3. If AI detects high-severity fraud (e.g., fake photo), block the upload
-      if (report.overallRisk === 'high') {
-        setLoading(false);
-        const badFlag = report.aiFlags.find(f => f.severity === 'high') || 
-                        report.heuristicFlags.find(f => f.severity === 'high');
-        
-        setError(`Upload blocked: ${badFlag ? badFlag.message : 'Suspicious activity detected.'}. Please upload a genuine photo of the lost item.`);
-        return; // STOP EXECUTION HERE — DO NOT SAVE
-      }
+      // (AI fraud scan was already completed successfully on Step 2)
 
       // 4. If clean or low/medium risk, proceed to save the item
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/add`, {
