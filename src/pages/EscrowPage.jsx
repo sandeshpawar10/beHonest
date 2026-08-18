@@ -87,22 +87,24 @@ function EscrowPage() {
             })
           });
 
-          if (verifyRes.ok) {
-            alert("✅ Payment Successful! Your reward is now securely held in Escrow.");
-          }
           // Remove params from URL so it doesn't re-trigger on refresh
           window.history.replaceState({}, document.title, "/escrow");
+          
+          if (verifyRes.ok) {
+            // Refresh escrows list to show the newly verified one
+            fetchEscrows();
+          }
         } catch (err) {
           console.error("Verification redirect error:", err);
         }
       }
     };
 
-    Promise.resolve().then(() => {
-      checkVerifyRedirect().then(() => {
-        fetchEscrows();
-      });
-    });
+    // Load instantly
+    fetchEscrows();
+    
+    // Process background verification if needed
+    checkVerifyRedirect();
   }, []);
 
   // ── Refresh escrows (re-read from backend) ───────────
