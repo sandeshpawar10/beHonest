@@ -1,8 +1,3 @@
-// MUST BE FIRST LINE: Force IPv4 DNS resolution globally
-// Render free tier cannot reach IPv6 addresses (Gmail SMTP fails without this)
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-
 const express = require("express")
 const connectDB = require("./db/connection")
 const cors = require("cors")
