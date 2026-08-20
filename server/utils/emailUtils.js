@@ -2,6 +2,10 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const dns = require('dns');
 
+// CRITICAL: Force ALL DNS lookups to prefer IPv4
+// Render free tier has no IPv6 connectivity
+dns.setDefaultResultOrder('ipv4first');
+
 const logoPath = path.join(__dirname, '../../public/logo.png');
 
 const transporter = nodemailer.createTransport({
@@ -11,10 +15,6 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    },
-    // Force IPv4 — Render free tier does not support IPv6
-    dnsLookup: (hostname, options, callback) => {
-        dns.lookup(hostname, { family: 4 }, callback);
     }
 });
 
