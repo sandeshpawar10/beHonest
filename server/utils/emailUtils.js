@@ -20,6 +20,11 @@ const transporter = nodemailer.createTransport({
 
 exports.sendOTP = async function(email, otp) {
     try {
+        console.log(`[EMAIL DEBUG] Attempting to send OTP to: ${email}`);
+        console.log(`[EMAIL DEBUG] EMAIL_USER is set: ${!!process.env.EMAIL_USER}`);
+        console.log(`[EMAIL DEBUG] EMAIL_PASS is set: ${!!process.env.EMAIL_PASS}`);
+        console.log(`[EMAIL DEBUG] EMAIL_PASS length: ${(process.env.EMAIL_PASS || '').length}`);
+        
         const mailOptions = {
             from: `"beHonest Support" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -49,9 +54,13 @@ exports.sendOTP = async function(email, otp) {
         };
 
         const info = await transporter.sendMail(mailOptions);
+        console.log(`[EMAIL DEBUG] OTP sent successfully! MessageId: ${info.messageId}`);
         return true;
     } catch (error) {
-        console.error("Error sending OTP email:", error);
+        console.error("[EMAIL DEBUG] FULL ERROR OBJECT:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error("[EMAIL DEBUG] Error name:", error.name);
+        console.error("[EMAIL DEBUG] Error code:", error.code);
+        console.error("[EMAIL DEBUG] Error message:", error.message);
         return false;
     }
 };
