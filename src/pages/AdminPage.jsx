@@ -45,7 +45,7 @@ function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     Promise.resolve().then(() => {

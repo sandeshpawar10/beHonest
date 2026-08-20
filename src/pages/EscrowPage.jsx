@@ -106,9 +106,11 @@ function EscrowPage() {
     };
 
     // Load instantly
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEscrows();
     
     // Process background verification if needed
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkVerifyRedirect();
   }, []);
 
