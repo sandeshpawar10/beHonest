@@ -29,7 +29,7 @@ function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   // ── Loading and global message state ─────────────────────
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [alert,   setAlert]   = useState({ msg: '', type: '' }); // { msg, type: 'error'|'success' }
 
   // ── Per-field error messages ──────────────────────────────
@@ -44,6 +44,8 @@ function RegisterPage() {
 
   const handleRegisterSubmit = async (e)=> {
     e.preventDefault()
+    setLoading(true);
+    setAlert({ msg: '', type: '' });
 
     try {
       console.log(email)
@@ -82,6 +84,9 @@ function RegisterPage() {
     } catch {
       //console.log(error.response.data);
       console.error("Failed to connect to the backend server.");
+      setAlert({ msg: "Failed to connect to the backend server.", type: "error" });
+    } finally {
+      setLoading(false);
     }
   }
 
