@@ -14,6 +14,7 @@ const { requireCustomHeaderCSRF } = require("./middlewares/csrfMiddleware");
 const https = require('https');
 dotenv.config()
 const app = express()
+app.set('trust proxy', 1);  // Required: Render runs behind a reverse proxy
 const port = process.env.port || 8000
 connectDB(process.env.Database_url)
 // Parse allowed origins from .env, fallback to localhost for development
