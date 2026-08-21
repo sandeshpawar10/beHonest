@@ -56,7 +56,7 @@ exports.runInteractiveInterrogation = async function(item, chatHistory, proofIma
   // Fetch and convert Cloudinary proofImage to base64
   const { base64Data: proofBase64Data, mimeType: proofMimeType } = await fetchImageAsBase64(proofImage);
 
-  const systemPrompt = `You are a strict security AI for a lost-and-found platform.
+  const systemPrompt = `You are a security AI for a lost-and-found platform.
 We need to verify if the person claiming this item is the true owner through a conversation.
 
 A student found this item and provided the following details:
@@ -73,11 +73,13 @@ You MUST ask between 4 and 10 questions to thoroughly interrogate them before ma
 
 GRADING RULES FOR FINAL VERDICT:
 1. Start with a baseline score of 100.
-2. For every minor mistake or slight inaccuracy, deduct 5 to 10 points.
-3. For every completely wrong answer, deduct 20 points.
-4. If the final score is 80 or above, set status to "verified".
-5. If the final score is between 50 and 79, set status to "needs_review".
-6. If the final score is below 50, set status to "rejected".
+2. Give FULL CREDIT if the user's answer is approximately correct or demonstrates genuine knowledge (e.g., saying "dark blue" when the item is navy blue is correct; saying "Samsung" when it's a Samsung Galaxy is correct).
+3. Only deduct 5-10 points for genuinely wrong answers where the user clearly does not know the detail.
+4. Only deduct 15-20 points for completely fabricated or wildly incorrect answers.
+5. If the user answers most questions with reasonable accuracy (even if not word-perfect), they deserve a high score.
+6. If the final score is 70 or above, set status to "verified".
+7. If the final score is between 40 and 69, set status to "needs_review".
+8. If the final score is below 40, set status to "rejected".
 
 Return ONLY a valid JSON object matching this schema:
 {
@@ -283,7 +285,7 @@ exports.runFinalCombinedScoring = async function(item, chatHistory, tentativeVer
   const { base64Data, mimeType } = await fetchImageAsBase64(firstImage);
   const { base64Data: proofBase64Data, mimeType: proofMimeType } = await fetchImageAsBase64(proofImage);
 
-  const systemPrompt = `You are a strict security AI for a lost-and-found platform.
+  const systemPrompt = `You are a security AI for a lost-and-found platform.
 We are finalizing a claim verification. The user has already completed a chat interview.
 Based purely on their chat, the tentative verdict was: "${tentativeVerdict.status}" with a score of ${tentativeVerdict.score}.
 
@@ -294,8 +296,14 @@ CRITICAL INSTRUCTIONS:
 1. Cross-reference the proof image with the found item image.
 2. Look for matching serial numbers, visual defects, exact product models.
 3. FORENSIC CHECK: If the proof image appears to be a generic stock photo downloaded from the internet, or AI-generated, immediately set status to "needs_review" and explain the fraud.
-4. If the proof image strongly matches the item, boost their final score and set status to "verified".
-5. If the proof image clearly does NOT match the item, set status to "rejected" or "needs_review".
+4. If the proof image strongly matches the item (same brand, same model, same visual features, or a genuine receipt/bill for the same product), the MINIMUM final score MUST be 75 and status MUST be "verified". This is because a matching proof photo is very strong evidence of ownership.
+5. If the proof image somewhat matches (same type of product but unclear details), boost the tentative score by at least 15 points.
+6. If the proof image clearly does NOT match the item, set status to "rejected" or "needs_review".
+
+SCORING THRESHOLDS:
+- 70 or above → "verified"
+- 40 to 69 → "needs_review"  
+- Below 40 → "rejected"
 
 Return ONLY a valid JSON object matching this schema:
 {

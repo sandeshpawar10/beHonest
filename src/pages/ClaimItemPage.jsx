@@ -419,81 +419,101 @@ function ClaimItemPage() {
 
       {/* ════════════════ PROOF UPLOAD STEP ════════════════ */}
       {step === 'proof' && (
-        <div className={styles.topBar}>
-           <h1 className={styles.pageTitle}>📸 Final Proof</h1>
-        </div>
-      )}
-      {step === 'proof' && (
-        <div className={styles.layout}>
-          <div className={styles.previewCard} style={{ margin: '0 auto', maxWidth: '600px', textAlign: 'center', padding: '2rem' }}>
-            <h2 style={{ marginBottom: '1rem', color: '#1a1a2e' }}>You completed the interview!</h2>
-            <p style={{ color: '#4a4a68', marginBottom: '2rem' }}>
-              Your chat performance was recorded. To boost your final score and complete the verification, please upload a supporting photo.
-            </p>
-
-            <div style={{ background: '#f8f9fa', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
-              <label style={{ display: 'block', marginBottom: '1rem', fontWeight: '600', color: '#333', fontSize: '1.1rem' }}>
-                Upload Proof of Ownership {isProofMandatory() ? <span style={{ color: '#e74c3c' }}>(Mandatory)</span> : '(Optional)'}
-              </label>
-              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
-                {isProofMandatory() 
-                  ? 'For high-value items like electronics, you MUST upload a receipt, invoice, or an old photo of you with the item to claim it.'
-                  : 'Upload a receipt, invoice, or an old photo of you with the item.'}
+        <>
+          <div className={styles.topBar}>
+            <h1 className={styles.pageTitle}>📸 Final Proof</h1>
+          </div>
+          <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px 40px' }}>
+            <div style={{
+              background: 'var(--bg-card, #fff)',
+              borderRadius: '16px',
+              border: '1px solid var(--border, #e0e0e0)',
+              padding: '24px',
+              textAlign: 'center'
+            }}>
+              <h2 style={{ marginBottom: '8px', color: 'var(--text-primary, #1a1a2e)', fontSize: '1.3rem' }}>
+                You completed the interview!
+              </h2>
+              <p style={{ color: 'var(--text-secondary, #4a4a68)', marginBottom: '24px', fontSize: '0.95rem' }}>
+                Your chat performance was recorded. To boost your final score and complete the verification, please upload a supporting photo.
               </p>
-              
-              <input
-                type="file"
-                accept="image/*"
-                id="proofUpload"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setProofImageBase64(reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                  } else {
-                    setProofImageBase64('');
-                  }
-                }}
-              />
-              <label htmlFor="proofUpload" style={{
-                display: 'inline-block', padding: '12px 24px', background: '#00d2ff', 
-                color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold',
-                boxShadow: '0 4px 6px rgba(0, 210, 255, 0.2)'
-              }}>
-                Choose Photo
-              </label>
 
-              {proofImageBase64 && (
-                <div style={{ marginTop: '20px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxWidth: '300px', margin: '20px auto 0' }}>
-                  <img src={proofImageBase64} alt="Proof" style={{ width: '100%', display: 'block' }} />
+              <div style={{ 
+                background: 'var(--bg-secondary, #f8f9fa)', 
+                padding: '20px', 
+                borderRadius: '12px', 
+                marginBottom: '24px' 
+              }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary, #333)', fontSize: '1.05rem' }}>
+                  Upload Proof of Ownership {isProofMandatory() ? <span style={{ color: '#e74c3c' }}>(Mandatory)</span> : '(Optional)'}
+                </label>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #666)', marginBottom: '16px' }}>
+                  {isProofMandatory() 
+                    ? 'For high-value items like electronics, you MUST upload a receipt, invoice, or an old photo of you with the item to claim it.'
+                    : 'Upload a receipt, invoice, or an old photo of you with the item.'}
+                </p>
+                
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="proofUpload"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setProofImageBase64(reader.result);
+                      };
+                      reader.readAsDataURL(file);
+                    } else {
+                      setProofImageBase64('');
+                    }
+                  }}
+                />
+                <label htmlFor="proofUpload" style={{
+                  display: 'inline-block', padding: '12px 24px', background: '#00d2ff', 
+                  color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold',
+                  boxShadow: '0 4px 6px rgba(0, 210, 255, 0.2)'
+                }}>
+                  Choose Photo
+                </label>
+
+                {proofImageBase64 && (
+                  <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxWidth: '250px', margin: '16px auto 0' }}>
+                    <img src={proofImageBase64} alt="Proof" style={{ width: '100%', display: 'block' }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <div className={styles.errorAlert} style={{ marginBottom: '16px' }}>
+                  ⚠️ {error}
                 </div>
               )}
-            </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              {!isProofMandatory() && (
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {!isProofMandatory() && (
+                  <button 
+                    onClick={() => handleFinalizeProof(true)}
+                    disabled={verifying}
+                    style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Skip Photo
+                  </button>
+                )}
                 <button 
-                  onClick={() => handleFinalizeProof(true)}
-                  disabled={verifying}
-                  style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
+                  onClick={() => handleFinalizeProof(false)}
+                  disabled={verifying || !proofImageBase64}
+                  style={{ padding: '12px 24px', background: proofImageBase64 ? '#00d2ff' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: proofImageBase64 ? 'pointer' : 'not-allowed' }}
                 >
-                  Skip Photo
+                  {verifying ? 'Verifying...' : 'Submit Final Proof'}
                 </button>
-              )}
-              <button 
-                onClick={() => handleFinalizeProof(false)}
-                disabled={verifying || !proofImageBase64}
-                style={{ padding: '12px 24px', background: proofImageBase64 ? '#00d2ff' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: proofImageBase64 ? 'pointer' : 'not-allowed' }}
-              >
-                {verifying ? 'Verifying...' : 'Submit Final Proof'}
-              </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ════════════════ RESULT STEP ════════════════ */}
@@ -633,12 +653,28 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
         )}
 
         {result.verdict === 'needs_review' && (
-          <button
-            className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item._id}`, { state: { claimId: result.claimId } })}
-          >
-            💰 Proceed to Escrow (Pending Review)
-          </button>
+          <>
+            <div style={{ 
+              background: 'rgba(255, 179, 71, 0.1)', 
+              border: '1px solid rgba(255, 179, 71, 0.3)', 
+              borderRadius: '12px', 
+              padding: '20px', 
+              textAlign: 'center',
+              marginBottom: '16px',
+              maxWidth: '400px',
+              width: '100%'
+            }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#ffb347', marginBottom: '8px' }}>
+                ⏳ Your claim is under review
+              </p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+                Your answers were not sufficient for automatic verification. You can try the interview again with better answers, or wait for a manual review.
+              </p>
+            </div>
+            <button className={styles.retryBtn} onClick={onTryAgain}>
+              🔄 Try Interview Again
+            </button>
+          </>
         )}
 
         <button className={styles.backToItemsBtn} onClick={onGoBack}>
