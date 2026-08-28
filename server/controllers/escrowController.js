@@ -200,6 +200,7 @@ exports.verifyPayment = async function(req, res) {
 exports.getMyEscrows = async function(req, res) {
     try {
         const userId = req.user._id;
+        console.log("[getMyEscrows] userId:", userId.toString());
 
         // Find escrows where user is either the depositor (owner) or finder
         const escrows = await escrowModel.find({
@@ -213,6 +214,8 @@ exports.getMyEscrows = async function(req, res) {
         .populate("depositorId", "email username")
         .populate("finderId", "email username")
         .sort({ createdAt: -1 });
+
+        console.log("[getMyEscrows] Total escrows found:", escrows.length);
 
         const asOwner = [];
         const asFinder = [];
@@ -234,13 +237,22 @@ exports.getMyEscrows = async function(req, res) {
             }
 
             const escrowObj = escrow.toObject();
-            if (escrow.depositorId._id.toString() === userId.toString()) {
+            
+            // Get the IDs safely (after populate, these are user objects)
+            const depositorIdStr = escrow.depositorId?._id?.toString() || escrow.depositorId?.toString();
+            const finderIdStr = escrow.finderId?._id?.toString() || escrow.finderId?.toString();
+            
+            console.log(`[getMyEscrows] Escrow ${escrow._id}: status=${escrow.status}, depositorId=${depositorIdStr}, finderId=${finderIdStr}`);
+
+            if (depositorIdStr === userId.toString()) {
                 asOwner.push(escrowObj);
             }
-            if (escrow.finderId._id.toString() === userId.toString()) {
+            if (finderIdStr === userId.toString()) {
                 asFinder.push(escrowObj);
             }
         }
+
+        console.log(`[getMyEscrows] Results: asOwner=${asOwner.length}, asFinder=${asFinder.length}`);
 
         return res.status(200).json({
             status: "success",
