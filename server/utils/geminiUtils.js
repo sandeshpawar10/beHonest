@@ -73,13 +73,12 @@ You MUST ask between 4 and 10 questions to thoroughly interrogate them before ma
 
 GRADING RULES FOR FINAL VERDICT:
 1. Start with a baseline score of 100.
-2. Give FULL CREDIT if the user's answer is approximately correct or demonstrates genuine knowledge (e.g., saying "dark blue" when the item is navy blue is correct; saying "Samsung" when it's a Samsung Galaxy is correct).
-3. Only deduct 5-10 points for genuinely wrong answers where the user clearly does not know the detail.
-4. Only deduct 15-20 points for completely fabricated or wildly incorrect answers.
-5. If the user answers most questions with reasonable accuracy (even if not word-perfect), they deserve a high score.
-6. If the final score is 70 or above, set status to "verified".
-7. If the final score is between 40 and 69, set status to "needs_review".
-8. If the final score is below 40, set status to "rejected".
+2. If the user answered the questions correctly or approximately correctly, their score MUST remain between 90 and 100.
+3. Even if they made a mistake, as long as they didn't completely fabricate the answers, their score MUST be at least 75.
+4. Only deduct points if they are completely, blatantly lying (e.g., saying the item is a red car when it's a blue laptop).
+5. If the final score is 70 or above, set status to "verified".
+6. If the final score is between 40 and 69, set status to "needs_review".
+7. If the final score is below 40, set status to "rejected".
 
 Return ONLY a valid JSON object matching this schema:
 {
@@ -294,11 +293,11 @@ The FIRST image is the actual found item.
 
 CRITICAL INSTRUCTIONS:
 1. Cross-reference the proof image with the found item image.
-2. Look for matching serial numbers, visual defects, exact product models.
-3. FORENSIC CHECK: If the proof image appears to be a generic stock photo downloaded from the internet, or AI-generated, immediately set status to "needs_review" and explain the fraud.
-4. If the proof image strongly matches the item (same brand, same model, same visual features, or a genuine receipt/bill for the same product), the MINIMUM final score MUST be 75 and status MUST be "verified". This is because a matching proof photo is very strong evidence of ownership.
-5. If the proof image somewhat matches (same type of product but unclear details), boost the tentative score by at least 15 points.
-6. If the proof image clearly does NOT match the item, set status to "rejected" or "needs_review".
+2. If the user provided ANY photo that even remotely looks like it could be the item (or a receipt for it), you MUST give them a score of 95 and set status to "verified".
+3. We want to be extremely lenient. Do NOT reject them unless the photo is an obvious joke (e.g., a picture of a human face or a completely unrelated object).
+4. If the proof image strongly matches, score them 100 and "verified".
+5. If the proof image somewhat matches, score them 90 and "verified".
+6. Only if the proof image is blatantly fraudulent, set status to "needs_review".
 
 SCORING THRESHOLDS:
 - 70 or above → "verified"
