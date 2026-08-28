@@ -166,26 +166,33 @@ exports.verifyPayment = async function(req, res) {
         escrow.razorpaySignature = razorpay_signature;
         await escrow.save();
 
-        // Send notifications
+        // 1. Immediately tell the frontend it was successful so the UI doesn't freeze
+        res.status(200).json({ message: "Payment verified successfully", escrow });
+
+        // 2. Send notifications in the background (Render free tier blocks emails, which causes freezing if awaited)
         const item = await itemModel.findById(escrow.itemId);
         const { sendClaimNotification } = require('../utils/emailUtils');
         const finder = await userModel.findById(escrow.finderId);
         
         if(finder){
-            await sendClaimNotification(finder.email, item.shortTitle, escrow.amount);
+            // Do NOT await this, let it fail silently in the background if SMTP is blocked
+            sendClaimNotification(finder.email, item.shortTitle, escrow.amount).catch(err => console.error("Email blocked by Render:", err));
         }
 
-        await createNotification(
+        createNotification(
             escrow.finderId,
             "GENERAL",
             "Reward Deposited! 💰",
             `The owner has verified their claim and deposited a reward of ₹${escrow.amount} into escrow for your found item: ${item.shortTitle}. Meet them to complete the handover!`,
             `/escrow`
-        );
-        res.status(200).json({ message: "Payment verified successfully", escrow });
+        ).catch(err => console.error("Notification error:", err));
+
     } catch (error) {
         console.error("Error verifying payment:", error);
-        return res.status(500).json({ error: "Internal server error." });
+        // Only send 500 if we haven't already sent a response
+        if (!res.headersSent) {
+            return res.status(500).json({ error: "Internal server error." });
+        }
     }
 };
 
