@@ -22,7 +22,6 @@ import {
   calculateReward,       // AI recommendation function
 } from '../utils/rewardUtils';
 import styles from './RewardPage.module.css';
-import { load } from '@cashfreepayments/cashfree-js';
 
 function RewardPage() {
   const { itemId }  = useParams();   // Item ID from URL
@@ -57,9 +56,6 @@ function RewardPage() {
 
   // Processing state for the confirm button
   const [processing, setProcessing]             = useState(false);
-
-  // Cashfree SDK instance
-  const [cashfree, setCashfree]                 = useState(null);
 
   // ── Load item on mount ────────────────────────────────────
   useEffect(() => {
@@ -96,18 +92,14 @@ function RewardPage() {
 
     fetchItem();
     
-    // Initialize Cashfree SDK
-    const initCashfree = async () => {
-      try {
-        const cf = await load({
-          mode: import.meta.env.VITE_CASHFREE_ENV === "PRODUCTION" ? "production" : "sandbox"
-        });
-        setCashfree(cf);
-      } catch (err) {
-        console.error("Failed to load Cashfree SDK", err);
-      }
-    };
-    initCashfree();
+    // Load Razorpay checkout script
+    if (!document.getElementById('razorpay-script')) {
+      const script = document.createElement('script');
+      script.id = 'razorpay-script';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
 
   }, [itemId, claimId]);
 
@@ -144,11 +136,11 @@ function RewardPage() {
     setProcessing(true);
 
     try {
-      if (!cashfree) {
-        throw new Error('Payment gateway SDK failed to load. Are you online?');
+      if (!window.Razorpay) {
+        throw new Error('Payment gateway failed to load. Please refresh the page.');
       }
 
-      // 2. Create Order
+      // 1. Create Order on our backend
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,26 +159,69 @@ function RewardPage() {
       }
 
       const data = await response.json();
-      const { paymentSessionId } = data;
+      const { orderId, escrowId, keyId } = data;
 
-      // 3. Initialize Cashfree Checkout
-      let checkoutOptions = {
-        paymentSessionId: paymentSessionId,
-        redirectTarget: "_self", // Use _self for mobile reliability
+      // 2. Open Razorpay Checkout Modal
+      const options = {
+        key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: chosenReward * 100,
+        currency: "INR",
+        name: "beHonest",
+        description: `Reward for: ${item.shortTitle}`,
+        order_id: orderId,
+        handler: async function (response) {
+          // 3. Verify payment on our backend
+          try {
+            const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                escrowId: escrowId
+              })
+            });
+
+            if (verifyRes.ok) {
+              navigate('/escrow');
+            } else {
+              const errData = await verifyRes.json().catch(() => ({}));
+              setError(errData.error || 'Payment verification failed. Contact support.');
+            }
+          } catch (verifyErr) {
+            console.error(verifyErr);
+            setError('Payment succeeded but verification failed. Please check your escrow dashboard.');
+            navigate('/escrow');
+          }
+        },
+        prefill: {
+          email: session?.user?.email || ''
+        },
+        theme: {
+          color: "#00d2ff"
+        },
+        modal: {
+          ondismiss: function() {
+            setProcessing(false);
+          }
+        }
       };
-      
-      // We do not await this, as the browser will redirect to the Cashfree payment page.
-      // After payment, Cashfree will redirect back to /escrow?verify_order_id=...
-      cashfree.checkout(checkoutOptions);
 
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        setError(`Payment failed: ${response.error.description}`);
+        setProcessing(false);
+      });
+      rzp.open();
 
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to process escrow. Please try again.');
-    } finally {
       setProcessing(false);
-      window.scrollTo(0, 0);
     }
+    window.scrollTo(0, 0);
   };
 
   // ── Filtered categories for search ────────────────────────

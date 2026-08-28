@@ -6,6 +6,13 @@ const chatModel = require("../models/chatModel");
 const { createNotification } = require("./notificationController");
 const z = require("zod");
 const crypto = require("crypto");
+const Razorpay = require("razorpay");
+
+// Initialize Razorpay instance
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 const createEscrowSchema = z.object({
     itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Item ID"),
@@ -97,64 +104,43 @@ exports.createEscrow = async function(req, res) {
             status: "payment_pending"
         });
 
-        // Create Cashfree order
-        const cashfreeEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
-        
-        const response = await fetch(`${cashfreeEnv}/orders`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-version': '2023-08-01',
-                'x-client-id': process.env.CASHFREE_APP_ID,
-                'x-client-secret': process.env.CASHFREE_SECRET_KEY
-            },
-            body: JSON.stringify({
-                order_amount: amount,
-                order_currency: "INR",
-                order_id: `escrow_${newEscrow._id}`,
-                customer_details: {
-                    customer_id: depositorId.toString(),
-                    customer_phone: "9999999999" // Dummy phone required by CF
-                },
-                order_meta: {
-                    return_url: `${process.env.VITE_FRONTEND_URL || req.headers.origin || 'http://localhost:5173'}/escrow?verify_order_id={order_id}&escrow_id=${newEscrow._id}`
-                }
-            })
+        // Create Razorpay order
+        const order = await razorpay.orders.create({
+            amount: amount * 100, // Razorpay expects amount in paise
+            currency: "INR",
+            receipt: `escrow_${newEscrow._id}`,
+            notes: {
+                escrowId: newEscrow._id.toString(),
+                itemId: itemId,
+                depositorId: depositorId.toString()
+            }
         });
 
-        const orderData = await response.json();
-        
-        if (!response.ok) {
-            console.error("Cashfree API Error:", orderData);
-            throw new Error(orderData.message || "Failed to create Cashfree Order");
-        }
-
-        // Update the escrow with the generated IDs
-        newEscrow.cashfreeOrderId = orderData.order_id;
-        newEscrow.cashfreePaymentSessionId = orderData.payment_session_id;
+        // Update the escrow with the Razorpay order ID
+        newEscrow.razorpayOrderId = order.id;
         await newEscrow.save();
 
         res.status(201).json({
             message: "Payment order created successfully",
-            orderId: orderData.order_id,
-            paymentSessionId: orderData.payment_session_id,
+            orderId: order.id,
             escrowId: newEscrow._id,
             amount: amount,
-            currency: "INR"
+            currency: "INR",
+            keyId: process.env.RAZORPAY_KEY_ID
         });
 
     } catch (error) {
         console.error("Error in createEscrow:", error);
-        res.status(500).json({ error: error.message || "Failed to communicate with Cashfree. Check API Keys." });
+        res.status(500).json({ error: error.message || "Failed to create payment order. Check API Keys." });
     }
 };
 
-// ── Verify Payment ──────────────────────────────────────────────────────────
+// ── Verify Payment (Razorpay signature verification) ──────────────────────
 exports.verifyPayment = async function(req, res) {
     try {
-        const { order_id, escrowId } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, escrowId } = req.body;
 
-        if (!order_id || !escrowId) {
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !escrowId) {
             return res.status(400).json({ error: "Missing required payment details." });
         }
 
@@ -163,30 +149,21 @@ exports.verifyPayment = async function(req, res) {
             return res.status(404).json({ error: "Escrow not found." });
         }
 
-        // Verify with Cashfree API
-        const cashfreeEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
-        
-        const response = await fetch(`${cashfreeEnv}/orders/${order_id}`, {
-            method: 'GET',
-            headers: {
-                'x-api-version': '2023-08-01',
-                'x-client-id': process.env.CASHFREE_APP_ID,
-                'x-client-secret': process.env.CASHFREE_SECRET_KEY
-            }
-        });
+        // Verify Razorpay signature using HMAC SHA256
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .update(body)
+            .digest("hex");
 
-        const orderData = await response.json();
-        
-        if (!response.ok) {
-            return res.status(400).json({ error: "Failed to verify order with Cashfree." });
+        if (expectedSignature !== razorpay_signature) {
+            return res.status(400).json({ error: "Payment verification failed. Invalid signature." });
         }
 
-        if (orderData.order_status !== "PAID") {
-            return res.status(400).json({ error: "Payment not completed or failed." });
-        }
-
-        // Signature is valid (since we queried CF directly), update the escrow
+        // Signature is valid, update the escrow
         escrow.status = "pending";
+        escrow.razorpayPaymentId = razorpay_payment_id;
+        escrow.razorpaySignature = razorpay_signature;
         await escrow.save();
 
         // Send notifications
@@ -299,36 +276,10 @@ exports.confirmHandover = async function(req, res) {
         if (escrow.ownerConfirmed && escrow.finderConfirmed) {
             escrow.status = "released";
             bothConfirmed = true;
-            
-            // Trigger Cashfree Payout to Finder's UPI
+
+            // Log payout details (manual payout for now — Razorpay RazorpayX requires separate KYC)
             if (escrow.finderUpiId) {
-                try {
-                    const payoutEnv = process.env.CASHFREE_ENV === "PRODUCTION" ? "https://api.cashfree.com/payout" : "https://sandbox.cashfree.com/payout";
-                    const payoutRes = await fetch(`${payoutEnv}/transfers`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-api-version': '2024-01-01',
-                            'x-client-id': process.env.CASHFREE_APP_ID,
-                            'x-client-secret': process.env.CASHFREE_SECRET_KEY
-                        },
-                        body: JSON.stringify({
-                            transfer_id: `payout_${escrow._id}_${Date.now()}`,
-                            transfer_amount: escrow.amount,
-                            transfer_currency: "INR",
-                            transfer_mode: "upi",
-                            beneficiary_details: {
-                                beneficiary_id: `finder_${escrow.finderId}`,
-                                beneficiary_name: finder?.username || "Finder",
-                                beneficiary_vpa: escrow.finderUpiId
-                            }
-                        })
-                    });
-                    const payoutData = await payoutRes.json();
-                    console.log("Cashfree Payout Result:", payoutData);
-                } catch (payoutErr) {
-                    console.error("Payout failed (escrow still released):", payoutErr);
-                }
+                console.log(`[PAYOUT] Reward of ₹${escrow.amount} should be sent to UPI: ${escrow.finderUpiId} (Finder: ${escrow.finderId})`);
             }
 
             const item = await itemModel.findById(escrow.itemId);
