@@ -53,7 +53,8 @@ function RegisterPage() {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type' : 'application/json'
+          'Content-Type' : 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({
           username: fullName,
