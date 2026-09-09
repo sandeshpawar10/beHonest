@@ -27,11 +27,12 @@ import App from './App';           // Root component with router
 // Automatically injects the X-Requested-With header into all state-changing requests
 const originalFetch = window.fetch;
 window.fetch = async (...args) => {
-  let [resource, config] = args;
+  let [resource, config={}] = args;
+  const method = (config.method || 'GET').toUpperCase();
   
-  if (config && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase())) {
+  if (config && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     config.headers = {
-      ...config.headers,
+      ...(config.headers || {} ),
       'X-Requested-With': 'XMLHttpRequest'
     };
   }
