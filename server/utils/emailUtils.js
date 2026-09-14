@@ -1,28 +1,39 @@
-const { Resend } = require('resend');
-
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Sender address — use onboarding@resend.dev on free tier, or your verified domain
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'beHonest <onboarding@resend.dev>';
-
-// ── Helper: send email via Resend HTTP API ──────────────────
+// ── Helper: send email via Brevo HTTP API (Bypasses Render SMTP block) ──
 async function sendEmail({ to, subject, html }) {
     try {
-        console.log(`[EMAIL] Sending to: ${to} | Subject: ${subject}`);
-        const { data, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: [to],
-            subject,
-            html
+        console.log(`[EMAIL] Sending via Brevo to: ${to} | Subject: ${subject}`);
+        
+        // We use EMAIL_USER from environment variables as the verified sender email
+        const senderEmail = process.env.EMAIL_USER || 'behonest.noreply@gmail.com';
+        
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': process.env.BREVO_API_KEY,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: {
+                    name: "beHonest Support",
+                    email: senderEmail
+                },
+                to: [
+                    { email: to }
+                ],
+                subject: subject,
+                htmlContent: html
+            })
         });
 
-        if (error) {
-            console.error('[EMAIL] Resend API error:', error);
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('[EMAIL] Brevo API error:', errorData);
             return false;
         }
 
-        console.log(`[EMAIL] Sent successfully! ID: ${data.id}`);
+        const data = await response.json();
+        console.log(`[EMAIL] Sent successfully! MessageId: ${data.messageId}`);
         return true;
     } catch (err) {
         console.error('[EMAIL] Send failed:', err.message);
