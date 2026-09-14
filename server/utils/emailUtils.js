@@ -13,7 +13,10 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000, // 10 seconds — fail fast if Render blocks SMTP
+    greetingTimeout: 10000,
+    socketTimeout: 10000
 });
 
 exports.sendOTP = async function(email, otp) {

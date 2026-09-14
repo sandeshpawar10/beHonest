@@ -64,8 +64,15 @@ function RegisterPage() {
       })
       const data = await response.json()
       if(response.ok){
-        setAlert({msg: "Registration successful! Please check your email for the OTP.", type: "success"})
-        navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`)
+        if (data.emailSent) {
+          setAlert({msg: "Registration successful! Please check your email for the OTP.", type: "success"})
+        } else {
+          setAlert({msg: "Registration successful! Email could not be sent — OTP will be shown on the next page.", type: "success"})
+        }
+        // Pass OTP as state if email failed (so verify page can show it)
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}&context=register`, {
+          state: data.emailSent ? {} : { fallbackOtp: data.otp }
+        })
       }
       else{
         let errorMsg = "An error occurred";

@@ -35,17 +35,22 @@ exports.registerUser = async function(req,res){
     u.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
     await u.save({ validateBeforeSave: false });
 
-    // Send the OTP email
+    // Try to send the OTP email (don't block registration if it fails)
     const { sendOTP } = require('../utils/emailUtils');
-    const emailSent = await sendOTP(email, otp);
-
-    if (!emailSent) {
-        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+    let emailSent = false;
+    try {
+        emailSent = await sendOTP(email, otp);
+    } catch (emailErr) {
+        console.error("[REGISTER] Email sending failed:", emailErr.message);
     }
 
     return res.status(201).json({
-        message: "User registered successfully and email has been sent to you", 
-        user: { _id: u._id, username: u.username, email: u.email }
+        message: emailSent 
+            ? "Registration successful! Please check your email for the OTP." 
+            : "Registration successful! Email delivery failed — your OTP is shown below.",
+        user: { _id: u._id, username: u.username, email: u.email },
+        emailSent: emailSent,
+        ...(emailSent ? {} : { otp: otp }) // Only expose OTP if email failed
     })
 }
 
@@ -229,13 +234,18 @@ exports.resendOTP = async function(req, res) {
         await u.save({ validateBeforeSave: false });
 
         const { sendOTP } = require('../utils/emailUtils');
-        const emailSent = await sendOTP(email, otp);
-
-        if (!emailSent) {
-            return res.status(500).json({ error: "Failed to send verification email." });
+        let emailSent = false;
+        try {
+            emailSent = await sendOTP(email, otp);
+        } catch (emailErr) {
+            console.error("[RESEND] Email sending failed:", emailErr.message);
         }
 
-        return res.status(200).json({ message: "OTP resent successfully" });
+        return res.status(200).json({ 
+            message: emailSent ? "OTP resent successfully" : "Email delivery failed — OTP shown below.",
+            emailSent: emailSent,
+            ...(emailSent ? {} : { otp: otp })
+        });
     } catch (error) {
         return res.status(500).json({ error: "An error occurred while resending OTP" });
     }

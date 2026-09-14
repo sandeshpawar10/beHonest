@@ -7,7 +7,7 @@
    ============================================================ */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 
 import {
   maskEmail,        // Masks email for privacy display
@@ -27,6 +27,10 @@ function VerifyOTPPage() {
   // Get email and context from URL (?email=...&context=register)
   const email   = searchParams.get('email')   || '';
   const context = searchParams.get('context') || 'register';
+  
+  // Get fallback OTP from navigation state (when email sending failed)
+  const location = useLocation();
+  const fallbackOtp = location.state?.fallbackOtp || null;
 
 
 
@@ -184,6 +188,9 @@ function VerifyOTPPage() {
   };
 
   // ── Resend OTP ────────────────────────────────────────────
+  // State for resend fallback OTP
+  const [resendFallbackOtp, setResendFallbackOtp] = useState(null);
+
   const handleResend = async () => {
     if (!canResend) return;
 
@@ -191,6 +198,7 @@ function VerifyOTPPage() {
     setDigits(['', '', '', '', '', '']); // Clear all boxes
     setBoxState('');
     setAlert({ msg: '', type: '' });
+    setResendFallbackOtp(null);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/resend-otp`, {
@@ -209,7 +217,13 @@ function VerifyOTPPage() {
 
       setResendCooldown(AUTH_CONFIG.OTP_RESEND_COOLDOWN);
       setTimeLeft(OTP_TOTAL_SECONDS);
-      setAlert({ msg: 'New OTP sent! Check your email.', type: 'success' });
+      
+      if (data.emailSent) {
+        setAlert({ msg: 'New OTP sent! Check your email.', type: 'success' });
+      } else {
+        setAlert({ msg: 'Email could not be delivered. OTP shown below.', type: 'warning' });
+        setResendFallbackOtp(data.otp);
+      }
     } catch {
       setAlert({ msg: 'Failed to connect to server.', type: 'error' });
       setCanResend(true);
@@ -262,6 +276,66 @@ function VerifyOTPPage() {
             {maskEmail(email)}
           </span>
         </div>
+
+        {/* Fallback OTP display when email delivery failed */}
+        {fallbackOtp && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fff3cd, #ffeeba)',
+            border: '2px solid #ffc107',
+            borderRadius: '12px',
+            padding: '16px',
+            margin: '12px 0',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 8px', fontWeight: 'bold', color: '#856404', fontSize: '0.9rem' }}>
+              ⚠️ Email could not be delivered. Use this OTP:
+            </p>
+            <span style={{
+              display: 'inline-block',
+              fontSize: '28px',
+              fontWeight: 'bold',
+              letterSpacing: '6px',
+              color: '#333',
+              background: '#fff',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              userSelect: 'all'
+            }}>
+              {fallbackOtp}
+            </span>
+          </div>
+        )}
+
+        {/* Fallback OTP display when resend email delivery failed */}
+        {resendFallbackOtp && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fff3cd, #ffeeba)',
+            border: '2px solid #ffc107',
+            borderRadius: '12px',
+            padding: '16px',
+            margin: '12px 0',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 8px', fontWeight: 'bold', color: '#856404', fontSize: '0.9rem' }}>
+              ⚠️ Email could not be delivered. Use this OTP:
+            </p>
+            <span style={{
+              display: 'inline-block',
+              fontSize: '28px',
+              fontWeight: 'bold',
+              letterSpacing: '6px',
+              color: '#333',
+              background: '#fff',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              userSelect: 'all'
+            }}>
+              {resendFallbackOtp}
+            </span>
+          </div>
+        )}
 
         {/* Alert */}
         {alert.msg && (
