@@ -13,25 +13,29 @@ exports.adminLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const admin = await adminModel.findOne({ email: email.toLowerCase() });
-        if (!admin) {
-            return res.status(401).json({ error: "DEBUG: Admin email not found in database", message: "Admin email not found in database" });
+        // Check directly against environment variables!
+        const validEmail = process.env.ADMIN_EMAIL;
+        const validPassword = process.env.ADMIN_PASSWORD;
+
+        if (email.toLowerCase() !== validEmail.toLowerCase() || password !== validPassword) {
+            return res.status(401).json({ 
+                error: "Invalid admin credentials", 
+                message: "Incorrect email or password." 
+            });
         }
 
-        const isMatch = await admin.isPasswordCorrect(password);
-        if (!isMatch) {
-            return res.status(401).json({ error: "DEBUG: Password does not match", message: "Password does not match" });
-        }
-
-        const accesstoken = admin.generateAccesstoken();
-        const refreshtoken = admin.generateRefreshToken();
-
-        admin.refreshTokens = admin.refreshTokens || [];
-        admin.refreshTokens.push(refreshtoken);
-        if (admin.refreshTokens.length > 5) {
-            admin.refreshTokens.shift();
-        }
-        await admin.save({ validateBeforeSave: false });
+        // We don't need the database anymore, just generate a simple JWT
+        const accesstoken = jwt.sign(
+            { role: "superadmin", email: validEmail },
+            process.env.access_token_secret,
+            { expiresIn: process.env.access_token_expiry || "15m" }
+        );
+        
+        const refreshtoken = jwt.sign(
+            { role: "superadmin" },
+            process.env.REFRESH_TOKEN_SECRET,
+            { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
+        );
 
         const options = {
             httpOnly: true,
@@ -160,13 +164,6 @@ exports.getAdminStats = async (req, res) => {
 
 exports.adminLogout = async (req, res) => {
     try {
-        const refreshToken = req.cookies?.adminrefreshtoken;
-        if (req.user && req.user._id) {
-            await adminModel.findByIdAndUpdate(req.user._id, {
-                $pull: { refreshTokens: refreshToken }
-            });
-        }
-        
         const options = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -191,23 +188,23 @@ exports.refreshAdminToken = async (req, res) => {
             return res.status(401).json({ error: "Unauthorized request" });
         }
 
-        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        // Just verify it's a valid token for our env
+        jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
         
-        const admin = await adminModel.findById(decodedToken._id);
-        if (!admin) {
-            return res.status(401).json({ error: "Invalid refresh token" });
-        }
-
-        if (!admin.refreshTokens.includes(incomingRefreshToken)) {
-            return res.status(401).json({ error: "Refresh token is expired or used" });
-        }
-
-        const accesstoken = admin.generateAccesstoken();
-        const newRefreshToken = admin.generateRefreshToken();
-
-        admin.refreshTokens = admin.refreshTokens.filter(t => t !== incomingRefreshToken);
-        admin.refreshTokens.push(newRefreshToken);
-        await admin.save({ validateBeforeSave: false });
+        // Generate new tokens directly using env vars
+        const validEmail = process.env.ADMIN_EMAIL;
+        
+        const accesstoken = jwt.sign(
+            { role: "superadmin", email: validEmail },
+            process.env.access_token_secret,
+            { expiresIn: process.env.access_token_expiry || "15m" }
+        );
+        
+        const newRefreshToken = jwt.sign(
+            { role: "superadmin" },
+            process.env.REFRESH_TOKEN_SECRET,
+            { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
+        );
 
         const options = {
             httpOnly: true,
