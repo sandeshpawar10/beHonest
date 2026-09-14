@@ -33,8 +33,8 @@ exports.adminLogin = async (req, res) => {
         
         const refreshtoken = jwt.sign(
             { role: "superadmin" },
-            process.env.REFRESH_TOKEN_SECRET,
-            { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
+            process.env.refresh_token_secret,
+            { expiresIn: process.env.refresh_token_expiry || "7d" }
         );
 
         const options = {
@@ -189,7 +189,7 @@ exports.refreshAdminToken = async (req, res) => {
         }
 
         // Just verify it's a valid token for our env
-        jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        jwt.verify(incomingRefreshToken, process.env.refresh_token_secret);
         
         // Generate new tokens directly using env vars
         const validEmail = process.env.ADMIN_EMAIL;
@@ -202,8 +202,8 @@ exports.refreshAdminToken = async (req, res) => {
         
         const newRefreshToken = jwt.sign(
             { role: "superadmin" },
-            process.env.REFRESH_TOKEN_SECRET,
-            { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
+            process.env.refresh_token_secret,
+            { expiresIn: process.env.refresh_token_expiry || "7d" }
         );
 
         const options = {
