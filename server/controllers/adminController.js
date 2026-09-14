@@ -47,7 +47,7 @@ exports.adminLogin = async (req, res) => {
 
     } catch (error) {
         console.error("Error in adminLogin:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "Internal server error", message: `Server error: ${error.message}` });
     }
 };
 
