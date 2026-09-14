@@ -15,12 +15,12 @@ exports.adminLogin = async (req, res) => {
 
         const admin = await adminModel.findOne({ email: email.toLowerCase() });
         if (!admin) {
-            return res.status(401).json({ error: "Invalid admin credentials" });
+            return res.status(401).json({ error: "DEBUG: Admin email not found in database", message: "Admin email not found in database" });
         }
 
         const isMatch = await admin.isPasswordCorrect(password);
         if (!isMatch) {
-            return res.status(401).json({ error: "Invalid admin credentials" });
+            return res.status(401).json({ error: "DEBUG: Password does not match", message: "Password does not match" });
         }
 
         const accesstoken = admin.generateAccesstoken();
