@@ -11,18 +11,15 @@ const verifyAdmin = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.access_token_secret);
         
-        const admin = await adminModel.findById(decoded._id).select("-password -refreshTokens");
-        
-        if (!admin) {
-            return res.status(401).json({ error: "Admin account not found" });
-        }
-
-        if (admin.role !== "superadmin" && admin.role !== "moderator") {
+        // Since we bypassed the DB for admin login, just check the decoded token directly
+        if (decoded.role !== "superadmin" && decoded.role !== "moderator") {
             return res.status(403).json({ error: "Access denied. Insufficient permissions." });
         }
 
-        req.user = admin; // Attach to req.user so controllers that expect req.user._id still work
-        req.admin = admin;
+        req.admin = decoded; // Attach the decoded payload
+        // We no longer have an _id for admin, so any controllers relying on req.user._id for admin actions must use email
+        req.user = decoded; 
+        
         next();
     } catch (error) {
         return res.status(401).json({ error: "Invalid admin token" });
