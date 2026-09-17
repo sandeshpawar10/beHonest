@@ -501,6 +501,9 @@ exports.refundEscrow = async function(req, res) {
             await sendRefundEmail(user.email, item.shortTitle, escrow.amount);
         }
 
+        await escrowModel.deleteOne({ _id: escrowId });
+        await chatModel.deleteMany({escrowId: escrow._id})
+
         return res.status(200).json({
             status: "success",
             message: "Escrow refunded successfully.",
