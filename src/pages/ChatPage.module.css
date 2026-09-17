@@ -155,7 +155,7 @@
 }
 
 .sent .messageBubble {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: white;
   border-bottom-right-radius: 4px;
 }
