@@ -145,16 +145,19 @@ exports.finalizeClaim = async function(req, res) {
 
         let finalStatus = aiResponse.status;
 
-        // Save to Database
+        // Save to Database — store detailed notes for admin, neutral message for user
         const claim = await claimModel.create({
             itemId,
             claimantId: req.user._id,
             answers: chatHistory || [],
             verdict: finalStatus === 'verified' || finalStatus === 'needs_review' ? finalStatus : 'rejected',
             score: aiResponse.score || 0,
-            verdictMessage: aiResponse.message || "",
+            verdictMessage: aiResponse.userMessage || "",
+            reviewerNotes: aiResponse.reviewerNotes || "",
+            evidenceFor: aiResponse.evidenceFor || [],
+            evidenceAgainst: aiResponse.evidenceAgainst || [],
             aiModelUsed: aiResponse.aiModelUsed || "gemini-3.1-flash-lite",
-            aiVersion: aiResponse.aiVersion || "v1",
+            aiVersion: aiResponse.aiVersion || "v2",
             secretGuess: secretGuess || "",
             proofImage: proofImage || ""
         });
@@ -178,9 +181,17 @@ exports.finalizeClaim = async function(req, res) {
             }
         }
 
+        // Only return safe fields to the client — never leak reviewerNotes or evidence details
         return res.status(200).json({
             status: "success",
-            claim: claim
+            claim: {
+                _id: claim._id,
+                itemId: claim.itemId,
+                verdict: claim.verdict,
+                score: claim.score,
+                verdictMessage: claim.verdictMessage, // This is the neutral userMessage
+                createdAt: claim.createdAt
+            }
         });
 
     } catch (error) {

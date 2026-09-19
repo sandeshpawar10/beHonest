@@ -35,10 +35,24 @@ const claimSchema = new Schema({
         min: 0,
         max: 100
     },
-    // AI's explanation of its decision
+    // Neutral message shown to the claimant (no details about what matched or failed)
     verdictMessage: {
         type: String,
         default: ""
+    },
+    // Detailed notes for admin/staff review only (never sent to claimant)
+    reviewerNotes: {
+        type: String,
+        default: ""
+    },
+    // Structured evidence arrays from AI evaluation
+    evidenceFor: {
+        type: [String],
+        default: []
+    },
+    evidenceAgainst: {
+        type: [String],
+        default: []
     },
     // Audit fields for AI versioning
     aiModelUsed: {
