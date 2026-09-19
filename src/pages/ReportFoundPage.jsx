@@ -113,8 +113,16 @@ function ReportFoundPage() {
         setLoading(true);
         setError('');
         try {
-          const tempItem = { category, title, description, imageData };
-          const report = await runFullFraudScan(tempItem, session.email);
+          // Wrap fraud scan in a timeout so it doesn't block navigation forever
+          const scanPromise = runFullFraudScan(
+            { category, title, description, imageData },
+            session.email
+          );
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Fraud scan timed out')), 15000)
+          );
+
+          const report = await Promise.race([scanPromise, timeoutPromise]);
           
           if (report.overallRisk === 'high') {
             const badFlag = report.aiFlags.find(f => f.severity === 'high');
@@ -129,7 +137,8 @@ function ReportFoundPage() {
             }
           }
         } catch (err) {
-          console.error('Fraud scan error:', err);
+          console.error('Fraud scan error (proceeding anyway):', err);
+          // If scan fails or times out, let them proceed — the backend also validates on submit
         }
         setLoading(false);
       }
@@ -456,8 +465,8 @@ function ReportFoundPage() {
 
           {/* Next or Submit button */}
           {step < 3 ? (
-            <button className={styles.nextBtn} onClick={handleNext} type="button">
-              Next →
+            <button className={styles.nextBtn} onClick={handleNext} type="button" disabled={loading}>
+              {loading ? <><ButtonSpinner /> Scanning photo...</> : 'Next →'}
             </button>
           ) : (
             <button
