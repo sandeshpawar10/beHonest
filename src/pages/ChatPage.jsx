@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { MessageSquare, ArrowLeft, Send } from 'lucide-react';
 import styles from './ChatPage.module.css';
 
 function ChatPage() {
@@ -122,7 +123,7 @@ function ChatPage() {
           <h2>🛑 Access Denied</h2>
           <p>{error}</p>
           <button className={styles.backBtn} onClick={() => navigate('/escrow')} style={{ marginTop: '20px' }}>
-            ← Back to Escrow Dashboard
+            <ArrowLeft size={16} /> Back to Escrow Dashboard
           </button>
         </div>
       </div>
@@ -145,12 +146,12 @@ function ChatPage() {
       {/* ── Top Bar ── */}
       <div className={styles.topBar}>
         <button className={styles.backBtn} onClick={() => navigate('/escrow')}>
-          ← Back to Escrow
+          <ArrowLeft size={16} /> Back to Escrow
         </button>
         
         {/* Context Badge showing what item this chat is about */}
         <div className={styles.contextBadge}>
-          📦 {escrow.itemTitle}
+          <PackageOpen size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> {escrow.itemTitle}
         </div>
       </div>
 
@@ -160,7 +161,7 @@ function ChatPage() {
         {/* Header */}
         <div className={styles.chatHeader}>
           <div className={styles.avatar}>
-            {theirRole === 'Owner' ? '👑' : '🕵️'}
+            {theirRole === 'Owner' ? '👑' : '<User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />'}
           </div>
           <div className={styles.headerInfo}>
             <h2>Chat with {theirRole}</h2>

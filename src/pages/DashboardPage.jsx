@@ -6,9 +6,10 @@
    ============================================================ */
 
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
+import { Search, Eye, Landmark, PackageOpen, LogOut } from 'lucide-react';
 
 import NotificationDropdown from '../components/ui/NotificationDropdown';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
@@ -20,7 +21,7 @@ import styles from './DashboardPage.module.css';
 const ACTION_CARDS = [
   {
     id: 'card-lost',
-    icon: '🔍',
+    icon: <Search size={28} />,
     title: 'Report Lost Item',
     desc: 'Describe what you lost, when and where. Upload a photo if available. AI matches it against found listings.',
     ready: false,          // Not built yet
@@ -38,7 +39,7 @@ const ACTION_CARDS = [
   // },
   {
     id: 'card-browse',
-    icon: '🔎',
+    icon: <Eye size={28} />,
     title: 'Browse Found Items',
     desc: 'See all found items reported on campus. Sensitive areas are blurred — only the real owner can recognise their item.',
     ready: true,           // ✅ Built in Feature 2!
@@ -65,7 +66,7 @@ const ACTION_CARDS = [
   // },
   {
     id: 'card-escrow',
-    icon: '🏦',
+    icon: <Landmark size={28} />,
     title: 'Escrow Payments',
     desc: 'View and manage your reward transactions. Confirm item receipt to release payment, or request a refund.',
     ready: true,           // ✅ Built in Feature 5!
@@ -81,11 +82,25 @@ function DashboardPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate(); // Hook for programmatic navigation
   const [loggingOut, setLoggingOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   const handleLogoutClick = async () => {
     setLoggingOut(true);
     await logout();
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Trap the hardware back button: if pressed on dashboard, log the user out.
   useEffect(() => {
@@ -124,16 +139,33 @@ function DashboardPage() {
           
           <NotificationDropdown />
           
-          {/* Logout button */}
-          <button
-            className={styles.logoutBtn}
-            onClick={handleLogoutClick}
-            id="logout-btn"
-            aria-label="Log out"
-            disabled={loggingOut}
-          >
-            {loggingOut ? <ButtonSpinner /> : 'Logout'}
-          </button>
+          {/* User Profile Dropdown */}
+          <div className={styles.userMenuWrapper} ref={menuRef}>
+            <div 
+              className={styles.avatar} 
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="User menu"
+            >
+              {session?.username ? session.username.charAt(0).toUpperCase() : '?'}
+            </div>
+            
+            {menuOpen && (
+              <div className={styles.dropdown}>
+                <div className={styles.dropdownName}>{session?.username}</div>
+                <div className={styles.dropdownEmail}>{session?.email}</div>
+                <div className={styles.dropdownDivider}></div>
+                <button
+                  className={styles.dropdownLogoutBtn}
+                  onClick={handleLogoutClick}
+                  id="logout-btn"
+                  aria-label="Log out"
+                  disabled={loggingOut}
+                >
+                  {loggingOut ? <ButtonSpinner /> : <><LogOut size={16} /> Logout</>}
+                </button>
+              </div>
+            )}
+          </div>
 
         </div>
       </nav>
@@ -156,7 +188,7 @@ function DashboardPage() {
           <h1 className={styles.heroTitle}>
             Welcome to beHonest,{' '}
             {/* Gradient text for the user's first name */}
-            <span className="gradient-text" id="hero-greeting">{session.username}</span> 👋
+            <span className="gradient-text" id="hero-greeting">{session.username}</span>
           </h1>
           <p className={styles.heroSubtitle}>
             Lost something? Found something? Use the platform to report it securely.
@@ -171,8 +203,9 @@ function DashboardPage() {
               id="report-lost-btn"
               aria-label="Report a lost item"
               onClick={() => alert('Report Lost feature coming soon!')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              🔍 I Lost Something
+              <Search size={18} /> I Lost Something
             </button>
 
             {/* Found Something — links to the new ReportFoundPage */}
@@ -181,8 +214,9 @@ function DashboardPage() {
               id="report-found-btn"
               aria-label="Report a found item"
               onClick={() => navigate('/report-found')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              📦 I Found Something
+              <PackageOpen size={18} /> I Found Something
             </button>
           </div>
         </div>

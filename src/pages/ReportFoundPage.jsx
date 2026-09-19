@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
+import { PackageOpen, Camera, ImageIcon, Info, CheckCircle, EyeOff, MapPin, ArrowLeft, ChevronRight, Trash2, Plus } from 'lucide-react';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
@@ -34,8 +35,9 @@ function ReportFoundPage() {
   const [location,    setLocation]    = useState('');       // approximate location (public)
   const [exactLocation, setExactLocation] = useState('');   // exact location (hidden from public)
   const [secretDetails, setSecretDetails] = useState('');   // hidden identifier
-  const [imageData,   setImageData]   = useState(null);     // base64 image string
-  const [blurZones,   setBlurZones]   = useState([]);       // list of blur rectangles
+  const [images, setImages] = useState([]);              // array of base64 strings (max 5)
+  const [allBlurZones, setAllBlurZones] = useState({});  // { 0: [...zones], 1: [...zones] }
+  const [activeImageIndex, setActiveImageIndex] = useState(0); // which image is being blur-edited
 
   /* ── UI state ─────────────────────────────────────────── */
   const [step,    setStep]    = useState(1);     // Current step: 1=Details, 2=Photo, 3=Blur
@@ -49,35 +51,49 @@ function ReportFoundPage() {
      can store it easily in localStorage.
   */
   const handleImageUpload = (e) => {
-    const file = e.target.files[0]; // Get the selected file
-    if (!file) return;
-
-    // Only allow image files
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file (JPG, PNG, etc.)');
-      return;
-    }
-
-    // Max file size: 5MB (5 * 1024 * 1024 bytes)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be smaller than 5MB.');
-      return;
-    }
-
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    const remaining = 5 - images.length;
+    const toProcess = files.slice(0, remaining);
+    
+    toProcess.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file (JPG, PNG, etc.)');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image must be smaller than 5MB.');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImages(prev => {
+          if (prev.length >= 5) return prev;
+          return [...prev, event.target.result];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    
     setError('');
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
+  };
 
-    /*
-      FileReader reads the file from the user's device.
-      readAsDataURL() converts it to a base64 string like:
-      "data:image/jpeg;base64,/9j/4AAQSkZJRgAB..."
-      This string can be used directly as an <img src="...">
-    */
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setImageData(event.target.result); // Save the base64 string
-      setBlurZones([]); // Reset blur zones when a new image is uploaded
-    };
-    reader.readAsDataURL(file);
+  const removeImage = (indexToRemove) => {
+    setImages(prev => prev.filter((_, i) => i !== indexToRemove));
+    setAllBlurZones(prev => {
+      const updated = {};
+      Object.keys(prev).forEach(key => {
+        const k = parseInt(key);
+        if (k < indexToRemove) updated[k] = prev[k];
+        else if (k > indexToRemove) updated[k - 1] = prev[k];
+      });
+      return updated;
+    });
+    if (activeImageIndex >= images.length - 1) setActiveImageIndex(Math.max(0, images.length - 2));
   };
 
   /* ──────────────────────────────────────────────────────────
@@ -96,7 +112,7 @@ function ReportFoundPage() {
     }
 
     if (step === 2) {
-      if (!imageData) return setError('Please upload a photo of the item.'), false;
+      if (images.length === 0) return setError('Please upload a photo of the item.'), false;
     }
 
     return true; // All good
@@ -109,13 +125,13 @@ function ReportFoundPage() {
   const handleNext = async () => {
     if (validateStep()) {
       // STRICT AI VALIDATION on Step 2 (Photo Upload)
-      if (step === 2 && imageData) {
+      if (step === 2 && images.length > 0) {
         setLoading(true);
         setError('');
         try {
           // Wrap fraud scan in a timeout so it doesn't block navigation forever
           const scanPromise = runFullFraudScan(
-            { category, title, description, imageData },
+            { category, title, description, imageData: images[0] },
             session.email
           );
           const timeoutPromise = new Promise((_, reject) =>
@@ -182,9 +198,9 @@ function ReportFoundPage() {
           secretDetails: secretDetails ? secretDetails.split(',').map(s => s.trim()).filter(Boolean) : [],
           // We are temporarily sending the raw Base64 string to the DB.
           // Later, you should upload this to Cloudinary and send the URL instead!
-          images: [imageData], 
-          imageFingerprint: generateImageFingerprint(imageData),
-          blurZones: blurZones, // 🔥 CRITICAL: Actually send the blur zones to the DB!
+          images: images, 
+          imageFingerprint: generateImageFingerprint(images[0]),
+          blurZones: Object.values(allBlurZones).flat(), // 🔥 CRITICAL: Actually send the blur zones to the DB!
         }) 
       });
 
@@ -217,9 +233,11 @@ function ReportFoundPage() {
       {/* ── Top bar with back button ── */}
       <div className={styles.topBar}>
         <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-          ← Back to Dashboard
+          <ArrowLeft size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Back to Dashboard
         </button>
-        <h1 className={styles.pageTitle}>📦 Report Found Item</h1>
+        <h1 className={styles.pageTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <PackageOpen size={24} /> Report Found Item
+        </h1>
       </div>
 
       {/* ── Step progress indicator ── */}
@@ -333,8 +351,8 @@ function ReportFoundPage() {
 
             {/* Exact Location (Hidden) */}
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="item-exact-location">
-                Exact Location (Hidden) 📍
+              <label className={styles.label} htmlFor="item-exact-location" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Exact Location (Hidden) <MapPin size={16} />
               </label>
               <p className={styles.fieldHint}>
                 This is <strong>never shown publicly</strong>. The AI will ask the owner to guess this.
@@ -352,8 +370,8 @@ function ReportFoundPage() {
 
             {/* Secret Details */}
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="item-secret">
-                Secret Identifier (Optional) 🤫
+              <label className={styles.label} htmlFor="item-secret" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Secret Identifier (Optional) <EyeOff size={16} />
               </label>
               <p className={styles.fieldHint}>
                 Tell us something only the true owner would know. Separate multiple details with commas. E.g. "Spider-man sticker on back, left button missing, lock screen is a cat photo." This is 100% hidden and will be used by our AI to test the owner.
@@ -374,33 +392,45 @@ function ReportFoundPage() {
         {/* ══════════════ STEP 2: Upload Photo ══════════════ */}
         {step === 2 && (
           <div className={styles.stepContent}>
-            <h2 className={styles.stepHeading}>Upload a photo of the item</h2>
+            <h2 className={styles.stepHeading}>Upload photos of the item</h2>
             <p className={styles.stepSubtitle}>
               Take a clear photo. In the next step you'll mark which parts to blur.
             </p>
 
-            {/* Drag-to-upload area */}
-            <div className={styles.uploadArea}>
-              {imageData ? (
-                /* Show uploaded image preview */
-                <label className={styles.uploadPreview} htmlFor="gallery-upload" style={{ cursor: 'pointer' }}>
-                  <img src={imageData} alt="Uploaded item" className={styles.previewImg} />
-                  <span className={styles.changePhotoText}>Click to change photo</span>
-                </label>
-              ) : (
-                /* Upload placeholder */
-                <div className={styles.uploadPlaceholder}>
-                  <div className={styles.uploadButtons}>
-                    <label className={styles.cameraBtn} htmlFor="camera-upload">
-                      📸 Take Photo
-                    </label>
-                    <label className={styles.galleryBtn} htmlFor="gallery-upload">
-                      🖼️ Choose from Gallery
-                    </label>
-                  </div>
-                  <span className={styles.uploadHint}>JPG, PNG, WEBP — max 5MB</span>
+            <div className={styles.photoGrid}>
+              {images.map((imgSrc, idx) => (
+                <div key={idx} className={styles.photoThumb}>
+                  <img src={imgSrc} alt={`Uploaded ${idx + 1}`} />
+                  <button type="button" className={styles.photoRemoveBtn} onClick={() => removeImage(idx)}>
+                    <Trash2 size={12} />
+                  </button>
                 </div>
+              ))}
+              
+              {images.length < 5 && (
+                <label className={styles.addPhotoCard} htmlFor="gallery-upload">
+                  <Plus size={24} />
+                  <span style={{ fontSize: '0.8rem' }}>Add Photo</span>
+                </label>
               )}
+            </div>
+
+            {images.length < 5 && (
+              <div className={styles.uploadPlaceholder} style={{ padding: '24px', border: '2px dashed var(--border)', borderRadius: '16px' }}>
+                <div className={styles.uploadButtons}>
+                  <label className={styles.cameraBtn} htmlFor="camera-upload">
+                    <Camera size={16} /> Take Photo
+                  </label>
+                  <label className={styles.galleryBtn} htmlFor="gallery-upload">
+                    <ImageIcon size={16} /> Choose from Gallery
+                  </label>
+                </div>
+                <span className={styles.uploadHint}>JPG, PNG, WEBP — max 5MB</span>
+              </div>
+            )}
+
+            <div className={styles.photoCounter}>
+              {images.length} / 5 photos uploaded
             </div>
 
             {/* Hidden file inputs */}
@@ -409,6 +439,7 @@ function ReportFoundPage() {
               type="file"
               accept="image/*"
               capture="environment"
+              multiple
               onChange={handleImageUpload}
               className={styles.hiddenInput}
             />
@@ -416,15 +447,19 @@ function ReportFoundPage() {
               id="gallery-upload"
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImageUpload}
               className={styles.hiddenInput}
             />
 
             {/* Important note for the finder */}
-            <div className={styles.infoBox}>
-              <strong>📌 Tip:</strong> Take a photo that shows the item clearly.
-              In the next step, you will mark private areas (like IDs, engravings)
-              to blur them out before the image goes public.
+            <div className={styles.infoBox} style={{ display: 'flex', gap: '8px' }}>
+              <Info size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Tip:</strong> Take a photo that shows the item clearly.
+                In the next step, you will mark private areas (like IDs, engravings)
+                to blur them out before the image goes public.
+              </div>
             </div>
           </div>
         )}
@@ -437,19 +472,36 @@ function ReportFoundPage() {
               Publicly hiding private details ensures only the real owner can identify the item.
             </p>
 
+            {images.length > 1 && (
+              <div className={styles.blurTabs}>
+                {images.map((imgSrc, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`${styles.blurTab} ${activeImageIndex === idx ? styles.blurTabActive : ''}`}
+                    onClick={() => setActiveImageIndex(idx)}
+                  >
+                    <img src={imgSrc} alt={`Tab ${idx + 1}`} />
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* The blur region drawing tool */}
             <BlurRegionSelector
-              imageSrc={imageData}
-              blurZones={blurZones}
-              onChange={setBlurZones}   /* When zones change, update our state */
+              imageSrc={images[activeImageIndex]}
+              blurZones={allBlurZones[activeImageIndex] || []}
+              onChange={(zones) => setAllBlurZones(prev => ({...prev, [activeImageIndex]: zones}))}   /* When zones change, update our state */
               hint={blurHint}           /* Category-specific guidance */
             />
 
             {/* Submit confirmation info */}
-            <div className={styles.infoBox} style={{ marginTop: '16px' }}>
-              <strong>✅ What happens next:</strong> Your item will be listed publicly with the blurred image.
-              When someone claims ownership, our AI will ask them questions to verify they're the real owner.
-              Your identity stays hidden until the process is complete.
+            <div className={styles.infoBox} style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+              <CheckCircle size={20} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-cyan, #00d2ff)' }} />
+              <div>
+                <strong>What happens next:</strong> Your item will be listed publicly with the blurred image.
+                When someone claims ownership, our AI will ask them questions to verify they're the real owner.
+                Your identity stays hidden until the process is complete.
+              </div>
             </div>
           </div>
         )}

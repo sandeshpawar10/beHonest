@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Bot, Lock, Camera, ImageIcon, BarChart3, Coins, RefreshCw, AlertTriangle, CheckCircle, XCircle, ArrowLeft, Send, Upload, Trash2, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
@@ -151,7 +152,7 @@ function ClaimItemPage() {
       }
     } catch (err) {
       console.error(err);
-      setError(`⚠️ Sorry for the inconvenience. The AI is currently experiencing heavy traffic. Please try again. (Error: ${err.message})`);
+      setError(`Sorry for the inconvenience. The AI is currently experiencing heavy traffic. Please try again. (Error: ${err.message})`);
       setStarted(false);
       setVerifying(false);
     }
@@ -205,12 +206,12 @@ function ClaimItemPage() {
       console.error(err);
       if (errorCount >= 1) {
         // This is the second consecutive error -> Restart the test
-        setError(`⚠️ The AI servers are severely overloaded right now. We have restarted your interview to clear the session. Please try again.`);
+        setError(`The AI servers are severely overloaded right now. We have restarted your interview to clear the session. Please try again.`);
         setStarted(false);
         setChatHistory([]);
         setErrorCount(0);
       } else {
-        setChatHistory(prev => [...prev, { role: 'ai', text: `⚠️ Sorry for the inconvenience, but the AI is currently experiencing heavy traffic. Please try sending your last answer again.` }]);
+        setChatHistory(prev => [...prev, { role: 'ai', text: `Sorry for the inconvenience, but the AI is currently experiencing heavy traffic. Please try sending your last answer again.` }]);
         setErrorCount(prev => prev + 1);
       }
       setVerifying(false);
@@ -242,8 +243,8 @@ function ClaimItemPage() {
       const finalStatus = claimData.verdict;
       
       let verdictLabel = "Review Required";
-      if (finalStatus === "verified") verdictLabel = "✅ Verified Owner";
-      else if (finalStatus === "rejected") verdictLabel = "❌ Claim Rejected";
+      if (finalStatus === "verified") verdictLabel = "Verified Owner";
+      else if (finalStatus === "rejected") verdictLabel = "Claim Rejected";
       
       const verificationResult = {
         overallScore: claimData.score || 0,
@@ -257,7 +258,7 @@ function ClaimItemPage() {
       setStep('result');
     } catch (err) {
       console.error(err);
-      setError(`⚠️ Failed to finalize proof. ${err.message}`);
+      setError(`Failed to finalize proof. ${err.message}`);
     } finally {
       setVerifying(false);
     }
@@ -277,9 +278,9 @@ function ClaimItemPage() {
   if (error && !item) {
     return (
       <div className={styles.centerMsg}>
-        <span style={{ fontSize: '3rem' }}>⚠️</span>
+        <AlertTriangle size={48} style={{ color: '#ff4d6d' }} />
         <h2>{error}</h2>
-        <Link to="/found-items" className={styles.linkBtn}>← Back to Found Items</Link>
+        <Link to="/found-items" className={styles.linkBtn}><ArrowLeft size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Back to Found Items</Link>
       </div>
     );
   }
@@ -294,9 +295,9 @@ function ClaimItemPage() {
         <>
           <div className={styles.topBar}>
             <button className={styles.backBtn} onClick={() => navigate('/found-items')}>
-              ← Back
+              <ArrowLeft size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Back
             </button>
-            <h1 className={styles.pageTitle}>🤖 AI Ownership Interview</h1>
+            <h1 className={styles.pageTitle}><Bot size={28} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Ownership Interview</h1>
           </div>
 
           <div className={styles.layout}>
@@ -313,7 +314,7 @@ function ClaimItemPage() {
                   <h3 className={styles.previewTitle}>{item.shortTitle}</h3>
                 </div>
                 <div className={styles.reminderBox}>
-                  🔒 Sensitive areas are blurred. If this is really your item,
+                  <Lock size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Sensitive areas are blurred. If this is really your item,
                   you should be able to answer the AI's questions.
                 </div>
               </div>
@@ -397,7 +398,7 @@ function ClaimItemPage() {
                           className={styles.sendBtn}
                           disabled={verifying || !inputText.trim()}
                         >
-                          {verifying ? <ButtonSpinner /> : 'Send'}
+                          {verifying ? <ButtonSpinner /> : <><Send size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Send</>}
                         </button>
                       </form>
                     </div>
@@ -409,7 +410,7 @@ function ClaimItemPage() {
               {/* Error message */}
               {error && (
                 <div className={styles.errorAlert} style={{ marginTop: '16px' }}>
-                  ⚠️ {error}
+                  <AlertTriangle size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {error}
                 </div>
               )}
             </div>
@@ -421,94 +422,96 @@ function ClaimItemPage() {
       {step === 'proof' && (
         <>
           <div className={styles.topBar}>
-            <h1 className={styles.pageTitle}>📸 Final Proof</h1>
+            <h1 className={styles.pageTitle}><Camera size={24} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Final Proof</h1>
           </div>
-          <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px 40px' }}>
-            <div style={{
-              background: 'var(--bg-card, #fff)',
-              borderRadius: '16px',
-              border: '1px solid var(--border, #e0e0e0)',
-              padding: '24px',
-              textAlign: 'center'
-            }}>
-              <h2 style={{ marginBottom: '8px', color: 'var(--text-primary, #1a1a2e)', fontSize: '1.3rem' }}>
-                You completed the interview!
-              </h2>
-              <p style={{ color: 'var(--text-secondary, #4a4a68)', marginBottom: '24px', fontSize: '0.95rem' }}>
-                Your chat performance was recorded. To boost your final score and complete the verification, please upload a supporting photo.
+          <div className={styles.proofContainer}>
+            <div className={styles.proofCard}>
+              <h2 className={styles.proofHeading}>You completed the interview!</h2>
+              <p className={styles.proofSubtext}>
+                Your chat performance was recorded. To boost your final score, upload supporting proof.
               </p>
 
-              <div style={{ 
-                background: 'var(--bg-secondary, #f8f9fa)', 
-                padding: '20px', 
-                borderRadius: '12px', 
-                marginBottom: '24px' 
-              }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary, #333)', fontSize: '1.05rem' }}>
-                  Upload Proof of Ownership {isProofMandatory() ? <span style={{ color: '#e74c3c' }}>(Mandatory)</span> : '(Optional)'}
+              <div className={styles.proofUploadSection}>
+                <label className={styles.proofLabel}>
+                  <Upload size={18} /> Upload Proof of Ownership {isProofMandatory() ? <span className={styles.mandatory}>(Required)</span> : '(Optional)'}
                 </label>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #666)', marginBottom: '16px' }}>
+                <p className={styles.proofHint}>
                   {isProofMandatory() 
-                    ? 'For high-value items like electronics, you MUST upload a receipt, invoice, or an old photo of you with the item to claim it.'
+                    ? 'For high-value items, you MUST upload a receipt, invoice, or an old photo with the item.'
                     : 'Upload a receipt, invoice, or an old photo of you with the item.'}
                 </p>
                 
+                <div className={styles.proofUploadBtns}>
+                  <label className={styles.proofCameraBtn} htmlFor="proof-camera">
+                    <Camera size={16} /> Take Photo
+                  </label>
+                  <label className={styles.proofGalleryBtn} htmlFor="proof-gallery">
+                    <ImageIcon size={16} /> Choose from Gallery
+                  </label>
+                </div>
+                
                 <input
+                  id="proof-camera"
                   type="file"
                   accept="image/*"
-                  id="proofUpload"
-                  style={{ display: 'none' }}
+                  capture="environment"
+                  className={styles.hiddenInput}
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
                       const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setProofImageBase64(reader.result);
-                      };
+                      reader.onloadend = () => setProofImageBase64(reader.result);
                       reader.readAsDataURL(file);
-                    } else {
-                      setProofImageBase64('');
                     }
                   }}
                 />
-                <label htmlFor="proofUpload" style={{
-                  display: 'inline-block', padding: '12px 24px', background: '#00d2ff', 
-                  color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold',
-                  boxShadow: '0 4px 6px rgba(0, 210, 255, 0.2)'
-                }}>
-                  Choose Photo
-                </label>
+                <input
+                  id="proof-gallery"
+                  type="file"
+                  accept="image/*"
+                  className={styles.hiddenInput}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setProofImageBase64(reader.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
 
                 {proofImageBase64 && (
-                  <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxWidth: '250px', margin: '16px auto 0' }}>
-                    <img src={proofImageBase64} alt="Proof" style={{ width: '100%', display: 'block' }} />
+                  <div className={styles.proofPreview}>
+                    <img src={proofImageBase64} alt="Proof" className={styles.proofPreviewImg} />
+                    <button className={styles.proofRemoveBtn} onClick={() => setProofImageBase64('')}>
+                      <Trash2 size={14} /> Remove
+                    </button>
                   </div>
                 )}
               </div>
 
-              {/* Error message */}
               {error && (
-                <div className={styles.errorAlert} style={{ marginBottom: '16px' }}>
-                  ⚠️ {error}
+                <div className={styles.errorAlert}>
+                  <AlertTriangle size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {error}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div className={styles.proofActions}>
                 {!isProofMandatory() && (
                   <button 
+                    className={styles.proofSkipBtn}
                     onClick={() => handleFinalizeProof(true)}
                     disabled={verifying}
-                    style={{ padding: '12px 24px', background: 'transparent', border: '2px solid #ccc', borderRadius: '8px', color: '#666', fontWeight: 'bold', cursor: 'pointer' }}
                   >
                     Skip Photo
                   </button>
                 )}
                 <button 
+                  className={styles.proofSubmitBtn}
                   onClick={() => handleFinalizeProof(false)}
                   disabled={verifying || !proofImageBase64}
-                  style={{ padding: '12px 24px', background: proofImageBase64 ? '#00d2ff' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: proofImageBase64 ? 'pointer' : 'not-allowed' }}
                 >
-                  {verifying ? 'Verifying...' : 'Submit Final Proof'}
+                  {verifying ? <><ButtonSpinner /> Verifying...</> : <><CheckCircle size={16} /> Submit Final Proof</>}
                 </button>
               </div>
             </div>
@@ -577,7 +580,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
 
   return (
     <div className={styles.resultPage}>
-      <h1 className={styles.resultTitle}>🤖 AI Verification Result</h1>
+      <h1 className={styles.resultTitle}><Bot size={28} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Verification Result</h1>
 
       <div className={styles.resultItemRef}>
         <span>{catConfig.icon}</span>
@@ -630,7 +633,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
       </div> */}
 
       <div className={styles.breakdownSection}>
-        <h3 className={styles.breakdownTitle}>📊 AI Analysis Complete</h3>
+        <h3 className={styles.breakdownTitle}><BarChart3 size={20} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Analysis Complete</h3>
         <p className={styles.breakdownSubtitle}>
           The AI has processed your interview answers against the hidden item identifiers.
         </p>
@@ -642,13 +645,13 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
             className={styles.rewardBtn}
             onClick={() => navigate(`/reward/${item._id}`, { state: { claimId: result.claimId } })}
           >
-            💰 Proceed to Escrow
+            <Coins size={18} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Proceed to Escrow
           </button>
         )}
 
         {result.verdict === 'rejected' && (
           <button className={styles.retryBtn} onClick={onTryAgain}>
-            🔄 Try Interview Again
+            <RefreshCw size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Try Interview Again
           </button>
         )}
 
@@ -665,20 +668,20 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
               width: '100%'
             }}>
               <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#ffb347', marginBottom: '8px' }}>
-                ⏳ Your claim is under review
+                <Clock size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Your claim is under review
               </p>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
                 Your answers were not sufficient for automatic verification. You can try the interview again with better answers, or wait for a manual review.
               </p>
             </div>
             <button className={styles.retryBtn} onClick={onTryAgain}>
-              🔄 Try Interview Again
+              <RefreshCw size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Try Interview Again
             </button>
           </>
         )}
 
         <button className={styles.backToItemsBtn} onClick={onGoBack}>
-          ← Back to Found Items
+          <ArrowLeft size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Back to Found Items
         </button>
       </div>
     </div>

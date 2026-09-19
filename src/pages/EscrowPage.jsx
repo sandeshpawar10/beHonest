@@ -21,6 +21,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { REWARD_CATEGORIES } from '../utils/rewardUtils';
+import { Landmark, Shield, Lock, CheckCircle, DollarSign, PartyPopper, Gift, ArrowLeft, ChevronRight, MessageSquare, AlertOctagon, CreditCard, History, Undo2, XCircle } from 'lucide-react';
 import styles from './EscrowPage.module.css';
 
 function EscrowPage() {
@@ -138,7 +139,7 @@ function EscrowPage() {
       }
       const data = await res.json();
       if (data.bothConfirmed) {
-        alert('🎉 Both parties confirmed! The reward has been released!');
+        alert(' Both parties confirmed! The reward has been released!');
       }
       refreshEscrows();
     } catch (err) {
@@ -215,18 +216,18 @@ function EscrowPage() {
   // ── Get status config ─────────────────────────────────────
   const getStatusConfig = (status) => {
     const configs = {
-      held:     { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
-      pending:  { label: '🔒 Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
-      released: { label: '✅ Reward Released',   color: 'var(--color-success)', bgColor: 'rgba(16, 185, 129, 0.08)' },
-      refunded: { label: '↩️ Refunded',          color: '#ff8fa3', bgColor: 'rgba(255, 77, 109, 0.08)' },
-      disputed: { label: '⚠️ Under Dispute',    color: '#ff4d6d', bgColor: 'rgba(255, 77, 109, 0.08)' },
+      held:     { label: 'Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
+      pending:  { label: 'Held in Escrow',   color: '#ffb347', bgColor: 'rgba(255, 179, 71, 0.08)' },
+      released: { label: 'Reward Released',   color: 'var(--color-success)', bgColor: 'rgba(16, 185, 129, 0.08)' },
+      refunded: { label: 'Refunded',          color: '#ff8fa3', bgColor: 'rgba(255, 77, 109, 0.08)' },
+      disputed: { label: 'Under Dispute',    color: '#ff4d6d', bgColor: 'rgba(255, 77, 109, 0.08)' },
     };
     return configs[status] || configs.pending;
   };
 
   // ── Get category info ─────────────────────────────────────
   const getCategoryInfo = (key) => {
-    return REWARD_CATEGORIES[key] || REWARD_CATEGORIES.other || { icon: '📦', label: 'Item' };
+    return REWARD_CATEGORIES[key] || REWARD_CATEGORIES.other || { icon: 'Box', label: 'Item' };
   };
 
   // ── Loading ───────────────────────────────────────────────
@@ -259,35 +260,35 @@ function EscrowPage() {
       {/* Top bar */}
       <div className={styles.topBar}>
         <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-          ← Dashboard
+          <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Dashboard
         </button>
-        <h1 className={styles.pageTitle}>🏦 Escrow Dashboard</h1>
+        <h1 className={styles.pageTitle}><Landmark size={28} style={{ marginRight: '10px', verticalAlign: 'bottom' }} /> Escrow Dashboard</h1>
       </div>
 
       {/* Explanation banner */}
       <div className={styles.explainBanner}>
-        <h3>🔐 How Escrow Protects Both Parties</h3>
+        <h3><Shield size={20} style={{ marginRight: '8px', verticalAlign: 'bottom' }} /> How Escrow Protects Both Parties</h3>
         <div className={styles.flowSteps}>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>1</span>
             <span>Owner deposits reward</span>
           </div>
-          <div className={styles.flowArrow}>→</div>
+          <div className={styles.flowArrow}><ChevronRight size={14} /></div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>2</span>
             <span>They arrange meetup via chat</span>
           </div>
-          <div className={styles.flowArrow}>→</div>
+          <div className={styles.flowArrow}><ChevronRight size={14} /></div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>3</span>
             <span>Finder confirms handover</span>
           </div>
-          <div className={styles.flowArrow}>→</div>
+          <div className={styles.flowArrow}><ChevronRight size={14} /></div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>4</span>
             <span>Owner confirms receipt</span>
           </div>
-          <div className={styles.flowArrow}>→</div>
+          <div className={styles.flowArrow}><ChevronRight size={14} /></div>
           <div className={styles.flowStep}>
             <span className={styles.flowNum}>5</span>
             <span>Reward auto-releases</span>
@@ -299,19 +300,19 @@ function EscrowPage() {
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <span className={styles.statValue}>{totalHeld}</span>
-          <span className={styles.statLabel}>🔒 Active Escrows</span>
+          <span className={styles.statLabel}><Lock size={14} style={{ marginRight: '6px' }} /> Active Escrows</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>{totalReleased}</span>
-          <span className={styles.statLabel}>✅ Completed</span>
+          <span className={styles.statLabel}><CheckCircle size={14} style={{ marginRight: '6px' }} /> Completed</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>₹{totalAmount}</span>
-          <span className={styles.statLabel}>💸 Total Deposited</span>
+          <span className={styles.statLabel}><DollarSign size={14} style={{ marginRight: '6px' }} /> Total Deposited</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>₹{earnedAmount}</span>
-          <span className={styles.statLabel}>🎉 Total Earned</span>
+          <span className={styles.statLabel}><PartyPopper size={14} style={{ marginRight: '6px' }} /> Total Earned</span>
         </div>
       </div>
 
@@ -321,14 +322,14 @@ function EscrowPage() {
           className={`${styles.tab} ${activeTab === 'owner' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('owner')}
         >
-          💸 As Owner ({escrows.asOwner.length})
+          <DollarSign size={16} style={{ marginRight: '6px' }} /> As Owner ({escrows.asOwner.length})
           <span className={styles.tabHint}>Items you claimed — you deposited the reward</span>
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'finder' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('finder')}
         >
-          🎁 As Finder ({escrows.asFinder.length})
+          <Gift size={16} style={{ marginRight: '6px' }} /> As Finder ({escrows.asFinder.length})
           <span className={styles.tabHint}>Items you found — you'll receive the reward</span>
         </button>
       </div>
@@ -337,7 +338,7 @@ function EscrowPage() {
       {currentList.length === 0 ? (
         <div className={styles.emptyState}>
           <span style={{ fontSize: '3rem' }}>
-            {activeTab === 'owner' ? '💸' : '🎁'}
+            {activeTab === 'owner' ? '<DollarSign size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : '<Gift size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />'}
           </span>
           <h3>No escrow records {activeTab === 'owner' ? 'as owner' : 'as finder'}</h3>
           <p>
@@ -395,7 +396,7 @@ function EscrowPage() {
                       <span className={styles.ecDetailValue}>
                         {escrow.status === 'released' || escrow.status === 'refunded'
                           ? (activeTab === 'owner' ? (escrow.finderId?.username || escrow.finderId?.email) : (escrow.depositorId?.username || escrow.depositorId?.email))
-                          : (activeTab === 'owner' ? 'Anonymous Finder 🕵️‍♂️' : 'Anonymous Owner 🕵️')}
+                          : (activeTab === 'owner' ? 'Anonymous Finder <User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Anonymous Owner <User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />')}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>
@@ -425,7 +426,7 @@ function EscrowPage() {
                   {/* ── Timeline ── */}
                   {escrow.timeline && escrow.timeline.length > 0 && (
                     <div className={styles.timeline}>
-                      <h5 className={styles.timelineTitle}>📜 Transaction Timeline</h5>
+                      <h5 className={styles.timelineTitle}><History size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Transaction Timeline</h5>
                       {escrow.timeline.map((event, i) => {
                         const evStatus = getStatusConfig(event.status);
                         return (
@@ -452,9 +453,9 @@ function EscrowPage() {
                       
                       <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                          <strong>Status:</strong> {escrow.ownerConfirmed ? 'You confirmed ✅' : 'Waiting for your confirmation'}
+                          <strong>Status:</strong> {escrow.ownerConfirmed ? 'You confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Waiting for your confirmation'}
                           <br />
-                          <strong>Finder status:</strong> {escrow.finderConfirmed ? 'Finder confirmed ✅' : "Finder hasn't confirmed yet"}
+                          <strong>Finder status:</strong> {escrow.finderConfirmed ? 'Finder confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : "Finder hasn't confirmed yet"}
                         </p>
                         
                         {escrow.finderConfirmed && !escrow.ownerConfirmed && (
@@ -489,7 +490,7 @@ function EscrowPage() {
                             opacity: escrow.ownerConfirmed ? 0.7 : (confirmingId === escrow._id ? 0.7 : 1)
                           }}
                         >
-                          {confirmingId === escrow._id ? 'Processing...' : escrow.ownerConfirmed ? '✅ Confirmed' : '✅ I have received my item'}
+                          {confirmingId === escrow._id ? 'Processing...' : escrow.ownerConfirmed ? ' Confirmed' : ' I have received my item'}
                         </button>
                       </div>
 
@@ -498,7 +499,7 @@ function EscrowPage() {
                         onClick={() => navigate(`/chat/${escrow._id}`)}
                         style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
-                        💬 Open Secure Chat
+                        <MessageSquare size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Open Secure Chat
                       </button>
 
                       <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '10px' }}>
@@ -509,13 +510,13 @@ function EscrowPage() {
                           title={escrow.finderConfirmed ? "Finder confirmed handover. Raise a dispute instead." : ""}
                           style={{ flex: 1, padding: '12px', borderRadius: '10px', opacity: escrow.finderConfirmed ? 0.5 : 1, cursor: escrow.finderConfirmed ? 'not-allowed' : 'pointer' }}
                         >
-                          ↩️ Request Refund
+                          <Undo2 size={16} style={{ marginRight: '8px' }} /> Request Refund
                         </button>
                         <button
                           onClick={() => setDisputeModal(escrow)}
                           style={{ flex: 1, background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#0c0f0e', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
                         >
-                          🚨 Raise Dispute
+                          <AlertOctagon size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Raise Dispute
                         </button>
                       </div>
                     </div>
@@ -528,12 +529,12 @@ function EscrowPage() {
                       {/* UPI ID Input for Finder */}
                       <div style={{ padding: '16px', background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.05), rgba(0, 255, 136, 0.05))', border: '1px solid rgba(0, 210, 255, 0.2)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '8px', fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                          💳 Your UPI ID {escrow.finderUpiId ? '(Saved)' : '(Required to receive payout)'}
+                          <CreditCard size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Your UPI ID {escrow.finderUpiId ? '(Saved)' : '(Required to receive payout)'}
                         </p>
                         {escrow.finderUpiId && !editingUpi[escrow._id] ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ padding: '10px 16px', background: 'rgba(0, 255, 136, 0.1)', border: '1px solid rgba(0, 255, 136, 0.3)', borderRadius: '8px', color: '#00ff88', fontWeight: '600', flex: 1 }}>
-                              ✅ {escrow.finderUpiId}
+                              <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> {escrow.finderUpiId}
                             </span>
                             <button
                               onClick={() => {
@@ -616,14 +617,14 @@ function EscrowPage() {
 
                       <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                          <strong>Status:</strong> {escrow.finderConfirmed ? 'You confirmed ✅' : 'Waiting for your confirmation'}
+                          <strong>Status:</strong> {escrow.finderConfirmed ? 'You confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Waiting for your confirmation'}
                           <br />
-                          <strong>Owner status:</strong> {escrow.ownerConfirmed ? 'Owner confirmed ✅' : "Owner hasn't confirmed yet"}
+                          <strong>Owner status:</strong> {escrow.ownerConfirmed ? 'Owner confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : "Owner hasn't confirmed yet"}
                         </p>
                         
                         {escrow.finderConfirmed && !escrow.ownerConfirmed && (
                           <p style={{ color: '#ffb347', fontSize: '0.9rem', marginBottom: '12px', background: 'rgba(255, 179, 71, 0.1)', padding: '10px', borderRadius: '8px' }}>
-                            ⚠️ You confirmed handover but the owner hasn't confirmed receipt. If they don't confirm, raise a dispute!
+                            <AlertTriangle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> You confirmed handover but the owner hasn't confirmed receipt. If they don't confirm, raise a dispute!
                           </p>
                         )}
                         
@@ -643,7 +644,7 @@ function EscrowPage() {
                             opacity: escrow.finderConfirmed ? 0.7 : (confirmingId === escrow._id ? 0.7 : 1)
                           }}
                         >
-                          {confirmingId === escrow._id ? 'Processing...' : escrow.finderConfirmed ? '✅ Confirmed' : '🤝 I have handed over the item'}
+                          {confirmingId === escrow._id ? 'Processing...' : escrow.finderConfirmed ? ' Confirmed' : '🤝 I have handed over the item'}
                         </button>
                       </div>
 
@@ -652,14 +653,14 @@ function EscrowPage() {
                         onClick={() => navigate(`/chat/${escrow._id}`)}
                         style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '12px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
-                        💬 Open Secure Chat
+                        <MessageSquare size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Open Secure Chat
                       </button>
 
                       <button
                         onClick={() => setDisputeModal(escrow)}
                         style={{ width: '100%', marginTop: '10px', background: 'rgba(255, 77, 109, 0.1)', border: '1px solid rgba(255, 77, 109, 0.3)', color: '#0c0f0e', borderRadius: '10px', padding: '12px', cursor: 'pointer', fontWeight: 'bold' }}
                       >
-                        🚨 Raise Dispute
+                        <AlertOctagon size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Raise Dispute
                       </button>
                     </div>
                   )}
@@ -668,7 +669,7 @@ function EscrowPage() {
                   {escrow.status === 'disputed' && (
                     <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255, 77, 109, 0.08)', border: '1px solid rgba(255, 77, 109, 0.3)', borderRadius: '12px' }}>
                       <h4 style={{ color: '#ff4d6d', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
-                        ⚠️ Under Dispute
+                        <AlertTriangle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Under Dispute
                       </h4>
                       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                         <strong>Raised by:</strong> {String(escrow.disputeRaisedBy?._id || escrow.disputeRaisedBy) === String(session?._id) ? 'You' : (activeTab === 'owner' ? 'Finder' : 'Owner')} on {formatDate(escrow.disputeRaisedAt)}
@@ -702,10 +703,10 @@ function EscrowPage() {
                   {escrow.status === 'released' && (
                     <div className={styles.finderReleased} style={{ marginTop: '16px' }}>
                       {escrow.ownerConfirmed && escrow.finderConfirmed 
-                        ? '🎉 Both parties confirmed the exchange. Reward released!'
+                        ? ' Both parties confirmed the exchange. Reward released!'
                         : activeTab === 'finder' 
-                          ? `🎉 Congratulations! ₹${escrow.amount} has been released to you for honestly returning the item. Thank you for being honest!`
-                          : `✅ Reward of ₹${escrow.amount} was successfully released to the finder.`}
+                          ? ` Congratulations! ₹${escrow.amount} has been released to you for honestly returning the item. Thank you for being honest!`
+                          : ` Reward of ₹${escrow.amount} was successfully released to the finder.`}
                     </div>
                   )}
                 </div>
@@ -725,11 +726,11 @@ function EscrowPage() {
         <div className={styles.modalOverlay} onClick={closeConfirmModal}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h2>↩️ Request Refund</h2>
+              <h2><Undo2 size={16} style={{ marginRight: '8px' }} /> Request Refund</h2>
               <button className={styles.modalClose} onClick={closeConfirmModal}>✕</button>
             </div>
             <div className={styles.modalBody}>
-              <div className={styles.modalIcon}>↩️</div>
+              <div className={styles.modalIcon}><Undo2 size={48} color="#ffb347" /></div>
               <p className={styles.modalText}>
                 You are requesting a refund for the escrow on
                 <strong> "{confirmModal.itemId?.shortTitle}"</strong>.
@@ -756,7 +757,7 @@ function EscrowPage() {
               >
                 {processing
                   ? <><span className={styles.spinner} /> Processing...</>
-                  : '↩️ Yes, Refund Me'
+                  : <><Undo2 size={16} style={{ marginRight: '8px' }} /> Yes, Refund Me</>
                 }
               </button>
             </div>
@@ -769,7 +770,7 @@ function EscrowPage() {
         <div className={styles.modalOverlay} onClick={() => setDisputeModal(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h2 style={{ color: '#ff4d6d' }}>🚨 Raise a Dispute</h2>
+              <h2 style={{ color: '#ff4d6d' }}><AlertOctagon size={24} style={{ marginRight: '8px', verticalAlign: 'bottom' }} /> Raise a Dispute</h2>
               <button className={styles.modalClose} onClick={() => setDisputeModal(null)}>✕</button>
             </div>
             <div className={styles.modalBody}>

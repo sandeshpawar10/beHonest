@@ -22,6 +22,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import BlurableImage from './BlurableImage';  // Reuse to show live preview
+import { Pencil, MousePointer2, Eye, Trash2, AlertTriangle } from 'lucide-react';
 import styles from './BlurRegionSelector.module.css';
 
 function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
@@ -151,7 +152,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
       {/* Section heading */}
       <div className={styles.header}>
-        <h3 className={styles.title}>✏️ Mark Sensitive Areas to Blur</h3>
+        <h3 className={styles.title}><Pencil size={18} /> Mark Sensitive Areas to Blur</h3>
         {/* Hint text tells the finder WHAT they should be hiding */}
         <p className={styles.hint}>{hint || 'Click and drag on the image to select areas to blur.'}</p>
       </div>
@@ -161,7 +162,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
         {/* ── LEFT: Drawing Canvas ── */}
         <div className={styles.column}>
-          <p className={styles.colLabel}>👇 Drag to mark areas</p>
+          <p className={styles.colLabel}><MousePointer2 size={14} /> Drag to mark areas</p>
 
           {/*
             The image container.
@@ -232,7 +233,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
             {/* Instruction shown in the centre when no zones exist yet */}
             {blurZones.length === 0 && !isDrawing && (
               <div className={styles.placeholder}>
-                <span>🖱️ Click &amp; drag to blur a region</span>
+                <span><MousePointer2 size={14} style={{display:'inline'}} /> Click &amp; drag to blur a region</span>
               </div>
             )}
           </div>
@@ -251,7 +252,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
                 onClick={clearAll}
                 type="button"
               >
-                🗑️ Clear All
+                <Trash2 size={14} /> Clear All
               </button>
             )}
           </div>
@@ -259,7 +260,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
         {/* ── RIGHT: Live Blur Preview ── */}
         <div className={styles.column}>
-          <p className={styles.colLabel}>👁️ Public view preview</p>
+          <p className={styles.colLabel}><Eye size={14} /> Public view preview</p>
           <p className={styles.previewNote}>
             This is exactly how the public will see your image.
           </p>
@@ -278,7 +279,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
           {/* Warning if no zones have been added */}
           {blurZones.length === 0 && (
             <div className={styles.noBlurWarning}>
-              ⚠️ No areas blurred — the full image will be public.
+              <AlertTriangle size={14} /> No areas blurred — the full image will be public.
               Add blur zones to protect sensitive details.
             </div>
           )}

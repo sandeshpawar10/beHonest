@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 import BlurableImage   from '../components/ui/BlurableImage';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
+import { Search, MapPin, Calendar, User, PackageOpen } from 'lucide-react';
 import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {
@@ -134,11 +135,11 @@ function FoundItemsPage() {
       {/* ── Page header ── */}
       <div className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-          ← Dashboard
+          <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Dashboard
         </button>
 
         <div className={styles.headerText}>
-          <h1 className={styles.title}>📦 Found Items</h1>
+          <h1 className={styles.title}> Found Items</h1>
           <p className={styles.subtitle}>
             Scroll through the stack to find your item. Each card stacks as you scroll.
           </p>
@@ -155,7 +156,7 @@ function FoundItemsPage() {
 
       {/* ── Search bar ── */}
       <div className={styles.searchBar}>
-        <span className={styles.searchIcon}>🔍</span>
+        <span className={styles.searchIcon}><Search size={16} /></span>
         <input
           type="text"
           className={styles.searchInput}
@@ -209,7 +210,7 @@ function FoundItemsPage() {
 
           {filteredItems.length === 0 ? (
             <div className={styles.emptyState}>
-              <span className={styles.emptyIcon}>🔎</span>
+              <span className={styles.emptyIcon}><Search size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /></span>
               <h3>No items here yet</h3>
               <p>
                 {(!activeFilter && !debouncedSearch)
@@ -296,7 +297,7 @@ function StackCard({ item, formatDate, onDelete }) {
                 className={styles.toggleBtn}
                 onClick={() => setShowFull(f => !f)}
               >
-                {showFull ? '🔒' : '👁️'}
+                {showFull ? '' : '👁️'}
               </button>
             )}
           </div>
@@ -309,7 +310,7 @@ function StackCard({ item, formatDate, onDelete }) {
                 {catConfig.icon} {catConfig.label}
               </span>
               {isClaimed && (
-                <span className={styles.claimedBadge}>🔐 Claimed</span>
+                <span className={styles.claimedBadge}><Shield size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Claimed</span>
               )}
             </div>
 
@@ -318,18 +319,18 @@ function StackCard({ item, formatDate, onDelete }) {
 
             {/* Location + Date */}
             <div className={styles.cardMeta}>
-              <span>📍 {item.location}</span>
-              <span>📅 {formatDate(item.dateFound)}</span>
+              <span><MapPin size={16} /> {item.location}</span>
+              <span><Calendar size={16} /> {formatDate(item.dateFound)}</span>
             </div>
 
             {/* Blur info */}
             {item.blurZones && item.blurZones.length > 0 ? (
               <div className={styles.blurInfo}>
-                🔒 {item.blurZones.length} sensitive area{item.blurZones.length > 1 ? 's' : ''} hidden
+                <Lock size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> {item.blurZones.length} sensitive area{item.blurZones.length > 1 ? 's' : ''} hidden
               </div>
             ) : (
               <div className={styles.noBlurInfo}>
-                ⚠️ No blur zones — full image visible
+                <AlertTriangle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> No blur zones — full image visible
               </div>
             )}
 
@@ -352,9 +353,9 @@ function StackCard({ item, formatDate, onDelete }) {
               }}
             >
               {isClaimed
-                ? '🔐 Already Claimed'
+                ? '<Shield size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Already Claimed'
                 : isFinder
-                  ? '✅ You reported this'
+                  ? ' You reported this'
                   : isSameCollege
                     ? '🙋 This is Mine — Claim It'
                     : '🚫 Not from your college'}
