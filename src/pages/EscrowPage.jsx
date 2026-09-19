@@ -21,7 +21,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { REWARD_CATEGORIES } from '../utils/rewardUtils';
-import { Landmark, Shield, Lock, CheckCircle, DollarSign, PartyPopper, Gift, ArrowLeft, ChevronRight, MessageSquare, AlertOctagon, CreditCard, History, Undo2, XCircle } from 'lucide-react';
+import { Landmark, Shield, Lock, CheckCircle, DollarSign, PartyPopper, Gift, ArrowLeft, ChevronRight, MessageSquare, AlertOctagon, CreditCard, History, Undo2, XCircle, User, AlertTriangle } from 'lucide-react';
 import styles from './EscrowPage.module.css';
 
 function EscrowPage() {
