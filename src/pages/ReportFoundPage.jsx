@@ -31,7 +31,8 @@ function ReportFoundPage() {
   const [category,    setCategory]    = useState('');       // e.g. 'wallet'
   const [title,       setTitle]       = useState('');       // e.g. 'Blue Wallet'
   const [description, setDescription] = useState('');       // detailed description
-  const [location,    setLocation]    = useState('');       // where it was found
+  const [location,    setLocation]    = useState('');       // approximate location (public)
+  const [exactLocation, setExactLocation] = useState('');   // exact location (hidden from public)
   const [secretDetails, setSecretDetails] = useState('');   // hidden identifier
   const [imageData,   setImageData]   = useState(null);     // base64 image string
   const [blurZones,   setBlurZones]   = useState([]);       // list of blur rectangles
@@ -167,7 +168,9 @@ function ReportFoundPage() {
           shortTitle: title, // Map React 'title' to Backend 'shortTitle'
           description: description,
           location: location,
+          exactLocation: exactLocation,
           secretIdentity: secretDetails, // Map React 'secretDetails' to Backend 'secretIdentity'
+          secretDetails: secretDetails ? secretDetails.split(',').map(s => s.trim()).filter(Boolean) : [],
           // We are temporarily sending the raw Base64 string to the DB.
           // Later, you should upload this to Cloudinary and send the URL instead!
           images: [imageData], 
@@ -285,8 +288,8 @@ function ReportFoundPage() {
                 Description *
               </label>
               <p className={styles.fieldHint}>
-                Describe what you can see on item and how it is — mention specific identifying details
-                (brand, serial numbers, engravings). Those will be used to verify the real owner.
+                Describe the item in <strong>general terms only</strong> — color, brand, size. 
+                ⚠️ <strong style={{color: '#ff4d6d'}}>Do NOT include unique marks, serial numbers, scratches, or contents here.</strong> Put those in the "Secret Identifier" field below so scammers can't copy them.
               </p>
               <textarea
                 id="item-desc"
@@ -300,19 +303,41 @@ function ReportFoundPage() {
               <span className={styles.charCount}>{description.length}/500</span>
             </div>
 
-            {/* Location */}
+            {/* Approximate Location (Public) */}
             <div className={styles.field}>
               <label className={styles.label} htmlFor="item-location">
-                Where did you find it? *
+                Approximate Location (Public) *
               </label>
+              <p className={styles.fieldHint}>
+                This will be shown publicly. Keep it general (e.g., "Library building", "North Campus").
+              </p>
               <input
                 id="item-location"
                 type="text"
                 className={styles.input}
-                placeholder='e.g. "Library 2nd floor, near the study tables"'
+                placeholder='e.g. "Library building" or "Canteen area"'
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 maxLength={120}
+              />
+            </div>
+
+            {/* Exact Location (Hidden) */}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="item-exact-location">
+                Exact Location (Hidden) 📍
+              </label>
+              <p className={styles.fieldHint}>
+                This is <strong>never shown publicly</strong>. The AI will ask the owner to guess this.
+              </p>
+              <input
+                id="item-exact-location"
+                type="text"
+                className={styles.input}
+                placeholder='e.g. "Library 2nd floor, under the desk near window seat"'
+                value={exactLocation}
+                onChange={e => setExactLocation(e.target.value)}
+                maxLength={200}
               />
             </div>
 
@@ -322,16 +347,16 @@ function ReportFoundPage() {
                 Secret Identifier (Optional) 🤫
               </label>
               <p className={styles.fieldHint}>
-                Tell us something only the true owner would know. E.g. "The lock screen is a picture of a cat" or "Missing the left button." This is 100% hidden and will be used by our AI to test the owner.
+                Tell us something only the true owner would know. Separate multiple details with commas. E.g. "Spider-man sticker on back, left button missing, lock screen is a cat photo." This is 100% hidden and will be used by our AI to test the owner.
               </p>
               <input
                 id="item-secret"
                 type="text"
                 className={styles.input}
-                placeholder="e.g. Spider-man sticker on the back"
+                placeholder="e.g. Spider-man sticker on back, left button missing"
                 value={secretDetails}
                 onChange={e => setSecretDetails(e.target.value)}
-                maxLength={200}
+                maxLength={300}
               />
             </div>
           </div>

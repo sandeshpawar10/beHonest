@@ -8,7 +8,9 @@ const addItemSchema = z.object({
     shortTitle: z.string().min(3, "Title must be at least 3 characters").max(100),
     description: z.string().min(10, "Description must be at least 10 characters").max(2000),
     location: z.string().min(3, "Location must be at least 3 characters").max(100),
+    exactLocation: z.string().optional(),
     secretIdentity: z.string().max(500).optional(),
+    secretDetails: z.array(z.string()).optional(),
     images: z.array(z.string()).max(5).optional(),
     blurZones: z.array(z.any()).optional(),
     dateFound: z.string().datetime().optional()
@@ -29,7 +31,7 @@ exports.addItem = async function(req,res){
             });
         }
         
-        const {category, shortTitle, description, location, secretIdentity, images, blurZones, dateFound} = validation.data;
+        const {category, shortTitle, description, location, exactLocation, secretIdentity, secretDetails, images, blurZones, dateFound} = validation.data;
         if(!req.user || !req.user._id){
             return res.status(401).json({
                 error: "Unauthorized. You must be logged in to report an item."
@@ -77,7 +79,9 @@ exports.addItem = async function(req,res){
             shortTitle,
             description,
             location,
+            exactLocation: exactLocation || "",
             secretIdentity: secretIdentity || "",
+            secretDetails: secretDetails || [],
             status: "found", // Forcibly set to found
             images: uploadedImageUrls, 
             blurZones: blurZones || [],
@@ -123,7 +127,7 @@ exports.getAllFoundItems = async function(req,res){
         const totalItems = await itemModel.countDocuments(query);
 
         const allItems = await itemModel.find(query)
-            .select('-secretIdentity')
+            .select('-secretIdentity -secretDetails -exactLocation')
             .populate('reportedBy', 'email')
             .sort({ dateFound: -1 })
             .skip(skip)
@@ -172,7 +176,7 @@ exports.getFoundItemById = async function(req,res){
             return res.status(400).json({Status: "item id not found"})
         }
         const item = await itemModel.findById(itemid)
-            .select('-secretIdentity')
+            .select('-secretIdentity -secretDetails -exactLocation')
             .populate('reportedBy', 'email');
         if(!item){
             return res.status(400).json({

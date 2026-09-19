@@ -393,7 +393,9 @@ function EscrowPage() {
                         {activeTab === 'owner' ? 'Finder' : 'Owner'}
                       </span>
                       <span className={styles.ecDetailValue}>
-                        {activeTab === 'owner' ? (escrow.finderId?.username || escrow.finderId?.email) : (escrow.depositorId?.username || escrow.depositorId?.email)}
+                        {escrow.status === 'released' || escrow.status === 'refunded'
+                          ? (activeTab === 'owner' ? (escrow.finderId?.username || escrow.finderId?.email) : (escrow.depositorId?.username || escrow.depositorId?.email))
+                          : (activeTab === 'owner' ? 'Anonymous Finder 🕵️‍♂️' : 'Anonymous Owner 🕵️')}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>

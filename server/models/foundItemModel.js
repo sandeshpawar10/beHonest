@@ -26,13 +26,21 @@ const itemSchema = new Schema({
         trim: true
     },
     location: {
-        type: String,
+        type: String, // Approximate location for public listing
         required: true,
         trim: true
+    },
+    exactLocation: {
+        type: String, // Exact location, hidden from public
+        default: ""
     },
     secretIdentity: {
         type: String,
         default: ""
+    },
+    secretDetails: {
+        type: [String], // Specific marks, unique features, hidden from public
+        default: []
     },
     // Track if the item is still lost or if it has been returned
     status: {

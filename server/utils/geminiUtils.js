@@ -59,26 +59,29 @@ exports.runInteractiveInterrogation = async function(item, chatHistory, proofIma
   const systemPrompt = `You are a security AI for a lost-and-found platform.
 We need to verify if the person claiming this item is the true owner through a conversation.
 
-A student found this item and provided the following details:
+A student found this item and provided the following PUBLIC details:
 - Title: ${item.shortTitle || item.title}
 - Description: ${item.description}
+- Approximate Location: ${item.location}
 
-You are conducting an interactive interview. You must ask ONE highly specific question at a time based on the visual details in the image (if provided) or the description.
-Do NOT ask generic questions like "What color is it?". Ask about unique visual details (scratches, stickers, precise colors, brand, serial number).
+The finder also provided the following SECRET details (DO NOT REVEAL THESE TO THE CLAIMANT):
+- Exact Location Found: ${item.exactLocation || "Not provided"}
+- Secret Details/Marks: ${item.secretDetails && item.secretDetails.length > 0 ? item.secretDetails.join(", ") : "Not provided"}
+- Secret Identity Note: ${item.secretIdentity || "Not provided"}
+
+You are conducting an interactive interview. You must ask ONE highly specific question at a time.
+Do NOT ask generic questions. Instead, grill the user to see if they can guess the SECRET details provided above, or unique visual details from the image.
+CRITICAL: Never reveal the secret details in your questions. Frame questions like: "What was inside the front pocket?" or "Exactly where did you lose this?"
 
 The user's chat history is provided. Analyze their latest answer.
 If they answered correctly, proceed to the next question.
-If they answered incorrectly, you can give them one more chance or simply continue to the next question.
-You MUST ask between 4 and 10 questions to thoroughly interrogate them before making a final verdict. Do not pass them after just 1 or 2 questions.
+You MUST ask between 3 and 7 questions to thoroughly interrogate them before making a final verdict.
 
 GRADING RULES FOR FINAL VERDICT:
-1. Start with a baseline score of 100.
-2. If the user answered the questions correctly or approximately correctly, their score MUST remain between 90 and 100.
-3. Even if they made a mistake, as long as they didn't completely fabricate the answers, their score MUST be at least 75.
-4. Only deduct points if they are completely, blatantly lying (e.g., saying the item is a red car when it's a blue laptop).
-5. If the final score is 70 or above, set status to "verified".
-6. If the final score is between 40 and 69, set status to "needs_review".
-7. If the final score is below 40, set status to "rejected".
+1. Security is your top priority. Do NOT be lenient.
+2. If the user successfully identified the secret details and specific visual marks, give a high score (85-100) and set status to "verified".
+3. If they gave vague, generic answers or guessed wrong on key secrets, penalize them heavily (score 0-49) and set status to "rejected".
+4. If they were partially correct but you are unsure, score them 50-84 and set status to "needs_review".
 
 Return ONLY a valid JSON object matching this schema:
 {
@@ -261,17 +264,6 @@ CRITICAL RULE: If the image is a screenshot of a phone screen, a digital payment
 }
 
 exports.runFinalCombinedScoring = async function(item, chatHistory, tentativeVerdict, proofImage) {
-  if (!proofImage) {
-    // If no proof image is uploaded, just return the tentative verdict as final
-    return {
-      message: tentativeVerdict.message,
-      status: tentativeVerdict.status,
-      score: tentativeVerdict.score || 0,
-      aiModelUsed: 'gemini-3.1-flash-lite',
-      aiVersion: 'v1'
-    };
-  }
-
   if (!GEMINI_API_KEY) {
     throw new Error('Gemini API key is not configured.');
   }
@@ -281,34 +273,56 @@ exports.runFinalCombinedScoring = async function(item, chatHistory, tentativeVer
   
   const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
   
-  const { base64Data, mimeType } = await fetchImageAsBase64(firstImage);
-  const { base64Data: proofBase64Data, mimeType: proofMimeType } = await fetchImageAsBase64(proofImage);
+  let base64Data = null;
+  let mimeType = null;
+  if (firstImage) {
+      const res = await fetchImageAsBase64(firstImage);
+      base64Data = res.base64Data;
+      mimeType = res.mimeType;
+  }
+  
+  let proofBase64Data = null;
+  let proofMimeType = null;
+  if (proofImage) {
+      const res = await fetchImageAsBase64(proofImage);
+      proofBase64Data = res.base64Data;
+      proofMimeType = res.mimeType;
+  }
 
-  const systemPrompt = `You are a security AI for a lost-and-found platform.
-We are finalizing a claim verification. The user has already completed a chat interview.
-Based purely on their chat, the tentative verdict was: "${tentativeVerdict.status}" with a score of ${tentativeVerdict.score}.
+  // Format the chat history for the prompt
+  const formattedChat = chatHistory && chatHistory.length > 0 
+    ? chatHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n")
+    : "No chat history provided.";
 
-The user has now uploaded photographic proof of ownership (a receipt, bill, or an old photo of them with the item). This is the SECOND image.
-The FIRST image is the actual found item.
+  const systemPrompt = `You are a strict and highly analytical security AI for a lost-and-found platform.
+Your job is to definitively determine if a user claiming an item is the true owner.
+You must NOT be lenient. Security and preventing theft is your highest priority.
 
-CRITICAL INSTRUCTIONS:
-1. Cross-reference the proof image with the found item image.
-2. If the user provided ANY photo that even remotely looks like it could be the item (or a receipt for it), you MUST give them a score of 95 and set status to "verified".
-3. We want to be extremely lenient. Do NOT reject them unless the photo is an obvious joke (e.g., a picture of a human face or a completely unrelated object).
-4. If the proof image strongly matches, score them 100 and "verified".
-5. If the proof image somewhat matches, score them 90 and "verified".
-6. Only if the proof image is blatantly fraudulent, set status to "needs_review".
+ITEM DETAILS:
+- Title: ${item.shortTitle || item.title}
+- Description: ${item.description || 'None provided'}
+- Found Date: ${item.foundDate ? new Date(item.foundDate).toLocaleDateString() : 'Unknown'}
+
+USER'S CHAT INTERVIEW:
+${formattedChat}
+
+EVALUATION RULES:
+1. Carefully analyze the user's answers in the chat. Did they provide specific, non-obvious details about the item (e.g., scratches, contents, background wallpapers, unique marks)?
+2. If the user provided vague, generic, or guessing answers, you MUST penalize their score heavily.
+3. If photographic proof was provided, cross-reference it with the found item image. A valid proof image is a receipt, a bill, or a personal photo showing the exact item in the user's possession. 
+4. If a proof image is provided but it is generic, low-quality, a random stock photo, or unrelated, it is a massive red flag. Reduce the score significantly.
+5. Do NOT trust the user by default. Prove they own it.
 
 SCORING THRESHOLDS:
-- 70 or above → "verified"
-- 40 to 69 → "needs_review"  
-- Below 40 → "rejected"
+- 85 or above → "verified" (The chat details and/or photo provide undeniable proof of ownership).
+- 50 to 84 → "needs_review" (Plausible but lacks definitive proof, requires manual human review).
+- Below 50 → "rejected" (Vague answers, guessing, mismatched details, or fraudulent proof).
 
 Return ONLY a valid JSON object matching this schema:
 {
-  "message": "Your final verdict explanation, mentioning the photo proof.",
+  "message": "A 1-2 sentence explanation of your verdict, detailing exactly what convinced you or what was lacking.",
   "status": "verified" | "needs_review" | "rejected",
-  "score": a number from 0 to 100 representing the FINAL COMBINED confidence score.
+  "score": a number from 0 to 100 representing your confidence.
 }`;
 
   try {
@@ -316,9 +330,11 @@ Return ONLY a valid JSON object matching this schema:
       { text: systemPrompt }
     ];
     if (base64Data) {
+        parts.push({ text: "\nImage 1: The found item being claimed." });
         parts.push({ inlineData: { mimeType, data: base64Data } });
     }
     if (proofBase64Data) {
+        parts.push({ text: "\nImage 2: Photographic proof of ownership uploaded by the claimant." });
         parts.push({ inlineData: { mimeType: proofMimeType, data: proofBase64Data } });
     }
 
@@ -340,11 +356,11 @@ Return ONLY a valid JSON object matching this schema:
 
   } catch (error) {
     console.error('Final Gemini Evaluation Error:', error);
-    // Fallback if AI fails: use the tentative verdict but flag for review just in case
+    // Secure fallback: Never default to verified on error
     return {
-      message: "AI evaluation of the proof photo failed. Using chat score and flagging for manual review.",
+      message: "AI evaluation failed due to a system error. Claim flagged for manual review to ensure security.",
       status: "needs_review",
-      score: tentativeVerdict.score || 0,
+      score: 50,
       aiModelUsed: modelName,
       aiVersion: 'v1'
     };
