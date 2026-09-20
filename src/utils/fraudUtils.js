@@ -308,52 +308,41 @@ export async function runFullFraudScan(item, email, options = {}) {
         throw new Error(aiResult.error || 'Backend API error');
       }
 
-      // Save the raw Gemini response
+      // Save the raw AI response
       report.aiAnalysis = aiResult;
 
-      // If Gemini responded successfully (not skipped, no error)
+      // If AI responded successfully (not skipped, no error)
       if (!aiResult.skipped && !aiResult.error) {
-        // Convert each AI finding into our standard flag format
+        // Map reason_codes to our standard flag format
+        const codeToFlag = {
+          'SCREENSHOT_OR_DIGITAL':     { type: 'FAKE_IMAGE',            severity: 'high',   message: 'Image appears to be a screenshot or digital graphic' },
+          'SCREEN_CONTENT_AS_SUBJECT': { type: 'FAKE_IMAGE',            severity: 'high',   message: 'Image shows screen content as the subject, not a physical item' },
+          'STOCK_OR_WEB_IMAGE':        { type: 'FAKE_IMAGE',            severity: 'high',   message: 'Image appears to be a stock or web-sourced photo' },
+          'AI_GENERATED_SUSPECTED':    { type: 'AI_GENERATED_IMAGE',    severity: 'medium', message: 'Image may be AI-generated (under review)' },
+          'DESCRIPTION_MISMATCH':      { type: 'DESCRIPTION_MISMATCH',  severity: 'medium', message: 'Image does not match the provided description/category' },
+          'POOR_QUALITY':              { type: 'SUSPICIOUS_QUALITY',    severity: 'low',    message: 'Image quality is too poor to identify the item' },
+          'NO_ITEM_VISIBLE':           { type: 'FAKE_IMAGE',            severity: 'high',   message: 'No identifiable item visible in the image' },
+          'INAPPROPRIATE_CONTENT':     { type: 'INAPPROPRIATE_CONTENT', severity: 'high',   message: 'Image contains inappropriate content' },
+          'PROMPT_INJECTION':          { type: 'PROMPT_INJECTION',      severity: 'high',   message: 'Suspected prompt injection attempt detected' },
+        };
 
-        if (aiResult.isAIGenerated) {
-          report.aiFlags.push({
-            flagged: true,
-            type: 'AI_GENERATED_IMAGE',
-            severity: 'high',
-            message: 'Gemini AI detected this image may be AI-generated',
-            details: aiResult.reasoning || 'The image shows signs of AI generation.',
-          });
+        for (const code of (aiResult.reason_codes || [])) {
+          const mapping = codeToFlag[code];
+          if (mapping) {
+            report.aiFlags.push({
+              flagged: true,
+              type: mapping.type,
+              severity: mapping.severity,
+              message: mapping.message,
+              details: aiResult.user_message || aiResult.observations || '',
+            });
+          }
         }
 
-        if (aiResult.isFakeImage) {
-          report.aiFlags.push({
-            flagged: true,
-            type: 'FAKE_IMAGE',
-            severity: 'high',
-            message: 'Gemini AI detected this may be a stock/fake image',
-            details: aiResult.reasoning || 'The image appears to be from the internet.',
-          });
-        }
-
-        if (aiResult.descriptionMismatch) {
-          report.aiFlags.push({
-            flagged: true,
-            type: 'DESCRIPTION_MISMATCH',
-            severity: 'high',
-            message: 'Image does not match the provided description/category',
-            details: aiResult.reasoning || 'The image content doesn\'t match the description.',
-          });
-        }
-
-        if (aiResult.suspiciousQuality) {
-          report.aiFlags.push({
-            flagged: true,
-            type: 'SUSPICIOUS_QUALITY',
-            severity: 'low',
-            message: 'Image quality is suspicious (too blurry, too small, or screenshot)',
-            details: aiResult.reasoning || 'The image quality raises concerns.',
-          });
-        }
+        // Store the decision and score for the caller
+        report.aiDecision = aiResult.decision;
+        report.aiRiskScore = aiResult.risk_score;
+        report.aiUserMessage = aiResult.user_message;
       }
     } catch (err) {
       // AI check failed — store the error but don't crash

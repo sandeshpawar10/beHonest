@@ -140,18 +140,21 @@ function ReportFoundPage() {
 
           const report = await Promise.race([scanPromise, timeoutPromise]);
           
-          if (report.overallRisk === 'high') {
-            const badFlag = report.aiFlags.find(f => f.severity === 'high');
-            if (badFlag && badFlag.type === 'DESCRIPTION_MISMATCH') {
-              setError(`AI Validation Failed: The uploaded photo does not look like a ${category} matching your description. Please upload a real photo of the actual item.`);
-              setLoading(false);
-              return; // Block moving to step 3
-            } else if (report.overallRisk === 'high') {
-              setError(`Upload blocked: ${badFlag ? badFlag.message : 'Suspicious photo detected.'}. Only real, physical items can be uploaded.`);
-              setLoading(false);
-              return; // Block moving to step 3
-            }
+          // Use the AI's decision field instead of boolean flags
+          const aiDecision = report.aiDecision; // 'approve' | 'resubmit' | 'manual_review' | 'reject'
+          
+          if (aiDecision === 'reject') {
+            // Hard block: screenshot, stock image, no item, etc.
+            setError(report.aiUserMessage || 'This photo could not be accepted. Please upload a real photo of the physical item.');
+            setLoading(false);
+            return;
+          } else if (aiDecision === 'resubmit') {
+            // Soft block: description mismatch or poor quality — let them fix it
+            setError(report.aiUserMessage || 'Please retake or re-upload a clearer photo of the item.');
+            setLoading(false);
+            return;
           }
+          // 'approve' and 'manual_review' both proceed — manual_review gets flagged for admin but doesn't block the student
         } catch (err) {
           console.error('Fraud scan error (proceeding anyway):', err);
           // If scan fails or times out, let them proceed — the backend also validates on submit
