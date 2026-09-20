@@ -161,7 +161,7 @@ function ChatPage() {
         {/* Header */}
         <div className={styles.chatHeader}>
           <div className={styles.avatar}>
-            {theirRole === 'Owner' ? '👑' : '<User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />'}
+            {theirRole === 'Owner' ? '👑' : <User size={16} />}
           </div>
           <div className={styles.headerInfo}>
             <h2>Chat with {theirRole}</h2>

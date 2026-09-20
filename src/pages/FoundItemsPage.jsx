@@ -353,7 +353,7 @@ function StackCard({ item, formatDate, onDelete }) {
               }}
             >
               {isClaimed
-                ? '<Shield size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> Already Claimed'
+                ? <><Shield size={16} /> Already Claimed</>
                 : isFinder
                   ? ' You reported this'
                   : isSameCollege

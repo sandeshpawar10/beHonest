@@ -338,7 +338,7 @@ function EscrowPage() {
       {currentList.length === 0 ? (
         <div className={styles.emptyState}>
           <span style={{ fontSize: '3rem' }}>
-            {activeTab === 'owner' ? '<DollarSign size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : '<Gift size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />'}
+            {activeTab === 'owner' ? <DollarSign size={48} /> : <Gift size={48} />}
           </span>
           <h3>No escrow records {activeTab === 'owner' ? 'as owner' : 'as finder'}</h3>
           <p>
@@ -396,7 +396,7 @@ function EscrowPage() {
                       <span className={styles.ecDetailValue}>
                         {escrow.status === 'released' || escrow.status === 'refunded'
                           ? (activeTab === 'owner' ? (escrow.finderId?.username || escrow.finderId?.email) : (escrow.depositorId?.username || escrow.depositorId?.email))
-                          : (activeTab === 'owner' ? 'Anonymous Finder <User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Anonymous Owner <User size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />')}
+                          : (activeTab === 'owner' ? <>Anonymous Finder <User size={16} /></> : <>Anonymous Owner <User size={16} /></>)}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>
@@ -453,9 +453,9 @@ function EscrowPage() {
                       
                       <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                          <strong>Status:</strong> {escrow.ownerConfirmed ? 'You confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Waiting for your confirmation'}
+                          <strong>Status:</strong> {escrow.ownerConfirmed ? <>You confirmed <CheckCircle size={16} /></> : 'Waiting for your confirmation'}
                           <br />
-                          <strong>Finder status:</strong> {escrow.finderConfirmed ? 'Finder confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : "Finder hasn't confirmed yet"}
+                          <strong>Finder status:</strong> {escrow.finderConfirmed ? <>Finder confirmed <CheckCircle size={16} /></> : "Finder hasn't confirmed yet"}
                         </p>
                         
                         {escrow.finderConfirmed && !escrow.ownerConfirmed && (
@@ -617,9 +617,9 @@ function EscrowPage() {
 
                       <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', width: '100%', marginBottom: '10px' }}>
                         <p style={{ marginBottom: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                          <strong>Status:</strong> {escrow.finderConfirmed ? 'You confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : 'Waiting for your confirmation'}
+                          <strong>Status:</strong> {escrow.finderConfirmed ? <>You confirmed <CheckCircle size={16} /></> : 'Waiting for your confirmation'}
                           <br />
-                          <strong>Owner status:</strong> {escrow.ownerConfirmed ? 'Owner confirmed <CheckCircle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} />' : "Owner hasn't confirmed yet"}
+                          <strong>Owner status:</strong> {escrow.ownerConfirmed ? <>Owner confirmed <CheckCircle size={16} /></> : "Owner hasn't confirmed yet"}
                         </p>
                         
                         {escrow.finderConfirmed && !escrow.ownerConfirmed && (
