@@ -9,7 +9,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
-import { Search, Eye, Landmark, PackageOpen, LogOut } from 'lucide-react';
+import { Search, Eye, Landmark, PackageOpen, LogOut, ChevronDown } from 'lucide-react';
 
 import NotificationDropdown from '../components/ui/NotificationDropdown';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
@@ -141,13 +141,17 @@ function DashboardPage() {
           
           {/* User Profile Dropdown */}
           <div className={styles.userMenuWrapper} ref={menuRef}>
-            <div 
-              className={styles.avatar} 
+            <button
+              className={styles.avatar}
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="User menu"
+              aria-expanded={menuOpen}
             >
-              {session?.username ? session.username.charAt(0).toUpperCase() : '?'}
-            </div>
+              <span className={styles.avatarInitial}>
+                {session?.username ? session.username.charAt(0).toUpperCase() : '?'}
+              </span>
+              <ChevronDown size={14} className={styles.avatarChevron} />
+            </button>
             
             {menuOpen && (
               <div className={styles.dropdown}>
