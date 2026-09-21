@@ -46,10 +46,10 @@ exports.addItem = async function(req,res){
             if (firstImageData && firstImageData.startsWith('data:image')) {
                 const fraudAnalysis = await analyzeImageForFraud(firstImageData, description, category);
                 
-                if (!fraudAnalysis.skipped) {
-                    if (fraudAnalysis.isFakeImage || fraudAnalysis.isAIGenerated || fraudAnalysis.overallRiskScore > 70) {
+                if (!fraudAnalysis.skipped && !fraudAnalysis.error) {
+                    if (fraudAnalysis.decision === 'reject' || fraudAnalysis.decision === 'resubmit') {
                         return res.status(400).json({ 
-                            error: `AI Security Flag: ${fraudAnalysis.reasoning}. Please upload a real, genuine photo taken with your camera. Stock photos and AI images are strictly prohibited.`
+                            error: `AI Security Flag: ${fraudAnalysis.user_message || 'Please upload a clear, genuine photo of the actual item.'}`
                         });
                     }
                 }

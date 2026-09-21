@@ -14,7 +14,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }    from '../context/AuthContext';
-import { PackageOpen, Camera, ImageIcon, Info, CheckCircle, EyeOff, MapPin, ArrowLeft, ChevronRight, Trash2, Plus } from 'lucide-react';
+import { PackageOpen, Camera, ImageIcon, Info, CheckCircle, EyeOff, MapPin, ArrowLeft, Trash2, Plus } from 'lucide-react';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { runFullFraudScan } from '../utils/fraudUtils';
@@ -135,7 +135,7 @@ function ReportFoundPage() {
             session.email
           );
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Fraud scan timed out')), 15000)
+            setTimeout(() => reject(new Error('Fraud scan timed out')), 30000)
           );
 
           const report = await Promise.race([scanPromise, timeoutPromise]);

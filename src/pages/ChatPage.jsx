@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MessageSquare, ArrowLeft, Send, PackageOpen, User } from 'lucide-react';
+import { ArrowLeft, PackageOpen, User } from 'lucide-react';
 import styles from './ChatPage.module.css';
 
 function ChatPage() {

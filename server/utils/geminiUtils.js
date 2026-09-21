@@ -334,9 +334,10 @@ Return ONLY one valid JSON object. No markdown, no code fences, no text outside 
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash',
       config: {
         temperature: 0.15,
+        responseMimeType: "application/json",
       },
       contents: [
         {

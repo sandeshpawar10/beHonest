@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 import BlurableImage   from '../components/ui/BlurableImage';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
-import { Search, MapPin, Calendar, User, PackageOpen, ArrowLeft, Shield, Lock, AlertTriangle } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowLeft, Shield, Lock, AlertTriangle } from 'lucide-react';
 import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {

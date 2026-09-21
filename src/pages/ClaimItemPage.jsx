@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Bot, Lock, Camera, ImageIcon, BarChart3, Coins, RefreshCw, AlertTriangle, CheckCircle, XCircle, ArrowLeft, Send, Upload, Trash2, Clock } from 'lucide-react';
+import { Bot, Lock, Camera, ImageIcon, BarChart3, Coins, RefreshCw, AlertTriangle, CheckCircle, ArrowLeft, Send, Upload, Trash2, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
