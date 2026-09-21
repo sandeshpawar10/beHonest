@@ -507,7 +507,7 @@
   aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2px solid var(--border);
 }
 
 .photoThumb img {
@@ -536,26 +536,26 @@
 .addPhotoCard {
   aspect-ratio: 1;
   border-radius: 12px;
-  border: 2px dashed rgba(255,255,255,0.2);
+  border: 2px dashed var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  color: rgba(255,255,255,0.5);
-  transition: border-color 0.2s;
+  color: var(--text-muted);
+  transition: border-color 0.2s, color 0.2s;
 }
 
 .addPhotoCard:hover {
-  border-color: #00d2ff;
-  color: #00d2ff;
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
 }
 
 .photoCounter {
   text-align: center;
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   margin-top: 8px;
 }
 
@@ -572,7 +572,7 @@
   height: 64px;
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2px solid var(--border);
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0.6;

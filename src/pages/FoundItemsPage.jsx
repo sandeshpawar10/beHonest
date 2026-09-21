@@ -271,24 +271,57 @@ function StackCard({ item, formatDate, onDelete }) {
   const isClaimed = item.status === 'claimed';
 
   const [showFull, setShowFull] = useState(false);
+  const [imgIndex, setImgIndex] = useState(0);
 
   return (
     <div className={styles.cardInner}>
       {/* Left: Image */}
-      <div className={styles.cardImage}>
+      <div className={styles.cardImage} style={{ position: 'relative' }}>
             {showFull ? (
               <img
-                src={item.images && item.images.length > 0 ? item.images[0] : ''}
+                src={item.images && item.images.length > 0 ? item.images[imgIndex] : ''}
                 alt={item.shortTitle}
                 className={styles.fullImage}
               />
             ) : (
               <BlurableImage
-                imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
+                imageSrc={item.images && item.images.length > 0 ? item.images[imgIndex] : ''}
                 blurZones={item.blurZones || []}
                 alt={item.shortTitle}
                 blurStrength={14}
               />
+            )}
+
+            {/* Navigation arrows for multiple images */}
+            {item.images && item.images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i === 0 ? item.images.length - 1 : i - 1)); }}
+                  style={{
+                    position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
+                    width: '28px', height: '28px', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                >
+                  ◀
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i === item.images.length - 1 ? 0 : i + 1)); }}
+                  style={{
+                    position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
+                    width: '28px', height: '28px', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                >
+                  ▶
+                </button>
+                <div style={{
+                  position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
+                  background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', zIndex: 10
+                }}>
+                  {imgIndex + 1} / {item.images.length}
+                </div>
+              </>
             )}
 
             {/* Demo toggle — only for the finder */}

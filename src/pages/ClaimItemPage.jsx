@@ -27,7 +27,8 @@ function ClaimItemPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep]       = useState('quiz'); // 'quiz' (chat) | 'result'
   const [error, setError]     = useState('');
-  const [errorCount, setErrorCount] = useState(0); // Track consecutive API errors
+  const [errorCount, setErrorCount] = useState(0);
+  const [activeImgIndex, setActiveImgIndex] = useState(0); // Track consecutive API errors
 
   // Chat State
   const [chatHistory, setChatHistory] = useState([]);
@@ -303,13 +304,39 @@ function ClaimItemPage() {
           <div className={styles.layout}>
             {/* ── LEFT: Item preview card ── */}
             <div className={styles.itemPreview}>
-              <div className={styles.previewCard}>
+              <div className={styles.previewCard} style={{ position: 'relative' }}>
                 <BlurableImage
-                  imageSrc={item.images && item.images.length > 0 ? item.images[0] : ''}
+                  imageSrc={item.images && item.images.length > 0 ? item.images[activeImgIndex || 0] : ''}
                   blurZones={item.blurZones}
                   alt={item.shortTitle}
                   blurStrength={14}
                 />
+                
+                {item.images && item.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.preventDefault(); setActiveImgIndex(i => (i === 0 ? item.images.length - 1 : i - 1)); }}
+                      style={{
+                        position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
+                        background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
+                        width: '28px', height: '28px', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      ◀
+                    </button>
+                    <button
+                      onClick={(e) => { e.preventDefault(); setActiveImgIndex(i => (i === item.images.length - 1 ? 0 : i + 1)); }}
+                      style={{
+                        position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
+                        background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
+                        width: '28px', height: '28px', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      ▶
+                    </button>
+                  </>
+                )}
+                
                 <div className={styles.previewInfo}>
                   <h3 className={styles.previewTitle}>{item.shortTitle}</h3>
                 </div>
