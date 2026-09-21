@@ -63,7 +63,7 @@ exports.runInteractiveInterrogation = async function(item, chatHistory, proofIma
   }
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-  const modelName = 'gemini-3.1-flash-lite';
+  const modelName = 'gemini-3.5-flash-lite';
   
   // Safe extraction of the first image
   const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
@@ -334,7 +334,7 @@ Return ONLY one valid JSON object. No markdown, no code fences, no text outside 
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash',
+      model: 'gemini-3.5-flash',
       config: {
         temperature: 0.15,
         responseMimeType: "application/json",
@@ -416,7 +416,7 @@ exports.runFinalCombinedScoring = async function(item, chatHistory, tentativeVer
   }
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-  const modelName = 'gemini-3.1-flash-lite';
+  const modelName = 'gemini-3.5-flash-lite';
   
   const firstImage = (item.images && item.images.length > 0) ? item.images[0] : '';
   
