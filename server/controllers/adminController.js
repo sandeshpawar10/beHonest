@@ -260,7 +260,7 @@ exports.rejectItem = async (req,res) => {
         await item.save()
         if (item.reportedBy && item.reportedBy.email) {
             const { sendRejectionEmail } = require('../utils/emailUtils');
-            await sendRejectionEmail(item.reportedBy.email, "Item", feedback, item.hasResubmitted);
+            await sendRejectionEmail(item.reportedBy.email, "Item", item.shortTitle, feedback, item.hasResubmitted);
         }
         return res.status(200).json({ message: "Item rejected and user notified." });
     } catch (error) {
@@ -294,7 +294,7 @@ exports.rejectClaim = async (req,res)=>{
     try {
         const { feedback } = req.body;
         if (!feedback) return res.status(400).json({ error: "Feedback is required for rejection." });
-        const claim = await claimModel.findById(req.params.id).populate("claimantId");
+        const claim = await claimModel.findById(req.params.id).populate("claimantId").populate("itemId");
         if(!claim){
             return res.status(404).json({ error: "Claim not found" });
         }
@@ -308,7 +308,7 @@ exports.rejectClaim = async (req,res)=>{
         await claim.save()
         if (claim.claimantId && claim.claimantId.email) {
             const { sendRejectionEmail } = require('../utils/emailUtils');
-            await sendRejectionEmail(claim.claimantId.email, "Claim", feedback, claim.hasResubmitted);
+            await sendRejectionEmail(claim.claimantId.email, "Claim", claim.itemId?.shortTitle || "Item", feedback, claim.hasResubmitted);
         }
         return res.status(200).json({ message: "Claim rejected and user notified." });
     } catch (error) {

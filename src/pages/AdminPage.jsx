@@ -401,6 +401,7 @@ function AdminPage() {
             </div>
           </div>
         </div>
+      )}
       {/* Rejection Modal */}
       {rejectModalOpen && (
         <div className={styles.modalOverlay}>

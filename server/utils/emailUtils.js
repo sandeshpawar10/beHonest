@@ -295,14 +295,14 @@ exports.sendApprovalEmail = async function(email, type) {
     });
 };
 
-exports.sendRejectionEmail = async function(email, type, adminFeedback, isPermanentlyRejected) {
+exports.sendRejectionEmail = async function(email, type, itemTitle, adminFeedback, isPermanentlyRejected) {
     const actionText = isPermanentlyRejected 
         ? "Unfortunately, this was your second attempt, so this submission has been permanently rejected."
         : "You have <b>one more chance</b> to log in to the platform, edit your submission to fix these issues, and resubmit it.";
 
     return sendEmail({
         to: email,
-        subject: `Update on your ${type} Submission`,
+        subject: `Update on your ${type} Submission for ${itemTitle}`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
                 <div style="text-align: center; margin-bottom: 10px;">
@@ -311,7 +311,7 @@ exports.sendRejectionEmail = async function(email, type, adminFeedback, isPerman
                 
                 <h2 style="color: #d9534f; text-align: center; margin-bottom: 20px;">Action Required</h2>
                 <p style="font-size: 16px; color: #333;">Hello,</p>
-                <p style="font-size: 16px; color: #333;">Our admin team has reviewed your ${type} submission, and unfortunately, it has been <b>rejected</b>.</p>
+                <p style="font-size: 16px; color: #333;">Our admin team has reviewed your ${type} submission for <b>${itemTitle}</b>, and unfortunately, it has been <b>rejected</b>.</p>
                 
                 <div style="background-color: #f2dede; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0; border-radius: 4px;">
                     <p style="margin: 0; color: #a94442; font-size: 14px;"><b>Admin Feedback:</b></p>
