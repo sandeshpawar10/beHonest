@@ -268,3 +268,14 @@ exports.deleteItem = async function(req, res) {
         });
     }
 }
+
+
+exports.getMyReportedItems = async function(req, res) {
+    try {
+        const items = await itemModel.find({ reportedBy: req.user._id }).sort({ dateFound: -1 });
+        return res.status(200).json({ items });
+    } catch (err) {
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+

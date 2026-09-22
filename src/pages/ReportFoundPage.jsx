@@ -513,7 +513,7 @@ function ReportFoundPage() {
               disabled={loading}
             >
               {loading
-                ? <><ButtonSpinner /> AI is checking your item...</>
+                ? <><ButtonSpinner /> Scanning item...</>
                 : '🚀 Submit Found Item Report'
               }
             </button>

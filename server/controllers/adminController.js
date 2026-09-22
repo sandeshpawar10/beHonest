@@ -244,8 +244,8 @@ exports.approveItem = async (req,res) => {
 
 exports.rejectItem = async (req,res) => {
     try {
-        const feedBack = req.body
-        if (!feedBack) return res.status(400).json({ error: "Feedback is required for rejection." });
+        const { feedback } = req.body;
+        if (!feedback) return res.status(400).json({ error: "Feedback is required for rejection." });
         const item = await itemModel.findById(req.params.id).populate("reportedBy")
         if(!item){
             return res.status(404).json({ error: "Item not found" }); 
@@ -256,9 +256,10 @@ exports.rejectItem = async (req,res) => {
         else{
             item.status = "rejected"
         }
-        item.adminFeedback = feedBack;
+        item.adminFeedback = feedback;
         await item.save()
         if (item.reportedBy && item.reportedBy.email) {
+            const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(item.reportedBy.email, "Item", feedback, item.hasResubmitted);
         }
         return res.status(200).json({ message: "Item rejected and user notified." });
@@ -280,9 +281,10 @@ exports.approveClaim = async (req,res)=>{
             status: "claimed"
         })
         if (claim.claimantId && claim.claimantId.email) {
+            const { sendApprovalEmail } = require('../utils/emailUtils');
             await sendApprovalEmail(claim.claimantId.email, "Claim");
         }
-        return res.status(200).json({ message: "Claim approved. Item is now marked as claimed." });
+        return res.status(200).json({ message: "Claim approved and is now live." });
     } catch (error) {
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -290,8 +292,8 @@ exports.approveClaim = async (req,res)=>{
 
 exports.rejectClaim = async (req,res)=>{
     try {
-        const feedBack = req.body
-        if (!feedBack) return res.status(400).json({ error: "Feedback is required for rejection." });
+        const { feedback } = req.body;
+        if (!feedback) return res.status(400).json({ error: "Feedback is required for rejection." });
         const claim = await claimModel.findById(req.params.id).populate("claimantId");
         if(!claim){
             return res.status(404).json({ error: "Claim not found" });
@@ -302,8 +304,10 @@ exports.rejectClaim = async (req,res)=>{
         else{
             claim.verdict = "rejected";
         }
+        claim.adminFeedback = feedback;
         await claim.save()
         if (claim.claimantId && claim.claimantId.email) {
+            const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(claim.claimantId.email, "Claim", feedback, claim.hasResubmitted);
         }
         return res.status(200).json({ message: "Claim rejected and user notified." });

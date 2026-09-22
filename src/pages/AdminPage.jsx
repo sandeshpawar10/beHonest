@@ -111,44 +111,61 @@ function AdminPage() {
     }
   };
 
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectType, setRejectType] = useState(''); // 'item' or 'claim'
+  const [rejectTargetId, setRejectTargetId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
+
   const handleApproveItem = async (id) => {
-    if (!window.confirm("Approve this item? It will go live.")) return;
     try {
       await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/item/${id}/approve`, { method: 'PUT', credentials: 'include' });
       fetchAdminData();
     } catch (err) { console.error(err); }
   };
   
-  const handleRejectItem = async (id) => {
-    const feedback = prompt("Enter rejection reason for Finder:");
-    if (!feedback) return;
-    try {
-      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/item/${id}/reject`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', body: JSON.stringify({ feedback })
-      });
-      fetchAdminData();
-    } catch (err) { console.error(err); }
+  const openRejectItemModal = (id) => {
+    setRejectType('item');
+    setRejectTargetId(id);
+    setRejectReason('');
+    setRejectModalOpen(true);
   };
-  
+
   const handleApproveClaim = async (id) => {
-    if (!window.confirm("Approve this claim? The owner will be directed to pay the reward.")) return;
     try {
       await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/claim/${id}/approve`, { method: 'PUT', credentials: 'include' });
       fetchAdminData();
     } catch (err) { console.error(err); }
   };
   
-  const handleRejectClaim = async (id) => {
-    const feedback = prompt("Enter rejection reason for Owner:");
-    if (!feedback) return;
+  const openRejectClaimModal = (id) => {
+    setRejectType('claim');
+    setRejectTargetId(id);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  };
+
+  const submitRejection = async () => {
+    if (!rejectReason.trim()) return;
+    setIsRejecting(true);
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/claim/${id}/reject`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', body: JSON.stringify({ feedback })
+      const endpoint = rejectType === 'item' 
+        ? `/api/admin/item/${rejectTargetId}/reject`
+        : `/api/admin/claim/${rejectTargetId}/reject`;
+
+      await fetch(`${import.meta.env.VITE_API_URL || ''}${endpoint}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ feedback: rejectReason })
       });
+      setRejectModalOpen(false);
       fetchAdminData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   if (loading) {
@@ -227,7 +244,7 @@ function AdminPage() {
                   </div>
                   <div className={styles.disputeActions}>
                     <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)}>✅ Approve</button>
-                    <button className={styles.refundBtn} onClick={() => handleRejectItem(item._id)}>❌ Reject</button>
+                    <button className={styles.refundBtn} onClick={() => openRejectItemModal(item._id)}>❌ Reject</button>
                   </div>
                 </div>
               ))}
@@ -270,7 +287,7 @@ function AdminPage() {
                   </div>
                   <div className={styles.disputeActions}>
                     <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)}>✅ Approve</button>
-                    <button className={styles.refundBtn} onClick={() => handleRejectClaim(claim._id)}>❌ Reject</button>
+                    <button className={styles.refundBtn} onClick={() => openRejectClaimModal(claim._id)}>❌ Reject</button>
                   </div>
                 </div>
               ))}
@@ -380,6 +397,40 @@ function AdminPage() {
                 disabled={resolving}
               >
                 {resolving ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      {/* Rejection Modal */}
+      {rejectModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3>Reject {rejectType === 'item' ? 'Item Report' : 'Claim'}</h3>
+            </div>
+            <div className={styles.modalBody}>
+              <p style={{ marginBottom: '8px' }}>Please provide a reason for rejection. This will be sent to the {rejectType === 'item' ? 'finder' : 'owner'}.</p>
+              <textarea 
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Type your feedback here..."
+                style={{ width: '100%', minHeight: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.cancelBtn} 
+                onClick={() => setRejectModalOpen(false)}
+                disabled={isRejecting}
+              >
+                Cancel
+              </button>
+              <button 
+                className={styles.confirmRefundBtn}
+                onClick={submitRejection}
+                disabled={isRejecting || !rejectReason.trim()}
+              >
+                {isRejecting ? 'Rejecting...' : 'Submit Rejection'}
               </button>
             </div>
           </div>

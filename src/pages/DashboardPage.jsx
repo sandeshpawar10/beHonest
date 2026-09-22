@@ -83,7 +83,19 @@ function DashboardPage() {
   const navigate = useNavigate(); // Hook for programmatic navigation
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [myItems, setMyItems] = useState([]);
+  const [fetchingItems, setFetchingItems] = useState(false);
   const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (menuOpen && myItems.length === 0 && !fetchingItems) {
+      setFetchingItems(true);
+      fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/my-items`, { credentials: 'include' })
+        .then(r => r.json())
+        .then(d => { setMyItems(d.items || []); setFetchingItems(false); })
+        .catch(() => setFetchingItems(false));
+    }
+  }, [menuOpen]);
 
   const handleLogoutClick = async () => {
     setLoggingOut(true);
@@ -154,9 +166,42 @@ function DashboardPage() {
             </button>
             
             {menuOpen && (
-              <div className={styles.dropdown}>
+              <div className={styles.dropdown} style={{ minWidth: '300px' }}>
                 <div className={styles.dropdownName}>{session?.username}</div>
                 <div className={styles.dropdownEmail}>{session?.email}</div>
+                <div className={styles.dropdownDivider}></div>
+                
+                <div style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+                  <strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>My Reported Items</strong>
+                  {fetchingItems ? (
+                    <div style={{ color: 'var(--text-secondary)' }}>Loading...</div>
+                  ) : myItems.length === 0 ? (
+                    <div style={{ color: 'var(--text-secondary)' }}>No items reported.</div>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                      {myItems.map(item => (
+                        <li key={item._id} style={{ marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                          <div style={{ fontWeight: '500' }}>{item.shortTitle}</div>
+                          <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                            <span style={{
+                              padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+                              backgroundColor: item.status === 'pending_admin_review' ? '#fff3cd' : item.status === 'rejected' ? '#f8d7da' : '#d1e7dd',
+                              color: item.status === 'pending_admin_review' ? '#856404' : item.status === 'rejected' ? '#721c24' : '#0f5132'
+                            }}>
+                              {item.status === 'pending_admin_review' ? 'In Review' : item.status === 'rejected' ? 'Rejected' : 'Live'}
+                            </span>
+                          </div>
+                          {item.status === 'rejected' && item.adminFeedback && (
+                            <div style={{ fontSize: '0.75rem', color: '#721c24', marginTop: '4px', fontStyle: 'italic', background: '#f8d7da', padding: '4px', borderRadius: '4px' }}>
+                              <strong>Reason:</strong> {item.adminFeedback}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 <div className={styles.dropdownDivider}></div>
                 <button
                   className={styles.dropdownLogoutBtn}
