@@ -25,7 +25,7 @@ const claimSchema = new Schema({
     // AI's final decision
     verdict: {
         type: String,
-        enum: ["verified", "rejected", "needs_review"],
+        enum: ["verified", "rejected", "needs_review","pending_admin_review","permanently_rejected"],
         required: true
     },
     // AI confidence score (0-100)
@@ -72,6 +72,14 @@ const claimSchema = new Schema({
     proofImage: {
         type: String,
         default: ""
+    },
+    adminFeedback:{
+        type: String,
+        default: ""
+    },
+    hasResubmitted:{
+        type: Boolean,
+        default: false
     }
 },
 {

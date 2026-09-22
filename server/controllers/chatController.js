@@ -1,11 +1,27 @@
 const chatModel = require("../models/chatModel");
 const escrowModel = require("../models/escrowModel");
 const { createNotification } = require("./notificationController");
+const z = require("zod")
+
+const sendMessageSchema = z.object({
+    escrowId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Escrow ID"),
+    message: z.string().min(1).max(1000), // Limit chat messages to 1000 characters
+    senderAlias: z.string().max(50)
+});
 
 // ── Send a new chat message ─────────────────────────────────────
 exports.sendMessage = async function(req, res) {
     try {
-        const { escrowId, message, senderAlias } = req.body;
+        const validation = sendMessageSchema.safeParse(req.body);
+
+        if (!validation.success) {
+            const issues = validation.error?.issues || validation.error?.errors || [];
+            return res.status(400).json({ 
+                error: issues.map(e => e.message).join(", ") || validation.error?.message || "Invalid request payload"
+            });
+        }
+
+        const { escrowId, message, senderAlias } = validation.data;
 
         if (!escrowId || !message) {
             return res.status(400).json({

@@ -4,18 +4,23 @@ const { uploadImage } = require("../utils/cloudinary");
 const z = require("zod");
 
 const addItemSchema = z.object({
-    category: z.string().min(1, "Category is required").max(50),
-    shortTitle: z.string().min(3, "Title must be at least 3 characters").max(100),
-    description: z.string().min(10, "Description must be at least 10 characters").max(2000),
-    location: z.string().min(3, "Location must be at least 3 characters").max(100),
-    exactLocation: z.string().optional(),
-    secretIdentity: z.string().max(500).optional(),
+    shortTitle: z.string().min(3).max(100),
+    description: z.string().min(5).max(2000), 
+    location: z.string().max(200),
+    exactLocation: z.string().max(500).optional(),
+    category: z.enum(["wallet", "watch", "phone", "keychain", "bag", "laptop", "headphones", "id_card", "bottle", "glasses", "other"]),
+    dateFound: z.string().optional(),
+    secretIdentity: z.string().max(200).optional(),
     secretDetails: z.array(z.string()).optional(),
-    images: z.array(z.string()).max(5).optional(),
-    blurZones: z.array(z.any()).optional(),
-    dateFound: z.string().datetime().optional()
+    images: z.array(z.string()).max(3),
+    blurZones: z.array(z.object({
+        x: z.number().min(0).max(100),
+        y: z.number().min(0).max(100),
+        width: z.number().min(0).max(100),
+        height: z.number().min(0).max(100)
+    })).optional(),
+    imageFingerprint: z.string().optional()
 });
-
 
 const escapeRegExp = (string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
@@ -38,22 +43,9 @@ exports.addItem = async function(req,res){
             });
         }
 
-        
         let uploadedImageUrls = [];
         if (images && Array.isArray(images) && images.length > 0) {
-            // Validate the first image for fraud using AI
-            const firstImageData = images[0];
-            if (firstImageData && firstImageData.startsWith('data:image')) {
-                const fraudAnalysis = await analyzeImageForFraud(firstImageData, description, category);
-                
-                if (!fraudAnalysis.skipped && !fraudAnalysis.error) {
-                    if (fraudAnalysis.decision === 'reject' || fraudAnalysis.decision === 'resubmit') {
-                        return res.status(400).json({ 
-                            error: `AI Security Flag: ${fraudAnalysis.user_message || 'Please upload a clear, genuine photo of the actual item.'}`
-                        });
-                    }
-                }
-            }
+            // AI Fraud check is skipped for manual review
 
             for (let i = 0; i < images.length; i++) {
                 const imgData = images[i];
@@ -82,12 +74,17 @@ exports.addItem = async function(req,res){
             exactLocation: exactLocation || "",
             secretIdentity: secretIdentity || "",
             secretDetails: secretDetails || [],
-            status: "found", // Forcibly set to found
+            status: "pending_admin_review",
             images: uploadedImageUrls, 
             blurZones: blurZones || [],
             dateFound: dateFound || Date.now(), 
-            imageFingerprint: "" // Computed server-side later if needed
+            imageFingerprint: ""
         })
+
+        // Alert the admin
+        const { sendAdminReviewAlert } = require('../utils/emailUtils');
+        await sendAdminReviewAlert("Item", newItem._id).catch(console.error);
+
         return res.status(201).json({
             status: "success",
             message: "Successfully added",

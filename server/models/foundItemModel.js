@@ -45,7 +45,7 @@ const itemSchema = new Schema({
     // Track if the item is still lost or if it has been returned
     status: {
         type: String,
-        enum: ["found", "claimed"],
+        enum: ["found", "claimed","pending_admin_review", "rejected","permanently_rejected"],
         default: "found"
     },
     // An array of strings to store image URLs (since your frontend already handles photo uploads!)
@@ -67,6 +67,14 @@ const itemSchema = new Schema({
     dateFound: {
         type: Date,
         default: Date.now
+    },
+    adminFeedback:{
+        type: String,
+        default: ""
+    },
+    hasResubmitted:{
+        type: Boolean,
+        default: false
     }
 },
 {

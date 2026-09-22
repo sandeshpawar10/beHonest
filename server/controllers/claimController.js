@@ -140,46 +140,25 @@ exports.finalizeClaim = async function(req, res) {
             }
         }
 
-        const { runFinalCombinedScoring } = require("../utils/geminiUtils");
-        const aiResponse = await runFinalCombinedScoring(item, chatHistory || [], tentativeVerdict, proofImage);
-
-        let finalStatus = aiResponse.status;
-
-        // Save to Database — store detailed notes for admin, neutral message for user
         const claim = await claimModel.create({
             itemId,
             claimantId: req.user._id,
             answers: chatHistory || [],
-            verdict: finalStatus === 'verified' || finalStatus === 'needs_review' ? finalStatus : 'rejected',
-            score: aiResponse.score || 0,
-            verdictMessage: aiResponse.userMessage || "",
-            reviewerNotes: aiResponse.reviewerNotes || "",
-            evidenceFor: aiResponse.evidenceFor || [],
-            evidenceAgainst: aiResponse.evidenceAgainst || [],
-            aiModelUsed: aiResponse.aiModelUsed || "gemini-3.1-flash-lite",
-            aiVersion: aiResponse.aiVersion || "v2",
+            verdict: "pending_admin_review",
+            score: 0, 
+            verdictMessage: "Submitted for manual admin review.",
+            reviewerNotes: "",
+            evidenceFor: [],
+            evidenceAgainst: [],
+            aiModelUsed: "none",
+            aiVersion: "manual",
             secretGuess: secretGuess || "",
             proofImage: proofImage || ""
         });
 
-        // Update item status if verified
-        if (finalStatus === "verified") {
-            const updatedItem = await itemModel.findOneAndUpdate(
-                { _id: itemId, status: "found" },
-                { status: "claimed" },
-                { returnDocument: 'after' }
-            );
-
-            if (!updatedItem) {
-                claim.verdict = "rejected";
-                claim.verdictMessage = "Conflict: Item was claimed by another user simultaneously.";
-                await claim.save();
-
-                return res.status(409).json({
-                    error: "We're sorry, but another user successfully verified ownership of this item moments ago."
-                });
-            }
-        }
+        // Alert the admin
+        const { sendAdminReviewAlert } = require('../utils/emailUtils');
+        await sendAdminReviewAlert("Claim", claim._id).catch(console.error);
 
         // Only return safe fields to the client — never leak reviewerNotes or evidence details
         return res.status(200).json({
@@ -211,7 +190,22 @@ exports.getClaimsForItem = async function(req, res) {
             return res.status(400).json({ error: "Item ID is required." });
         }
 
+        const i = await itemModel.findById(itemId)
+
+        if(!i){
+            return res.status(404).json({
+                error: "Item not found."
+            });
+        }
+
+        if(i.reportedBy.toString()!==req.user._id.toString() && req.user.role!=='admin'){
+            return res.status(404).json({
+                error: "Forbidden. You are not authorized to view claims for this item."
+            });
+        }
+
         const claims = await claimModel.find({ itemId })
+            .select("_id claimantId verdict score verdictMessage createdAt")
             .populate("claimantId", "email username")
             .sort({ createdAt: -1 });
 

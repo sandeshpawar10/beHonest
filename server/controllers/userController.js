@@ -1,6 +1,8 @@
 const {userValidation,loginValidationFunction,passwordValidations} = require("../validation/userValidation")
 const user = require("../models/userModel")
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto")
+const bcrypt = require("bcrypt")
 
 exports.registerUser = async function(req,res){
     //console.log(req.body)
@@ -11,7 +13,6 @@ exports.registerUser = async function(req,res){
             error: validationResult.error.format()
         })
     }
-    console.log(validationResult);
     const {username,email,password} = validationResult.data
     const existingUser = await user.findOne({
         email
@@ -30,8 +31,9 @@ exports.registerUser = async function(req,res){
     }
     
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    u.emailVerificationOTP = otp;
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const hashOTP = await bcrypt.hash(otp,10);
+    u.emailVerificationOTP = hashOTP;
     u.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
     await u.save({ validateBeforeSave: false });
 
@@ -44,14 +46,22 @@ exports.registerUser = async function(req,res){
         console.error("[REGISTER] Email sending failed:", emailErr.message);
     }
 
+        // Safely determine if we are in local development
+    const isDevelopment = process.env.NODE_ENV !== "production";
+    
+    // Only leak the OTP if the email failed AND we are on localhost
+    const shouldLeakOtp = !emailSent && isDevelopment;
+
     return res.status(201).json({
         message: emailSent 
             ? "Registration successful! Please check your email for the OTP." 
-            : "Registration successful! Email delivery failed — your OTP is shown below.",
+            : (isDevelopment 
+                ? "Email delivery failed — DEV MODE: OTP shown below." 
+                : "Email delivery failed. Please try again later."),
         user: { _id: u._id, username: u.username, email: u.email },
         emailSent: emailSent,
-        ...(emailSent ? {} : { otp: otp }) // Only expose OTP if email failed
-    })
+        ...(shouldLeakOtp ? { otp: otp } : {}) 
+    });
 }
 
 exports.loginUser = async function(req,res){
@@ -185,7 +195,9 @@ exports.verifyEmail = async function(req, res){
             return res.status(400).json({ error: "Email is already verified" });
         }
 
-        if (u.emailVerificationOTP !== otp.trim()) {
+        const isMatch = await bcrypt.compare(otp, u.emailVerificationOTP)
+
+        if(!isMatch){
             return res.status(400).json({ error: "Invalid OTP" });
         }
 
@@ -228,8 +240,9 @@ exports.resendOTP = async function(req, res) {
         if (!u) return res.status(404).json({ error: "User not found" });
         if (u.isEmailVerified) return res.status(400).json({ error: "Email is already verified" });
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        u.emailVerificationOTP = otp;
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const hashOTP = await bcrypt.hash(otp,10);
+        u.emailVerificationOTP = hashOTP;
         u.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
         await u.save({ validateBeforeSave: false });
 
@@ -241,10 +254,21 @@ exports.resendOTP = async function(req, res) {
             console.error("[RESEND] Email sending failed:", emailErr.message);
         }
 
-        return res.status(200).json({ 
-            message: emailSent ? "OTP resent successfully" : "Email delivery failed — OTP shown below.",
+            // Safely determine if we are in local development
+        const isDevelopment = process.env.NODE_ENV !== "production";
+        
+        // Only leak the OTP if the email failed AND we are on localhost
+        const shouldLeakOtp = !emailSent && isDevelopment;
+
+        return res.status(201).json({
+            message: emailSent 
+                ? "Registration successful! Please check your email for the OTP." 
+                : (isDevelopment 
+                    ? "Email delivery failed — DEV MODE: OTP shown below." 
+                    : "Email delivery failed. Please try again later."),
+            user: { _id: u._id, username: u.username, email: u.email },
             emailSent: emailSent,
-            ...(emailSent ? {} : { otp: otp })
+            ...(shouldLeakOtp ? { otp: otp } : {}) 
         });
     } catch (error) {
         return res.status(500).json({ error: "An error occurred while resending OTP" });
@@ -257,20 +281,34 @@ exports.forgotPassword = async function(req, res) {
 
     try {
         const u = await user.findOne({ email });
+        const genericMessage = "If that email is registered, a reset OTP has been sent.";
+
         if (!u) {
             // Do not reveal whether the email is registered or not for security reasons
-            return res.status(200).json({ message: "If that email is registered, a reset OTP has been sent." });
+            return res.status(200).json({ message: genericMessage });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        u.passwordResetOTP = otp;
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const hashOTP = await bcrypt.hash(otp,10);
+        u.passwordResetOTP = hashOTP;
         u.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
         await u.save({ validateBeforeSave: false });
 
         const { sendPasswordResetOTP } = require('../utils/emailUtils');
-        await sendPasswordResetOTP(email, otp);
+        let emailSent = false;
+        try {
+            await sendPasswordResetOTP(email, otp);
+            emailSent = true;
+        } catch (emailErr) {
+            console.error("[FORGOT_PASSWORD] Email sending failed:", emailErr.message);
+        }
 
-        return res.status(200).json({ message: "If that email is registered, a reset OTP has been sent." });
+        const isDevelopment = process.env.NODE_ENV !== "production";
+        const shouldLeakOtp = !emailSent && isDevelopment;
+        return res.status(200).json({ 
+            message: genericMessage,
+            ...(shouldLeakOtp ? { dev_note: "Email failed. DEV MODE OTP included:", otp: otp } : {})
+        });
     } catch (error) {
         console.error("Forgot password error:", error);
         return res.status(500).json({ error: "An error occurred while processing your request." });
@@ -287,7 +325,9 @@ exports.resetPassword = async function(req, res) {
         const u = await user.findOne({ email });
         if (!u) return res.status(404).json({ error: "User not found" });
 
-        if (u.passwordResetOTP !== otp.trim()) {
+        const isMatch = await bcrypt.compare(otp, u.passwordResetOTP)
+
+        if(!isMatch){
             return res.status(400).json({ error: "Invalid OTP" });
         }
 

@@ -1,4 +1,9 @@
 const notificationModel = require('../models/notificationModel');
+const z = require("zod")
+
+const notificationIdSchema = z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Notification ID")
+});
 
 // Helper to create notifications internally from other controllers
 exports.createNotification = async function(userId, type, title, message, relatedItemId = "") {
@@ -36,7 +41,13 @@ exports.getNotifications = async function(req, res) {
 // Mark a single notification as read
 exports.markAsRead = async function(req, res) {
     try {
-        const { id } = req.params;
+
+        const validation = notificationIdSchema.safeParse(req.params);
+        if (!validation.success) {
+            return res.status(400).json({ error: "Invalid Notification ID format" });
+        }
+
+        const { id } = validation.data;
         const userId = req.user._id;
 
         const notification = await notificationModel.findOneAndUpdate(

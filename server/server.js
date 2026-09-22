@@ -37,7 +37,7 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '3mb' }));
 app.use(cookieParser());
 
 // Apply CSRF Protection to all API routes

@@ -15,10 +15,10 @@ const razorpay = new Razorpay({
 });
 
 const createEscrowSchema = z.object({
-    itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Item ID"),
-    claimId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Claim ID"),
-    amount: z.number().min(0, "Amount cannot be negative"),
-    rewardCategory: z.string().optional().default("standard")
+    itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Mongo ID"),
+    claimId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Mongo ID"),
+    amount: z.number().int().min(10).max(10000), // Must be an integer, max ₹10,000
+    rewardCategory: z.enum(["Standard", "Generous", "Custom"])
 });
 
 const raiseDisputeSchema = z.object({
@@ -225,16 +225,16 @@ exports.getMyEscrows = async function(req, res) {
 
         for (let escrow of escrows) {
             // Auto-refund check for pending escrows > 24 hours with no dispute
-            if (escrow.status === 'pending' && !escrow.disputeRaisedAt) {
-                if (now.getTime() - new Date(escrow.createdAt).getTime() > TWENTY_FOUR_HOURS) {
-                    escrow.status = 'refunded';
-                    await escrow.save();
+            // if (escrow.status === 'pending' && !escrow.disputeRaisedAt) {
+            //     if (now.getTime() - new Date(escrow.createdAt).getTime() > TWENTY_FOUR_HOURS) {
+            //         escrow.status = 'refunded';
+            //         await escrow.save();
 
-                    // Reset the item so it can be claimed again
-                    await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
-                    await claimModel.deleteMany({ itemId: escrow.itemId });
-                }
-            }
+            //         // Reset the item so it can be claimed again
+            //         await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
+            //         await claimModel.deleteMany({ itemId: escrow.itemId });
+            //     }
+            // }
 
             const escrowObj = escrow.toObject();
             
@@ -318,9 +318,6 @@ exports.confirmHandover = async function(req, res) {
                 );
             }
 
-            await itemModel.deleteOne({ _id: escrow.itemId });
-            await claimModel.deleteMany({itemId: escrow.itemId})
-            await chatModel.deleteMany({escrowId: escrow._id})
         }
 
         await escrow.save();
@@ -501,8 +498,6 @@ exports.refundEscrow = async function(req, res) {
             await sendRefundEmail(user.email, item.shortTitle, escrow.amount);
         }
 
-        await escrowModel.deleteOne({ _id: escrowId });
-        await chatModel.deleteMany({escrowId: escrow._id})
 
         return res.status(200).json({
             status: "success",

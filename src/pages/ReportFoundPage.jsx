@@ -124,44 +124,6 @@ function ReportFoundPage() {
   */
   const handleNext = async () => {
     if (validateStep()) {
-      // STRICT AI VALIDATION on Step 2 (Photo Upload)
-      if (step === 2 && images.length > 0) {
-        setLoading(true);
-        setError('');
-        try {
-          // Wrap fraud scan in a timeout so it doesn't block navigation forever
-          const scanPromise = runFullFraudScan(
-            { category, title, description, imageData: images[0] },
-            session.email
-          );
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Fraud scan timed out')), 30000)
-          );
-
-          const report = await Promise.race([scanPromise, timeoutPromise]);
-          
-          // Use the AI's decision field instead of boolean flags
-          const aiDecision = report.aiDecision; // 'approve' | 'resubmit' | 'manual_review' | 'reject'
-          
-          if (aiDecision === 'reject') {
-            // Hard block: screenshot, stock image, no item, etc.
-            setError(report.aiUserMessage || 'This photo could not be accepted. Please upload a real photo of the physical item.');
-            setLoading(false);
-            return;
-          } else if (aiDecision === 'resubmit') {
-            // Soft block: description mismatch or poor quality — let them fix it
-            setError(report.aiUserMessage || 'Please retake or re-upload a clearer photo of the item.');
-            setLoading(false);
-            return;
-          }
-          // 'approve' and 'manual_review' both proceed — manual_review gets flagged for admin but doesn't block the student
-        } catch (err) {
-          console.error('Fraud scan error (proceeding anyway):', err);
-          // If scan fails or times out, let them proceed — the backend also validates on submit
-        }
-        setLoading(false);
-      }
-      
       setStep(s => s + 1); // Go to next step
       window.scrollTo(0, 0); // Scroll to top
     }
@@ -211,6 +173,7 @@ function ReportFoundPage() {
       
       if (response.ok) {
         setLoading(false);
+        alert("Item Submitted! An admin will review your photos shortly. You will receive an email once it is approved.");
         navigate('/found-items');
       } else {
         let errorMsg = data.error || data.message || "An error occurred";

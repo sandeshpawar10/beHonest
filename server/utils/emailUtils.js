@@ -230,3 +230,103 @@ exports.sendRewardReleasedEmail = async function(email, itemTitle, amount) {
         `
     });
 };
+
+exports.sendAdminReviewAlert = async function(type, id) {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) return;
+
+    return sendEmail({
+        to: adminEmail,
+        subject: `[Action Required] New ${type} Pending Review`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
+                </div>
+                
+                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Manual Review Required</h2>
+                <p style="font-size: 16px; color: #333;">Hello Admin,</p>
+                <p style="font-size: 16px; color: #333;">A new <b>${type}</b> (ID: ${id}) has been submitted and is waiting for your manual review.</p>
+                <p style="font-size: 16px; color: #333;">Please log in to the Admin Portal to review the photos and chat history.</p>
+                
+                <div style="text-align: center; margin: 25px 0;">
+                    <a href="${process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',')[0] : 'http://localhost:5173'}/admin" 
+                       style="display: inline-block; padding: 12px 24px; background-color: #110eb98f; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                       Go to Admin Portal
+                    </a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="font-size: 12px; color: #aaa; text-align: center;">
+                    This is an automated notification. Please do not reply to this email.
+                </p>
+            </div>
+        `
+    });
+};
+
+exports.sendApprovalEmail = async function(email, type) {
+    const isItem = type === "Item";
+    
+    return sendEmail({
+        to: email,
+        subject: isItem ? "Your Item has been Approved! 🎉" : "Your Claim has been Verified! 🎉",
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
+                </div>
+                
+                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Great News!</h2>
+                <p style="font-size: 16px; color: #333;">Hello,</p>
+                <p style="font-size: 16px; color: #333;">Your ${isItem ? 'found item report' : 'item claim'} has been successfully reviewed and <b>approved</b> by our admin team.</p>
+                ${isItem 
+                    ? '<p style="font-size: 16px; color: #333;">Your item is now live on the platform! We will notify you when the owner claims it.</p>' 
+                    : '<p style="font-size: 16px; color: #333;">You can now proceed to the platform to pay the escrow reward and arrange a meetup to get your item back!</p>'}
+                <p style="font-size: 14px; color: #666; text-align: center; margin-top: 20px;">
+                    Thank you for keeping our campus honest!
+                </p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="font-size: 12px; color: #aaa; text-align: center;">
+                    This is an automated notification. Please do not reply to this email.
+                </p>
+            </div>
+        `
+    });
+};
+
+exports.sendRejectionEmail = async function(email, type, adminFeedback, isPermanentlyRejected) {
+    const actionText = isPermanentlyRejected 
+        ? "Unfortunately, this was your second attempt, so this submission has been permanently rejected."
+        : "You have <b>one more chance</b> to log in to the platform, edit your submission to fix these issues, and resubmit it.";
+
+    return sendEmail({
+        to: email,
+        subject: `Update on your ${type} Submission`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
+                </div>
+                
+                <h2 style="color: #d9534f; text-align: center; margin-bottom: 20px;">Action Required</h2>
+                <p style="font-size: 16px; color: #333;">Hello,</p>
+                <p style="font-size: 16px; color: #333;">Our admin team has reviewed your ${type} submission, and unfortunately, it has been <b>rejected</b>.</p>
+                
+                <div style="background-color: #f2dede; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #a94442; font-size: 14px;"><b>Admin Feedback:</b></p>
+                    <p style="margin: 10px 0 0 0; font-style: italic; color: #a94442; font-size: 15px;">"${adminFeedback}"</p>
+                </div>
+
+                <p style="font-size: 16px; color: #333;">${actionText}</p>
+                <p style="font-size: 14px; color: #666; text-align: center; margin-top: 20px;">
+                    If you have any questions, please reply to this email.
+                </p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="font-size: 12px; color: #aaa; text-align: center;">
+                    This is an automated notification.
+                </p>
+            </div>
+        `
+    });
+};

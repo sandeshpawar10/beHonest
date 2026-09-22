@@ -240,23 +240,8 @@ function ClaimItemPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to finalize claim');
       
-      const claimData = data.claim;
-      const finalStatus = claimData.verdict;
-      
-      let verdictLabel = "Review Required";
-      if (finalStatus === "verified") verdictLabel = "Verified Owner";
-      else if (finalStatus === "rejected") verdictLabel = "Claim Rejected";
-      
-      const verificationResult = {
-        overallScore: claimData.score || 0,
-        verdict: finalStatus,
-        verdictLabel,
-        verdictMessage: claimData.verdictMessage,
-        claimId: claimData._id
-      };
-
-      setResult(verificationResult);
-      setStep('result');
+      alert("Proof Submitted! An admin will manually review your photo and answers. You will receive an email once it is approved.");
+      navigate('/found-items');
     } catch (err) {
       console.error(err);
       setError(`Failed to finalize proof. ${err.message}`);
