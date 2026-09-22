@@ -16,8 +16,8 @@ const addItemSchema = z.object({
     blurZones: z.array(z.object({
         x: z.number().min(0).max(100),
         y: z.number().min(0).max(100),
-        width: z.number().min(0).max(100),
-        height: z.number().min(0).max(100)
+        w: z.number().min(0).max(100),
+        h: z.number().min(0).max(100)
     })).optional(),
     imageFingerprint: z.string().optional()
 });
