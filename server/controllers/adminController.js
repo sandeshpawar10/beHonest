@@ -311,3 +311,26 @@ exports.rejectClaim = async (req,res)=>{
         return res.status(500).json({ error: "Internal server error" });
     }
 }
+
+exports.getPendingItems = async function(req, res) {
+    try {
+        const items = await itemModel.find({ status: "pending_admin_review" }).populate("reportedBy", "email username");
+        return res.status(200).json({ items });
+    } catch (err) {
+        console.error("Error fetching pending items:", err);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
+exports.getPendingClaims = async function(req, res) {
+    try {
+        const claims = await claimModel.find({ verdict: "pending_admin_review" })
+            .populate("claimantId", "email username")
+            .populate("itemId", "shortTitle images");
+        return res.status(200).json({ claims });
+    } catch (err) {
+        console.error("Error fetching pending claims:", err);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+

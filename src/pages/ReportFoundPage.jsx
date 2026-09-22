@@ -43,6 +43,7 @@ function ReportFoundPage() {
   const [step,    setStep]    = useState(1);     // Current step: 1=Details, 2=Photo, 3=Blur
   const [loading, setLoading] = useState(false); // Submit loading spinner
   const [error,   setError]   = useState('');    // Validation error message
+  const [isSuccess, setIsSuccess] = useState(false); // Success state
 
   /* ──────────────────────────────────────────────────────────
      handleImageUpload()
@@ -173,8 +174,7 @@ function ReportFoundPage() {
       
       if (response.ok) {
         setLoading(false);
-        alert("Item Submitted! An admin will review your photos shortly. You will receive an email once it is approved.");
-        navigate('/found-items');
+        setIsSuccess(true);
       } else {
         let errorMsg = data.error || data.message || "An error occurred";
         setError(errorMsg);
@@ -193,6 +193,24 @@ function ReportFoundPage() {
     : 'Select a category first to get specific blur guidance.';
 
   /* ── Render ──────────────────────────────────────────────── */
+  if (isSuccess) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card} style={{ textAlign: 'center', padding: '40px' }}>
+          <CheckCircle size={64} style={{ color: 'var(--accent-cyan, #00d2ff)', margin: '0 auto 20px' }} />
+          <h2>Item Submitted Successfully!</h2>
+          <p style={{ margin: '20px 0', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+            Your item report has been sent to our admin team for manual review to ensure it meets our security guidelines. 
+            You will receive an email notification once it is approved and listed on the platform.
+          </p>
+          <button className={styles.submitBtn} onClick={() => navigate('/found-items')}>
+            Return to Found Items
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
 
@@ -464,8 +482,9 @@ function ReportFoundPage() {
             <div className={styles.infoBox} style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
               <CheckCircle size={20} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-cyan, #00d2ff)' }} />
               <div>
-                <strong>What happens next:</strong> Your item will be listed publicly with the blurred image.
-                When someone claims ownership, our AI will ask them questions to verify they're the real owner.
+                <strong>What happens next:</strong> Your item will be submitted to the admin team for manual review. 
+                Once approved, it will be listed publicly with the blurred image. 
+                When someone claims ownership, admins will manually verify them.
                 Your identity stays hidden until the process is complete.
               </div>
             </div>
@@ -484,7 +503,7 @@ function ReportFoundPage() {
           {/* Next or Submit button */}
           {step < 3 ? (
             <button className={styles.nextBtn} onClick={handleNext} type="button" disabled={loading}>
-              {loading ? <><ButtonSpinner /> Scanning photo...</> : 'Next →'}
+              {loading ? <><ButtonSpinner /> Loading...</> : 'Next →'}
             </button>
           ) : (
             <button

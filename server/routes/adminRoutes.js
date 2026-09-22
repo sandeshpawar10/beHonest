@@ -22,6 +22,8 @@ router.post("/api/admin/refresh", adminController.refreshAdminToken);
 router.get("/api/admin/disputes", verifyAdmin, adminController.getAllDisputes);
 router.post("/api/admin/resolve/:escrowId", verifyAdmin, adminController.resolveDispute);
 router.get("/api/admin/stats", verifyAdmin, adminController.getAdminStats);
+router.get("/api/admin/pending-items", verifyAdmin, adminController.getPendingItems);
+router.get("/api/admin/pending-claims", verifyAdmin, adminController.getPendingClaims);
 router.put("/api/admin/item/:id/approve", verifyAdmin, adminController.approveItem);
 router.put("/api/admin/item/:id/reject", verifyAdmin, adminController.rejectItem);
 router.put("/api/admin/claim/:id/approve", verifyAdmin, adminController.approveClaim);

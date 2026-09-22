@@ -6,6 +6,8 @@ function AdminPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ totalUsers: 0, totalItems: 0, totalEscrows: 0, totalDisputes: 0 });
   const [disputes, setDisputes] = useState([]);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [pendingClaims, setPendingClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Modal state
@@ -39,6 +41,18 @@ function AdminPage() {
       if (disputesRes.ok) {
         const disputesData = await disputesRes.json();
         setDisputes(disputesData.disputes || []);
+      }
+
+      const itemsRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/pending-items`, { method: 'GET', credentials: 'include' });
+      if (itemsRes.ok) {
+        const d = await itemsRes.json();
+        setPendingItems(d.items || []);
+      }
+
+      const claimsRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/pending-claims`, { method: 'GET', credentials: 'include' });
+      if (claimsRes.ok) {
+        const d = await claimsRes.json();
+        setPendingClaims(d.claims || []);
       }
     } catch (err) {
       console.error('Failed to fetch admin data:', err);
@@ -97,6 +111,46 @@ function AdminPage() {
     }
   };
 
+  const handleApproveItem = async (id) => {
+    if (!window.confirm("Approve this item? It will go live.")) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/item/${id}/approve`, { method: 'PUT', credentials: 'include' });
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+  
+  const handleRejectItem = async (id) => {
+    const feedback = prompt("Enter rejection reason for Finder:");
+    if (!feedback) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/item/${id}/reject`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify({ feedback })
+      });
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+  
+  const handleApproveClaim = async (id) => {
+    if (!window.confirm("Approve this claim? The owner will be directed to pay the reward.")) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/claim/${id}/approve`, { method: 'PUT', credentials: 'include' });
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+  
+  const handleRejectClaim = async (id) => {
+    const feedback = prompt("Enter rejection reason for Owner:");
+    if (!feedback) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/claim/${id}/reject`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify({ feedback })
+      });
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -144,6 +198,84 @@ function AdminPage() {
             <span className={styles.statValue}>{stats.totalDisputes}</span>
             <span className={styles.statLabel}>Active Disputes</span>
           </div>
+        </div>
+
+        {/* Pending Items Section */}
+        <div className={styles.disputesSection} style={{ marginTop: '2rem' }}>
+          <h2 className={styles.sectionTitle}>Pending Items (Found Reports)</h2>
+          {pendingItems.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>✅</span>
+              <p>No items pending review.</p>
+            </div>
+          ) : (
+            <div className={styles.disputesList}>
+              {pendingItems.map((item, index) => (
+                <div key={index} className={styles.disputeCard}>
+                  <div className={styles.disputeHeader}>
+                    <h3>{item.shortTitle}</h3>
+                    <span className={styles.rewardBadge}>{item.category}</span>
+                  </div>
+                  <div style={{ padding: '0 1rem' }}>
+                    <p><strong>Finder:</strong> {item.reportedBy?.username || item.reportedBy?.email}</p>
+                    <p><strong>Description:</strong> {item.description}</p>
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '8px 0' }}>
+                      {item.images?.map((img, i) => (
+                        <img key={i} src={img} alt="Item proof" style={{ height: '100px', borderRadius: '8px', objectFit: 'cover' }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className={styles.disputeActions}>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)}>✅ Approve</button>
+                    <button className={styles.refundBtn} onClick={() => handleRejectItem(item._id)}>❌ Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pending Claims Section */}
+        <div className={styles.disputesSection} style={{ marginTop: '2rem' }}>
+          <h2 className={styles.sectionTitle}>Pending Claims (Owner Proofs)</h2>
+          {pendingClaims.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>✅</span>
+              <p>No claims pending review.</p>
+            </div>
+          ) : (
+            <div className={styles.disputesList}>
+              {pendingClaims.map((claim, index) => (
+                <div key={index} className={styles.disputeCard}>
+                  <div className={styles.disputeHeader}>
+                    <h3>Claim for: {claim.itemId?.shortTitle}</h3>
+                  </div>
+                  <div style={{ padding: '0 1rem' }}>
+                    <p><strong>Owner:</strong> {claim.claimantId?.username || claim.claimantId?.email}</p>
+                    <p><strong>Secret Guess:</strong> {claim.secretGuess}</p>
+                    {claim.proofImage && (
+                      <div style={{ marginTop: '8px' }}>
+                        <p><strong>Proof Photo:</strong></p>
+                        <img src={claim.proofImage} alt="Owner Proof" style={{ height: '150px', borderRadius: '8px', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <details style={{ marginTop: '10px' }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>View Interview Transcript</summary>
+                      <div style={{ background: '#f5f5f5', padding: '10px', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {claim.answers?.map((msg, i) => (
+                          <p key={i}><strong>{msg.role}:</strong> {msg.text}</p>
+                        ))}
+                      </div>
+                    </details>
+                  </div>
+                  <div className={styles.disputeActions}>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)}>✅ Approve</button>
+                    <button className={styles.refundBtn} onClick={() => handleRejectClaim(claim._id)}>❌ Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Active Disputes Section */}

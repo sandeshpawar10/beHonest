@@ -27,6 +27,7 @@ function ClaimItemPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep]       = useState('quiz'); // 'quiz' (chat) | 'result'
   const [error, setError]     = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const [activeImgIndex, setActiveImgIndex] = useState(0); // Track consecutive API errors
 
@@ -240,8 +241,7 @@ function ClaimItemPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to finalize claim');
       
-      alert("Proof Submitted! An admin will manually review your photo and answers. You will receive an email once it is approved.");
-      navigate('/found-items');
+      setIsSuccess(true);
     } catch (err) {
       console.error(err);
       setError(`Failed to finalize proof. ${err.message}`);
@@ -272,6 +272,24 @@ function ClaimItemPage() {
   }
 
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
+
+  if (isSuccess) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card} style={{ textAlign: 'center', padding: '40px', maxWidth: '600px', margin: '40px auto' }}>
+          <CheckCircle size={64} style={{ color: 'var(--accent-cyan, #00d2ff)', margin: '0 auto 20px' }} />
+          <h2>Proof Submitted Successfully!</h2>
+          <p style={{ margin: '20px 0', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+            Your claim and answers have been sent to our admin team for manual review. 
+            You will receive an email notification once you are verified as the owner.
+          </p>
+          <button className={styles.submitBtn} onClick={() => navigate('/found-items')}>
+            Return to Found Items
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────
   return (

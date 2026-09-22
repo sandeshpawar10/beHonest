@@ -106,7 +106,7 @@ exports.getAllFoundItems = async function(req,res){
         
         const { search, category } = req.query;
         
-        let query = {};
+        let query = { status: 'found' };
         
         if (category) {
             query.category = category;
