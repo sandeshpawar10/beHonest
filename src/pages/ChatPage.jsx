@@ -88,7 +88,7 @@ function ChatPage() {
         socket.off('chat_message_received', handleNewMessage);
       };
     }
-  }, [escrowId, session]);
+  }, [escrowId, session, socket]);
 
   // ── 2. Auto-scroll to bottom when messages change ──
   useEffect(() => {

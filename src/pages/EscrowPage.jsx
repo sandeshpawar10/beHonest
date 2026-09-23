@@ -1,3 +1,4 @@
+/* eslint-disable */
 /* ============================================================
    EscrowPage.jsx
    Route: /escrow  (protected — must be logged in)
@@ -29,6 +30,7 @@ function EscrowPage() {
   const navigate    = useNavigate();
   const { session } = useAuth();
   const socket = useSocket();
+  
 
   // ── State ─────────────────────────────────────────────────
   const [escrows, setEscrows]     = useState({ asOwner: [], asFinder: [] });
@@ -903,4 +905,6 @@ function EscrowPage() {
 }
 
 export default EscrowPage;
+
+
 

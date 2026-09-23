@@ -13,18 +13,18 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth }    from '../context/AuthContext';
+
 import { PackageOpen, Camera, ImageIcon, Info, CheckCircle, EyeOff, MapPin, ArrowLeft, Trash2, Plus } from 'lucide-react';
 import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
-import { runFullFraudScan } from '../utils/fraudUtils';
+
 import { generateImageFingerprint } from '../utils/imageFingerprint';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './ReportFoundPage.module.css';
 
 function ReportFoundPage() {
   const navigate = useNavigate();
-  const { session } = useAuth(); // Get logged-in user info
+   // Get logged-in user info
 
   /* ── Form field state ──────────────────────────────────────
      Each piece of form data has its own useState variable.

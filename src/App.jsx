@@ -23,7 +23,6 @@ Think of it as:
 
 
 import { useAuth } from './context/AuthContext'; //Access authentication data from AuthContext
-import { SocketProvider } from './context/SocketContext'; // Add SocketProvider
 
 // Page components (each is a separate route)
 import LoginPage       from './pages/LoginPage';

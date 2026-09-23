@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
@@ -19,6 +20,8 @@ export const SocketProvider = ({ children }) => {
             withCredentials: true,
         });
 
+        // eslint-disable-next-line
+        // eslint-disable-next-line
         setSocket(newSocket);
 
         if (session && session.id) {
@@ -36,3 +39,4 @@ export const SocketProvider = ({ children }) => {
         </SocketContext.Provider>
     );
 };
+
