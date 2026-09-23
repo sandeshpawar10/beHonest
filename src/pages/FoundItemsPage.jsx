@@ -400,18 +400,22 @@ function StackCard({ item, formatDate, onDelete }) {
               <button 
                 onClick={onDelete}
                 style={{
-                  marginTop: '10px',
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 77, 109, 0.3)',
-                  backgroundColor: 'rgba(255, 77, 109, 0.05)',
+                  marginTop: 'auto',
+                  alignSelf: 'flex-start',
+                  background: 'none',
+                  border: 'none',
                   color: '#ff4d6d',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '0.9rem'
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 0 0 0',
+                  transition: 'opacity 0.2s',
                 }}
+                onMouseOver={(e) => e.target.style.opacity = '0.7'}
+                onMouseOut={(e) => e.target.style.opacity = '1'}
               >
                 🗑️ Delete Post
               </button>
