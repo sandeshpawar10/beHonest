@@ -116,12 +116,15 @@ function AdminPage() {
   const [rejectTargetId, setRejectTargetId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
+  const [approvingId, setApprovingId] = useState(null);
 
   const handleApproveItem = async (id) => {
+    setApprovingId(id);
     try {
       await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/item/${id}/approve`, { method: 'PUT', credentials: 'include' });
-      fetchAdminData();
+      await fetchAdminData();
     } catch (err) { console.error(err); }
+    finally { setApprovingId(null); }
   };
   
   const openRejectItemModal = (id) => {
@@ -132,10 +135,12 @@ function AdminPage() {
   };
 
   const handleApproveClaim = async (id) => {
+    setApprovingId(id);
     try {
       await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/claim/${id}/approve`, { method: 'PUT', credentials: 'include' });
-      fetchAdminData();
+      await fetchAdminData();
     } catch (err) { console.error(err); }
+    finally { setApprovingId(null); }
   };
   
   const openRejectClaimModal = (id) => {
@@ -255,7 +260,9 @@ function AdminPage() {
                   </div>
                   
                   <div className={styles.disputeActions} style={{ padding: '15px', borderTop: '1px solid #eee', marginTop: 'auto' }}>
-                    <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)} style={{ flex: 1, padding: '10px' }}>✅ Approve</button>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)} style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={approvingId === item._id}>
+                      {approvingId === item._id ? <><div className={styles.buttonSpinner}></div> Approving...</> : '✅ Approve'}
+                    </button>
                     <button className={styles.refundBtn} onClick={() => openRejectItemModal(item._id)} style={{ flex: 1, padding: '10px' }}>❌ Reject</button>
                   </div>
                 </div>
@@ -297,15 +304,15 @@ function AdminPage() {
                       </div>
                     )}
                     
-                    <details style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+                    <details open style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
                       <summary style={{ cursor: 'pointer', fontWeight: 'bold', padding: '10px', backgroundColor: '#f8f9fa', fontSize: '0.9rem', userSelect: 'none' }}>
-                        💬 View AI Interview Transcript
+                        💬 AI Interview Transcript
                       </summary>
                       <div style={{ background: '#fff', padding: '12px', maxHeight: '250px', overflowY: 'auto', fontSize: '0.85rem' }}>
                         {claim.answers?.map((msg, i) => (
                           <div key={i} style={{ marginBottom: '8px', padding: '8px', backgroundColor: msg.role === 'ai' ? '#f0f7ff' : '#f5f5f5', borderRadius: '6px' }}>
                             <strong style={{ color: msg.role === 'ai' ? '#0066cc' : '#333' }}>{msg.role === 'ai' ? '🤖 AI' : '👤 Owner'}:</strong> 
-                            <span style={{ marginLeft: '6px' }}>{msg.text}</span>
+                            <span style={{ marginLeft: '6px', whiteSpace: 'pre-wrap' }}>{msg.text}</span>
                           </div>
                         ))}
                       </div>
@@ -313,7 +320,9 @@ function AdminPage() {
                   </div>
                   
                   <div className={styles.disputeActions} style={{ padding: '15px', borderTop: '1px solid #eee', marginTop: 'auto' }}>
-                    <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)} style={{ flex: 1, padding: '10px' }}>✅ Approve</button>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)} style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={approvingId === claim._id}>
+                      {approvingId === claim._id ? <><div className={styles.buttonSpinner}></div> Approving...</> : '✅ Approve'}
+                    </button>
                     <button className={styles.refundBtn} onClick={() => openRejectClaimModal(claim._id)} style={{ flex: 1, padding: '10px' }}>❌ Reject</button>
                   </div>
                 </div>
@@ -457,8 +466,9 @@ function AdminPage() {
                 className={styles.confirmRefundBtn}
                 onClick={submitRejection}
                 disabled={isRejecting || !rejectReason.trim()}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {isRejecting ? 'Rejecting...' : 'Submit Rejection'}
+                {isRejecting ? <><div className={styles.buttonSpinner}></div> Rejecting...</> : 'Submit Rejection'}
               </button>
             </div>
           </div>
