@@ -18,7 +18,7 @@ const createEscrowSchema = z.object({
     itemId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Mongo ID"),
     claimId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Mongo ID"),
     amount: z.number().int().min(10).max(10000), // Must be an integer, max ₹10,000
-    rewardCategory: z.enum(["Standard", "Generous", "Custom"])
+    rewardCategory: z.string().min(1)
 });
 
 const raiseDisputeSchema = z.object({
