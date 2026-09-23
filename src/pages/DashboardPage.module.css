@@ -124,6 +124,9 @@
   top: calc(100% + 10px);
   right: 0;
   min-width: 230px;
+  max-width: 90vw;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 14px;

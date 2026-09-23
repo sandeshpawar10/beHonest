@@ -233,7 +233,7 @@ function DashboardPage() {
             </button>
             
             {menuOpen && (
-              <div className={styles.dropdown} style={{ minWidth: '300px' }}>
+              <div className={styles.dropdown} style={{ minWidth: 'min(300px, 90vw)' }}>
                 <div className={styles.dropdownName}>{session?.username}</div>
                 <div className={styles.dropdownEmail}>{session?.email}</div>
                 <div style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
@@ -241,7 +241,7 @@ function DashboardPage() {
                   {myItems.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)' }}>No items reported.</div>
                   ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '150px', overflowY: 'auto' }}>
                       {myItems.map(item => (
                         <li key={item._id} style={{ marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                           <div style={{ fontWeight: '500' }}>{item.shortTitle}</div>
@@ -272,7 +272,7 @@ function DashboardPage() {
                   {myClaims.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)' }}>No claims made.</div>
                   ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '150px', overflowY: 'auto' }}>
                       {myClaims.map(claim => {
                         const isFunded = myEscrowIds.has(claim._id);
                         return (
