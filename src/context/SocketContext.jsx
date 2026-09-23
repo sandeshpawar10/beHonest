@@ -24,8 +24,8 @@ export const SocketProvider = ({ children }) => {
         // eslint-disable-next-line
         setSocket(newSocket);
 
-        if (session && session.id) {
-            newSocket.emit('join_user_room', session.id);
+        if (session && (session._id || session.id)) {
+            newSocket.emit('join_user_room', (session._id || session.id));
         }
 
         return () => {
