@@ -84,13 +84,16 @@ function DashboardPage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [myItems, setMyItems] = useState([]);
+  const [myClaims, setMyClaims] = useState([]);
+  const [myEscrowIds, setMyEscrowIds] = useState(new Set());
   const [fetchingItems, setFetchingItems] = useState(false);
   const menuRef = useRef(null);
 
   const [hasUpdates, setHasUpdates] = useState(false);
 
   useEffect(() => {
-    const fetchItems = () => {
+    const fetchData = () => {
+      // Fetch reported items
       fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/my-items`, { credentials: 'include' })
         .then(r => r.json())
         .then(data => {
@@ -101,22 +104,50 @@ function DashboardPage() {
                   const oldItem = prev.find(i => i._id === newItem._id);
                   return !oldItem || oldItem.status !== newItem.status;
                 });
-                if (changed && !menuOpen) {
-                  setHasUpdates(true);
-                }
+                if (changed && !menuOpen) setHasUpdates(true);
               }
               return data.items;
             });
           }
         })
         .catch(err => console.error("Polling error", err));
+
+      // Fetch claims
+      fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/my-claims`, { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.claims) {
+            setMyClaims(prev => {
+              if (prev.length > 0) {
+                const changed = data.claims.some(newClaim => {
+                  const oldClaim = prev.find(c => c._id === newClaim._id);
+                  return !oldClaim || oldClaim.verdict !== newClaim.verdict;
+                });
+                if (changed && !menuOpen) setHasUpdates(true);
+              }
+              return data.claims;
+            });
+          }
+        })
+        .catch(err => console.error("Polling claims error", err));
+
+      // Fetch escrows to know which claims are already paid
+      fetch(`${import.meta.env.VITE_API_URL || ''}/api/escrow/my-escrows`, { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.asOwner) {
+            const fundedClaimIds = new Set(data.asOwner.map(e => e.claimId?.toString() || e.claimId?._id?.toString()));
+            setMyEscrowIds(fundedClaimIds);
+          }
+        })
+        .catch(err => console.error("Polling escrows error", err));
     };
 
     // Initial fetch to populate immediately, not waiting for menuOpen
-    fetchItems();
+    fetchData();
     
     // Poll every 15 seconds
-    const interval = setInterval(fetchItems, 15000);
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [menuOpen]);
 
@@ -205,13 +236,9 @@ function DashboardPage() {
               <div className={styles.dropdown} style={{ minWidth: '300px' }}>
                 <div className={styles.dropdownName}>{session?.username}</div>
                 <div className={styles.dropdownEmail}>{session?.email}</div>
-                <div className={styles.dropdownDivider}></div>
-                
                 <div style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
                   <strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>My Reported Items</strong>
-                  {fetchingItems ? (
-                    <div style={{ color: 'var(--text-secondary)' }}>Loading...</div>
-                  ) : myItems.length === 0 ? (
+                  {myItems.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)' }}>No items reported.</div>
                   ) : (
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
@@ -234,6 +261,71 @@ function DashboardPage() {
                           )}
                         </li>
                       ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className={styles.dropdownDivider}></div>
+                
+                <div style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+                  <strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>My Claims</strong>
+                  {myClaims.length === 0 ? (
+                    <div style={{ color: 'var(--text-secondary)' }}>No claims made.</div>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                      {myClaims.map(claim => {
+                        const isFunded = myEscrowIds.has(claim._id);
+                        return (
+                          <li key={claim._id} style={{ marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                            <div style={{ fontWeight: '500' }}>{claim.itemId?.shortTitle || 'Item'}</div>
+                            <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '8px' }}>
+                              <span style={{
+                                padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+                                backgroundColor: claim.verdict === 'pending_admin_review' ? '#fff3cd' : claim.verdict === 'rejected' ? '#f8d7da' : claim.verdict === 'verified' ? (isFunded ? '#d1e7dd' : '#cff4fc') : '#d1e7dd',
+                                color: claim.verdict === 'pending_admin_review' ? '#856404' : claim.verdict === 'rejected' ? '#721c24' : claim.verdict === 'verified' ? (isFunded ? '#0f5132' : '#055160') : '#0f5132'
+                              }}>
+                                {claim.verdict === 'pending_admin_review' ? 'In Review' : claim.verdict === 'rejected' ? 'Rejected' : claim.verdict === 'verified' ? (isFunded ? 'Escrow Funded' : 'Payment Pending') : 'Processed'}
+                              </span>
+                            </div>
+                            
+                            {claim.verdict === 'rejected' && claim.adminFeedback && (
+                              <div style={{ fontSize: '0.75rem', color: '#721c24', marginTop: '4px', fontStyle: 'italic', background: '#f8d7da', padding: '4px', borderRadius: '4px' }}>
+                                <strong>Reason:</strong> {claim.adminFeedback}
+                              </div>
+                            )}
+                            
+                            {claim.verdict === 'verified' && claim.itemId?._id && !isFunded && (
+                              <button 
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  navigate(`/reward/${claim.itemId._id}`, { state: { claimId: claim._id } });
+                                }}
+                                style={{ 
+                                  width: '100%', padding: '6px', background: '#0d6efd', color: 'white', 
+                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' 
+                                }}
+                              >
+                                💳 Pay Escrow Reward
+                              </button>
+                            )}
+                            
+                            {claim.verdict === 'verified' && isFunded && (
+                              <button 
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  navigate('/escrow');
+                                }}
+                                style={{ 
+                                  width: '100%', padding: '6px', background: '#198754', color: 'white', 
+                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' 
+                                }}
+                              >
+                                💸 View Escrow
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
