@@ -322,6 +322,13 @@ exports.confirmHandover = async function(req, res) {
 
         await escrow.save();
 
+        // Emit real-time update to both owner and finder
+        const io = req.app.get('io');
+        if (io) {
+            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+        }
+
         return res.status(200).json({
             status: "success",
             bothConfirmed,

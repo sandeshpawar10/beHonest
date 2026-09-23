@@ -20,6 +20,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { REWARD_CATEGORIES } from '../utils/rewardUtils';
 import { Landmark, Shield, Lock, CheckCircle, DollarSign, PartyPopper, Gift, ArrowLeft, ChevronRight, MessageSquare, AlertOctagon, CreditCard, History, Undo2, User, AlertTriangle } from 'lucide-react';
 import styles from './EscrowPage.module.css';
@@ -27,6 +28,7 @@ import styles from './EscrowPage.module.css';
 function EscrowPage() {
   const navigate    = useNavigate();
   const { session } = useAuth();
+  const socket = useSocket();
 
   // ── State ─────────────────────────────────────────────────
   const [escrows, setEscrows]     = useState({ asOwner: [], asFinder: [] });
@@ -901,3 +903,4 @@ function EscrowPage() {
 }
 
 export default EscrowPage;
+

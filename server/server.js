@@ -71,7 +71,48 @@ const seedAdmin = async () => {
     }
 };
 
-app.listen(port, async () => {
+// --- Socket.io Setup ---
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  }
+});
+
+app.set('io', io);
+
+io.on("connection", (socket) => {
+    console.log("A user connected:", socket.id);
+
+    // Join personal private room (for notifications)
+    socket.on("join_user_room", (userId) => {
+        socket.join(userId.toString());
+        console.log(`User ${userId} joined their private room`);
+    });
+
+    // Join escrow room (for live chat)
+    socket.on("join_escrow_room", (escrowId) => {
+        socket.join(escrowId.toString());
+        console.log(`User joined escrow room ${escrowId}`);
+    });
+
+    // Join admin room
+    socket.on("join_admin_room", () => {
+        socket.join("admin_room");
+        console.log("An admin joined the admin_room");
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected:", socket.id);
+    });
+});
+
+server.listen(port, async () => {
     await seedAdmin();
     console.log("server is started")
 

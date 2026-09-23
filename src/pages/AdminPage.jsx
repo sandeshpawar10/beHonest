@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 import styles from './AdminPage.module.css';
 
 function AdminPage() {
   const navigate = useNavigate();
+  const socket = useSocket();
   const [stats, setStats] = useState({ totalUsers: 0, totalItems: 0, totalEscrows: 0, totalDisputes: 0 });
   const [disputes, setDisputes] = useState([]);
   const [pendingItems, setPendingItems] = useState([]);
@@ -62,10 +64,26 @@ function AdminPage() {
   }, [navigate]);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchAdminData();
-    });
-  }, [fetchAdminData]);
+    fetchAdminData();
+    
+    if (socket) {
+      // Admins might want to join a specific room if we set that up,
+      // but for now, they can just listen to global broadcasts or specific events
+      socket.emit('join_admin_room');
+
+      const handleUpdate = () => {
+        fetchAdminData();
+      };
+
+      socket.on('admin_new_item', handleUpdate);
+      socket.on('admin_new_claim', handleUpdate);
+      
+      return () => {
+        socket.off('admin_new_item', handleUpdate);
+        socket.off('admin_new_claim', handleUpdate);
+      };
+    }
+  }, [fetchAdminData, socket]);
 
   const handleLogout = async () => {
     try {

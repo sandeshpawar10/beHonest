@@ -237,6 +237,12 @@ exports.approveItem = async (req,res) => {
             const { sendApprovalEmail } = require('../utils/emailUtils');
             await sendApprovalEmail(item.reportedBy.email, "Item", item.shortTitle);
             await createNotification(item.reportedBy._id, 'SYSTEM', 'Item Approved', `Your found item report for ${item.shortTitle} has been approved and is now live.`, item._id);
+            
+            const io = req.app.get('io');
+            if (io) {
+                io.to(item.reportedBy._id.toString()).emit('new_notification');
+                io.to(item.reportedBy._id.toString()).emit('item_updated');
+            }
         }
         return res.status(200).json({ message: "Item approved and is now live." });
     } catch (error) {
@@ -264,6 +270,12 @@ exports.rejectItem = async (req,res) => {
             const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(item.reportedBy.email, "Item", item.shortTitle, feedback, item.hasResubmitted);
             await createNotification(item.reportedBy._id, 'SYSTEM', 'Item Rejected', `Your found item report for ${item.shortTitle} was rejected. Reason: ${feedback}`, item._id);
+            
+            const io = req.app.get('io');
+            if (io) {
+                io.to(item.reportedBy._id.toString()).emit('new_notification');
+                io.to(item.reportedBy._id.toString()).emit('item_updated');
+            }
         }
         return res.status(200).json({ message: "Item rejected and user notified." });
     } catch (error) {
@@ -287,6 +299,13 @@ exports.approveClaim = async (req,res)=>{
             const { sendApprovalEmail } = require('../utils/emailUtils');
             await sendApprovalEmail(claim.claimantId.email, "Claim", claim.itemId?.shortTitle || "Item");
             await createNotification(claim.claimantId._id, 'CLAIM_VERDICT', 'Claim Approved', `Your claim for ${claim.itemId?.shortTitle || "Item"} has been approved! Proceed to pay the escrow reward.`, claim.itemId._id);
+            
+            // Emit real-time notification & claim update to user
+            const io = req.app.get('io');
+            if (io) {
+                io.to(claim.claimantId._id.toString()).emit('new_notification');
+                io.to(claim.claimantId._id.toString()).emit('claim_updated');
+            }
         }
         return res.status(200).json({ message: "Claim approved and is now live." });
     } catch (error) {
@@ -314,6 +333,12 @@ exports.rejectClaim = async (req,res)=>{
             const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(claim.claimantId.email, "Claim", claim.itemId?.shortTitle || "Item", feedback, claim.hasResubmitted);
             await createNotification(claim.claimantId._id, 'CLAIM_VERDICT', 'Claim Rejected', `Your claim for ${claim.itemId?.shortTitle || "Item"} was rejected. Reason: ${feedback}`, claim.itemId._id);
+            
+            const io = req.app.get('io');
+            if (io) {
+                io.to(claim.claimantId._id.toString()).emit('new_notification');
+                io.to(claim.claimantId._id.toString()).emit('claim_updated');
+            }
         }
         return res.status(200).json({ message: "Claim rejected and user notified." });
     } catch (error) {

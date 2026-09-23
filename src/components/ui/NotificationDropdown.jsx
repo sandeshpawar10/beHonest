@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 import styles from './NotificationDropdown.module.css';
 
 function NotificationDropdown() {
@@ -8,6 +9,7 @@ function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const socket = useSocket();
 
   const fetchNotifications = async () => {
     try {
@@ -25,13 +27,20 @@ function NotificationDropdown() {
   };
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchNotifications();
-    });
-    // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchNotifications();
+
+    if (socket) {
+      const handleNewNotification = (notif) => {
+        // Optimistically add to list or just refetch
+        fetchNotifications();
+      };
+      
+      socket.on('new_notification', handleNewNotification);
+      return () => {
+        socket.off('new_notification', handleNewNotification);
+      };
+    }
+  }, [socket]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

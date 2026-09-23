@@ -21,6 +21,7 @@ import '@fontsource/outfit/800.css';
 
 import './index.css';              // Global styles (design tokens, reset, animations)
 import { AuthProvider } from './context/AuthContext'; // Auth state provider
+import { SocketProvider } from './context/SocketContext'; // WebSocket provider
 import App from './App';           // Root component with router
 
 // --- Global Fetch CSRF Interceptor ---
@@ -45,7 +46,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     {/* AuthProvider wraps everything so any component can call useAuth() */}
     <AuthProvider>
-      <App />
+      <SocketProvider>
+        <App />
+      </SocketProvider>
     </AuthProvider>
   </StrictMode>
 );

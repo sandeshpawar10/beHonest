@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { ArrowLeft, PackageOpen, User } from 'lucide-react';
 import styles from './ChatPage.module.css';
 
@@ -18,6 +19,7 @@ function ChatPage() {
   const { escrowId } = useParams();
   const navigate = useNavigate();
   const { session } = useAuth();
+  const socket = useSocket();
   
   const [escrow, setEscrow] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -72,8 +74,20 @@ function ChatPage() {
     };
 
     fetchChatAndEscrow();
-    const interval = setInterval(fetchChatAndEscrow, 3000);
-    return () => clearInterval(interval);
+    
+    if (socket) {
+      socket.emit('join_escrow_room', escrowId);
+      
+      const handleNewMessage = (newMsg) => {
+        setMessages((prev) => [...prev, newMsg]);
+      };
+      
+      socket.on('chat_message_received', handleNewMessage);
+      
+      return () => {
+        socket.off('chat_message_received', handleNewMessage);
+      };
+    }
   }, [escrowId, session]);
 
   // ── 2. Auto-scroll to bottom when messages change ──
@@ -229,3 +243,5 @@ function ChatPage() {
 }
 
 export default ChatPage;
+
+

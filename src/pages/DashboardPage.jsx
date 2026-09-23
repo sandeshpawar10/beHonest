@@ -9,6 +9,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { Search, Eye, Landmark, PackageOpen, LogOut, ChevronDown } from 'lucide-react';
 
 import NotificationDropdown from '../components/ui/NotificationDropdown';
@@ -80,6 +81,7 @@ const ACTION_CARDS = [
 // ── DashboardPage component ────────────────────────────────────
 function DashboardPage() {
   const { session, logout } = useAuth();
+  const socket = useSocket();
   const navigate = useNavigate(); // Hook for programmatic navigation
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -143,13 +145,26 @@ function DashboardPage() {
         .catch(err => console.error("Polling escrows error", err));
     };
 
-    // Initial fetch to populate immediately, not waiting for menuOpen
+    // Initial fetch to populate immediately
     fetchData();
     
-    // Poll every 15 seconds
-    const interval = setInterval(fetchData, 15000);
-    return () => clearInterval(interval);
-  }, [menuOpen]);
+    if (socket) {
+      const handleUpdate = () => {
+        if (!menuOpen) setHasUpdates(true);
+        fetchData(); // Quick refetch to get latest arrays
+      };
+      
+      socket.on('item_updated', handleUpdate);
+      socket.on('claim_updated', handleUpdate);
+      socket.on('escrow_updated', handleUpdate);
+      
+      return () => {
+        socket.off('item_updated', handleUpdate);
+        socket.off('claim_updated', handleUpdate);
+        socket.off('escrow_updated', handleUpdate);
+      };
+    }
+  }, [menuOpen, socket]);
 
   useEffect(() => {
     if (menuOpen) {
@@ -190,6 +205,7 @@ function DashboardPage() {
     window.addEventListener('popstate', handlePopState);
     
     return () => {
+
       window.removeEventListener('popstate', handlePopState);
     };
   }, [logout]);

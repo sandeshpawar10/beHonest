@@ -60,6 +60,12 @@ exports.sendMessage = async function(req, res) {
             message: message.trim()
         });
 
+        // Emit to the escrow room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(escrowId.toString()).emit('chat_message_received', newMessage);
+        }
+        
         // Notify the recipient
         const recipientId = isDepositor ? escrow.finderId : escrow.depositorId;
         await createNotification(
@@ -124,3 +130,4 @@ exports.getMessages = async function(req, res) {
         return res.status(500).json({ error: "Internal server error." });
     }
 };
+
