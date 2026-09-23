@@ -78,11 +78,22 @@ function EscrowPage() {
     }
   }
 
-  // ── Load escrows on mount ───────────────
+  // ── Load escrows on mount + listen for live updates ─────
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEscrows();
-  }, []);
+    if (socket) {
+      const handleEscrowUpdate = () => {
+        console.log('[EscrowPage] Received escrow_updated, refetching...');
+        fetchEscrows();
+      };
+      socket.on('escrow_updated', handleEscrowUpdate);
+      socket.on('new_notification', handleEscrowUpdate);
+      return () => {
+        socket.off('escrow_updated', handleEscrowUpdate);
+        socket.off('new_notification', handleEscrowUpdate);
+      };
+    }
+  }, [socket]);
 
   // ── Refresh escrows (re-read from backend) ───────────
   const refreshEscrows = () => {

@@ -166,6 +166,13 @@ exports.verifyPayment = async function(req, res) {
         escrow.razorpaySignature = razorpay_signature;
         await escrow.save();
 
+        // Emit real-time update to both owner and finder
+        const io = req.app.get('io');
+        if (io) {
+            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+        }
+
         // 1. Immediately tell the frontend it was successful so the UI doesn't freeze
         res.status(200).json({ message: "Payment verified successfully", escrow });
 
@@ -453,6 +460,12 @@ exports.raiseDispute = async function(req, res) {
             escrowId
         );
 
+        const io = req.app.get('io');
+        if (io) {
+            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+        }
+
         return res.status(200).json({
             status: "success",
             message: "Dispute raised successfully.",
@@ -505,6 +518,12 @@ exports.refundEscrow = async function(req, res) {
             await sendRefundEmail(user.email, item.shortTitle, escrow.amount);
         }
 
+        const io = req.app.get('io');
+        if (io) {
+            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+            io.emit('item_updated', { itemId: escrow.itemId });
+        }
 
         return res.status(200).json({
             status: "success",
