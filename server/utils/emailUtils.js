@@ -265,12 +265,12 @@ exports.sendAdminReviewAlert = async function(type, id) {
     });
 };
 
-exports.sendApprovalEmail = async function(email, type) {
+exports.sendApprovalEmail = async function(email, type, itemTitle) {
     const isItem = type === "Item";
     
     return sendEmail({
         to: email,
-        subject: isItem ? "Your Item has been Approved! 🎉" : "Your Claim has been Verified! 🎉",
+        subject: isItem ? `Your Item ${itemTitle} has been Approved! 🎉` : `Your Claim for ${itemTitle} has been Verified! 🎉`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
                 <div style="text-align: center; margin-bottom: 10px;">
@@ -279,7 +279,7 @@ exports.sendApprovalEmail = async function(email, type) {
                 
                 <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Great News!</h2>
                 <p style="font-size: 16px; color: #333;">Hello,</p>
-                <p style="font-size: 16px; color: #333;">Your ${isItem ? 'found item report' : 'item claim'} has been successfully reviewed and <b>approved</b> by our admin team.</p>
+                <p style="font-size: 16px; color: #333;">Your ${isItem ? 'found item report' : 'item claim'} for <b>${itemTitle}</b> has been successfully reviewed and <b>approved</b> by our admin team.</p>
                 ${isItem 
                     ? '<p style="font-size: 16px; color: #333;">Your item is now live on the platform! We will notify you when the owner claims it.</p>' 
                     : '<p style="font-size: 16px; color: #333;">You can now proceed to the platform to pay the escrow reward and arrange a meetup to get your item back!</p>'}

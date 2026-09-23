@@ -19,6 +19,21 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+@keyframes ring {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(15deg); }
+  20% { transform: rotate(-10deg); }
+  30% { transform: rotate(15deg); }
+  40% { transform: rotate(-10deg); }
+  50% { transform: rotate(0); }
+  100% { transform: rotate(0); }
+}
+
+.hasUnread {
+  animation: ring 2s infinite ease-in-out;
+  transform-origin: top center;
+}
+
 .badge {
   position: absolute;
   top: 0;

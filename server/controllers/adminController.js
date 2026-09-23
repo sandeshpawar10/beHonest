@@ -234,7 +234,9 @@ exports.approveItem = async (req,res) => {
         item.adminFeedback = "";
         await item.save();
         if (item.reportedBy && item.reportedBy.email) {
-            await sendApprovalEmail(item.reportedBy.email, "Item");
+            const { sendApprovalEmail } = require('../utils/emailUtils');
+            await sendApprovalEmail(item.reportedBy.email, "Item", item.shortTitle);
+            await createNotification(item.reportedBy._id, 'SYSTEM', 'Item Approved', `Your found item report for ${item.shortTitle} has been approved and is now live.`, item._id);
         }
         return res.status(200).json({ message: "Item approved and is now live." });
     } catch (error) {
@@ -261,6 +263,7 @@ exports.rejectItem = async (req,res) => {
         if (item.reportedBy && item.reportedBy.email) {
             const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(item.reportedBy.email, "Item", item.shortTitle, feedback, item.hasResubmitted);
+            await createNotification(item.reportedBy._id, 'SYSTEM', 'Item Rejected', `Your found item report for ${item.shortTitle} was rejected. Reason: ${feedback}`, item._id);
         }
         return res.status(200).json({ message: "Item rejected and user notified." });
     } catch (error) {
@@ -270,7 +273,7 @@ exports.rejectItem = async (req,res) => {
 
 exports.approveClaim = async (req,res)=>{
     try {
-        const claim = await claimModel.findById(req.params.id).populate("claimantId");
+        const claim = await claimModel.findById(req.params.id).populate("claimantId").populate("itemId");
         if(!claim){
             return res.status(404).json({ error: "Claim not found" });
         }
@@ -282,7 +285,8 @@ exports.approveClaim = async (req,res)=>{
         })
         if (claim.claimantId && claim.claimantId.email) {
             const { sendApprovalEmail } = require('../utils/emailUtils');
-            await sendApprovalEmail(claim.claimantId.email, "Claim");
+            await sendApprovalEmail(claim.claimantId.email, "Claim", claim.itemId?.shortTitle || "Item");
+            await createNotification(claim.claimantId._id, 'CLAIM_VERDICT', 'Claim Approved', `Your claim for ${claim.itemId?.shortTitle || "Item"} has been approved! Proceed to pay the escrow reward.`, claim.itemId._id);
         }
         return res.status(200).json({ message: "Claim approved and is now live." });
     } catch (error) {
@@ -309,6 +313,7 @@ exports.rejectClaim = async (req,res)=>{
         if (claim.claimantId && claim.claimantId.email) {
             const { sendRejectionEmail } = require('../utils/emailUtils');
             await sendRejectionEmail(claim.claimantId.email, "Claim", claim.itemId?.shortTitle || "Item", feedback, claim.hasResubmitted);
+            await createNotification(claim.claimantId._id, 'CLAIM_VERDICT', 'Claim Rejected', `Your claim for ${claim.itemId?.shortTitle || "Item"} was rejected. Reason: ${feedback}`, claim.itemId._id);
         }
         return res.status(200).json({ message: "Claim rejected and user notified." });
     } catch (error) {

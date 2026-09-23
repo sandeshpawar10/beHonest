@@ -226,25 +226,37 @@ function AdminPage() {
               <p>No items pending review.</p>
             </div>
           ) : (
-            <div className={styles.disputesList}>
+            <div className={styles.disputesList} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
               {pendingItems.map((item, index) => (
-                <div key={index} className={styles.disputeCard}>
-                  <div className={styles.disputeHeader}>
-                    <h3>{item.shortTitle}</h3>
-                    <span className={styles.rewardBadge}>{item.category}</span>
+                <div key={index} className={styles.disputeCard} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className={styles.disputeHeader} style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#333' }}>{item.shortTitle}</h3>
+                    <span className={styles.rewardBadge} style={{ fontSize: '0.8rem', padding: '4px 8px' }}>{item.category}</span>
                   </div>
-                  <div style={{ padding: '0 1rem' }}>
-                    <p><strong>Finder:</strong> {item.reportedBy?.username || item.reportedBy?.email}</p>
-                    <p><strong>Description:</strong> {item.description}</p>
-                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '8px 0' }}>
+                  
+                  <div style={{ padding: '1rem', flexGrow: 1 }}>
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px' }}>
                       {item.images?.map((img, i) => (
-                        <img key={i} src={img} alt="Item proof" style={{ height: '100px', borderRadius: '8px', objectFit: 'cover' }} />
+                        <img key={i} src={img} alt="Item proof" style={{ height: '120px', width: 'auto', borderRadius: '8px', objectFit: 'cover', border: '1px solid #eee' }} />
                       ))}
                     </div>
+                    
+                    <div style={{ fontSize: '0.9rem', color: '#555', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <p style={{ margin: 0 }}><strong>📅 Date:</strong> {new Date(item.dateFound || item.createdAt || Date.now()).toLocaleString()}</p>
+                      <p style={{ margin: 0 }}><strong>👤 Finder:</strong> {item.reportedBy?.username || item.reportedBy?.email}</p>
+                      <p style={{ margin: 0 }}><strong>📍 Public Location:</strong> {item.location}</p>
+                      {item.exactLocation && (
+                        <p style={{ margin: 0, color: '#d9534f' }}><strong>🕵️ Exact Location (Hidden):</strong> {item.exactLocation}</p>
+                      )}
+                      <div style={{ marginTop: '5px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e9e9e9' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>Description:</strong> {item.description}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className={styles.disputeActions}>
-                    <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)}>✅ Approve</button>
-                    <button className={styles.refundBtn} onClick={() => openRejectItemModal(item._id)}>❌ Reject</button>
+                  
+                  <div className={styles.disputeActions} style={{ padding: '15px', borderTop: '1px solid #eee', marginTop: 'auto' }}>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveItem(item._id)} style={{ flex: 1, padding: '10px' }}>✅ Approve</button>
+                    <button className={styles.refundBtn} onClick={() => openRejectItemModal(item._id)} style={{ flex: 1, padding: '10px' }}>❌ Reject</button>
                   </div>
                 </div>
               ))}
@@ -261,33 +273,48 @@ function AdminPage() {
               <p>No claims pending review.</p>
             </div>
           ) : (
-            <div className={styles.disputesList}>
+            <div className={styles.disputesList} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
               {pendingClaims.map((claim, index) => (
-                <div key={index} className={styles.disputeCard}>
-                  <div className={styles.disputeHeader}>
-                    <h3>Claim for: {claim.itemId?.shortTitle}</h3>
+                <div key={index} className={styles.disputeCard} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className={styles.disputeHeader} style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>Claim for: {claim.itemId?.shortTitle}</h3>
+                    <span className={styles.rewardBadge} style={{ fontSize: '0.8rem', padding: '4px 8px', backgroundColor: '#eef2ff', color: '#4f46e5' }}>Claim</span>
                   </div>
-                  <div style={{ padding: '0 1rem' }}>
-                    <p><strong>Owner:</strong> {claim.claimantId?.username || claim.claimantId?.email}</p>
-                    <p><strong>Secret Guess:</strong> {claim.secretGuess}</p>
+                  
+                  <div style={{ padding: '1rem', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}><strong>📅 Date:</strong> {new Date(claim.createdAt || Date.now()).toLocaleString()}</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}><strong>👤 Owner:</strong> {claim.claimantId?.username || claim.claimantId?.email}</p>
+                    
+                    <div style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '6px', border: '1px solid #ffeeba', fontSize: '0.9rem' }}>
+                      <strong style={{ color: '#856404' }}>Secret Guess:</strong>
+                      <p style={{ margin: '5px 0 0 0', color: '#333' }}>{claim.secretGuess}</p>
+                    </div>
+
                     {claim.proofImage && (
                       <div style={{ marginTop: '8px' }}>
-                        <p><strong>Proof Photo:</strong></p>
-                        <img src={claim.proofImage} alt="Owner Proof" style={{ height: '150px', borderRadius: '8px', objectFit: 'cover' }} />
+                        <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', fontWeight: 'bold', color: '#555' }}>📸 Proof Photo:</p>
+                        <img src={claim.proofImage} alt="Owner Proof" style={{ height: '150px', width: '100%', borderRadius: '8px', objectFit: 'contain', backgroundColor: '#f5f5f5', border: '1px solid #eee' }} />
                       </div>
                     )}
-                    <details style={{ marginTop: '10px' }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>View Interview Transcript</summary>
-                      <div style={{ background: '#f5f5f5', padding: '10px', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                    
+                    <details style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 'bold', padding: '10px', backgroundColor: '#f8f9fa', fontSize: '0.9rem', userSelect: 'none' }}>
+                        💬 View AI Interview Transcript
+                      </summary>
+                      <div style={{ background: '#fff', padding: '12px', maxHeight: '250px', overflowY: 'auto', fontSize: '0.85rem' }}>
                         {claim.answers?.map((msg, i) => (
-                          <p key={i}><strong>{msg.role}:</strong> {msg.text}</p>
+                          <div key={i} style={{ marginBottom: '8px', padding: '8px', backgroundColor: msg.role === 'ai' ? '#f0f7ff' : '#f5f5f5', borderRadius: '6px' }}>
+                            <strong style={{ color: msg.role === 'ai' ? '#0066cc' : '#333' }}>{msg.role === 'ai' ? '🤖 AI' : '👤 Owner'}:</strong> 
+                            <span style={{ marginLeft: '6px' }}>{msg.text}</span>
+                          </div>
                         ))}
                       </div>
                     </details>
                   </div>
-                  <div className={styles.disputeActions}>
-                    <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)}>✅ Approve</button>
-                    <button className={styles.refundBtn} onClick={() => openRejectClaimModal(claim._id)}>❌ Reject</button>
+                  
+                  <div className={styles.disputeActions} style={{ padding: '15px', borderTop: '1px solid #eee', marginTop: 'auto' }}>
+                    <button className={styles.resolveBtn} onClick={() => handleApproveClaim(claim._id)} style={{ flex: 1, padding: '10px' }}>✅ Approve</button>
+                    <button className={styles.refundBtn} onClick={() => openRejectClaimModal(claim._id)} style={{ flex: 1, padding: '10px' }}>❌ Reject</button>
                   </div>
                 </div>
               ))}

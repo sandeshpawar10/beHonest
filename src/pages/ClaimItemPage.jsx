@@ -197,7 +197,16 @@ function ClaimItemPage() {
             message: response.message,
             score: response.score || 0
           });
-          setStep('proof');
+          if (response.status === 'reject') {
+            setResult({
+              verdict: response.status,
+              overallScore: response.score || 0,
+              feedback: response.message
+            });
+            setStep('result');
+          } else {
+            setStep('proof');
+          }
           setVerifying(false);
         }, 2000); // Wait 2 seconds so user can read the final message before switching screens
       } else {

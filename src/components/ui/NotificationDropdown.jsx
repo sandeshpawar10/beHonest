@@ -87,11 +87,11 @@ function NotificationDropdown() {
   return (
     <div className={styles.dropdownContainer} ref={dropdownRef}>
       <button 
-        className={styles.bellButton} 
+        className={`${styles.bellButton} ${unreadCount > 0 ? styles.hasUnread : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
       >
-        🔔
+        <div style={{ display: 'inline-block' }}>🔔</div>
         {unreadCount > 0 && (
           <span className={styles.badge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
         )}
