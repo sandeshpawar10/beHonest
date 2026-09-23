@@ -87,13 +87,42 @@ function DashboardPage() {
   const [fetchingItems, setFetchingItems] = useState(false);
   const menuRef = useRef(null);
 
+  const [hasUpdates, setHasUpdates] = useState(false);
+
   useEffect(() => {
-    if (menuOpen && myItems.length === 0 && !fetchingItems) {
-      setFetchingItems(true);
+    const fetchItems = () => {
       fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/my-items`, { credentials: 'include' })
         .then(r => r.json())
-        .then(d => { setMyItems(d.items || []); setFetchingItems(false); })
-        .catch(() => setFetchingItems(false));
+        .then(data => {
+          if (data.items) {
+            setMyItems(prev => {
+              if (prev.length > 0) {
+                const changed = data.items.some(newItem => {
+                  const oldItem = prev.find(i => i._id === newItem._id);
+                  return !oldItem || oldItem.status !== newItem.status;
+                });
+                if (changed && !menuOpen) {
+                  setHasUpdates(true);
+                }
+              }
+              return data.items;
+            });
+          }
+        })
+        .catch(err => console.error("Polling error", err));
+    };
+
+    // Initial fetch to populate immediately, not waiting for menuOpen
+    fetchItems();
+    
+    // Poll every 15 seconds
+    const interval = setInterval(fetchItems, 15000);
+    return () => clearInterval(interval);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      setHasUpdates(false);
     }
   }, [menuOpen]);
 
@@ -154,15 +183,22 @@ function DashboardPage() {
           {/* User Profile Dropdown */}
           <div className={styles.userMenuWrapper} ref={menuRef}>
             <button
-              className={styles.avatar}
+              className={`${styles.avatar} ${hasUpdates ? styles.hasUpdatesPulse : ''}`}
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="User menu"
               aria-expanded={menuOpen}
+              style={{ position: 'relative' }}
             >
               <span className={styles.avatarInitial}>
                 {session?.username ? session.username.charAt(0).toUpperCase() : '?'}
               </span>
               <ChevronDown size={14} className={styles.avatarChevron} />
+              {hasUpdates && (
+                <span style={{ 
+                  position: 'absolute', top: '-2px', right: '-2px', width: '12px', height: '12px', 
+                  backgroundColor: '#ff4757', borderRadius: '50%', border: '2px solid white' 
+                }}></span>
+              )}
             </button>
             
             {menuOpen && (
