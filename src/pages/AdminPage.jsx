@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../../context/SocketContext';
+import { useSocket } from '../context/SocketContext';
 import styles from './AdminPage.module.css';
 
 function AdminPage() {
