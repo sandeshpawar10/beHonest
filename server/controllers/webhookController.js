@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const escrowModel = require("../models/escrowModel");
-const itemModel = require("../models/itemFoundModel");
+const itemModel = require("../models/foundItemModel");
 const userModel = require("../models/userModel");
 const { createNotification } = require("./notificationController");
 
