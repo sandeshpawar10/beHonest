@@ -44,28 +44,37 @@ exports.razorpayWebhook = async (req, res) => {
                     
                     const escrow = await escrowModel.findOne({ razorpayOrderId: orderId });
                     
-                    if (escrow && escrow.status === "payment_pending") {
-                        escrow.status = "pending";
-                        escrow.razorpayPaymentId = paymentEntity.id;
-                        await escrow.save();
-                        
-                        console.log(`[Webhook] Escrow ${escrow._id} marked as pending (paid).`);
+                    if (!escrow) {
+                        console.warn(`[Webhook] No escrow found for order ${orderId}`);
+                        break;
+                    }
 
-                        if (io) {
-                            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
-                            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
-                        }
+                    // Idempotency: if already paid, just log and skip
+                    if (escrow.status !== "payment_pending") {
+                        console.log(`[Webhook] Escrow ${escrow._id} already in status "${escrow.status}", skipping duplicate.`);
+                        break;
+                    }
 
-                        const item = await itemModel.findById(escrow.itemId);
-                        if (item) {
-                            await createNotification(
-                                escrow.finderId,
-                                "GENERAL",
-                                "Reward Deposited! 💰",
-                                `The owner has successfully deposited the reward of ₹${escrow.amount} for your found item: ${item.shortTitle}.`,
-                                `/escrow`
-                            ).catch(err => console.error("Notification error:", err));
-                        }
+                    escrow.status = "pending";
+                    escrow.razorpayPaymentId = paymentEntity.id;
+                    await escrow.save();
+                    
+                    console.log(`[Webhook] Escrow ${escrow._id} marked as pending (paid).`);
+
+                    if (io) {
+                        io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+                        io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+                    }
+
+                    const item = await itemModel.findById(escrow.itemId);
+                    if (item) {
+                        await createNotification(
+                            escrow.finderId,
+                            "GENERAL",
+                            "Reward Deposited! 💰",
+                            `The owner has successfully deposited the reward of ₹${escrow.amount} for your found item: ${item.shortTitle}.`,
+                            `/escrow`
+                        ).catch(err => console.error("Notification error:", err));
                     }
                 }
                 break;
@@ -95,6 +104,20 @@ exports.razorpayWebhook = async (req, res) => {
                 }
                 break;
 
+            case 'refund.created':
+                // Razorpay has started processing the refund
+                if (payload.refund && payload.refund.entity) {
+                    const refundEntity = payload.refund.entity;
+                    const paymentId = refundEntity.payment_id;
+                    
+                    const escrow = await escrowModel.findOne({ razorpayPaymentId: paymentId });
+                    
+                    if (escrow) {
+                        console.log(`[Webhook] Refund initiated for escrow ${escrow._id}. Current status: ${escrow.status}`);
+                    }
+                }
+                break;
+
             case 'refund.processed':
                 if (payload.refund && payload.refund.entity) {
                     const refundEntity = payload.refund.entity;
@@ -102,8 +125,8 @@ exports.razorpayWebhook = async (req, res) => {
                     
                     const escrow = await escrowModel.findOne({ razorpayPaymentId: paymentId });
                     
-                    if (escrow && escrow.status === "disputed") {
-                        // We set to disputed or pending usually before refunding. But let's just make it refunded.
+                    // Accept refund from any non-terminal state (pending, disputed, refunded)
+                    if (escrow && escrow.status !== "released") {
                         escrow.status = "refunded";
                         await escrow.save();
 
@@ -120,8 +143,8 @@ exports.razorpayWebhook = async (req, res) => {
                             await createNotification(
                                 escrow.depositorId,
                                 "GENERAL",
-                                "Refund Processed",
-                                `Your refund of ₹${escrow.amount} for ${item.shortTitle} has been processed successfully.`,
+                                "Refund Processed ✅",
+                                `Your refund of ₹${escrow.amount} for ${item.shortTitle} has been processed successfully by Razorpay.`,
                                 `/escrow`
                             ).catch(err => console.error("Notification error:", err));
                         }
@@ -137,8 +160,26 @@ exports.razorpayWebhook = async (req, res) => {
                     const escrow = await escrowModel.findOne({ razorpayPaymentId: paymentId });
                     
                     if (escrow) {
-                        console.log(`[Webhook] Refund failed for escrow ${escrow._id}.`);
-                        // Keep the status as is or update if necessary. Admin should handle this.
+                        console.error(`[Webhook] Refund FAILED for escrow ${escrow._id}. Admin action required.`);
+                        
+                        // Notify the owner that refund failed
+                        const item = await itemModel.findById(escrow.itemId);
+                        await createNotification(
+                            escrow.depositorId,
+                            "GENERAL",
+                            "Refund Failed ⚠️",
+                            `Your refund of ₹${escrow.amount}${item ? ` for ${item.shortTitle}` : ''} could not be processed. Our team has been notified.`,
+                            `/escrow`
+                        ).catch(err => console.error("Notification error:", err));
+
+                        // Notify admins via socket
+                        if (io) {
+                            io.to("admin_room").emit('admin_alert', { 
+                                type: 'refund_failed', 
+                                escrowId: escrow._id,
+                                amount: escrow.amount 
+                            });
+                        }
                     }
                 }
                 break;
