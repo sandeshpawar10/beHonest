@@ -160,6 +160,9 @@ exports.verifyPayment = async function(req, res) {
             return res.status(400).json({ error: "Payment verification failed. Invalid signature." });
         }
 
+        // Store whether it was already paid to avoid duplicate notifications
+        const wasAlreadyPaid = escrow.status !== "payment_pending";
+
         // Signature is valid, update the escrow
         escrow.status = "pending";
         escrow.razorpayPaymentId = razorpay_payment_id;
@@ -177,22 +180,24 @@ exports.verifyPayment = async function(req, res) {
         res.status(200).json({ message: "Payment verified successfully", escrow });
 
         // 2. Send notifications in the background (Render free tier blocks emails, which causes freezing if awaited)
-        const item = await itemModel.findById(escrow.itemId);
-        const { sendClaimNotification } = require('../utils/emailUtils');
-        const finder = await userModel.findById(escrow.finderId);
-        
-        if(finder){
-            // Do NOT await this, let it fail silently in the background if SMTP is blocked
-            sendClaimNotification(finder.email, item.shortTitle, escrow.amount).catch(err => console.error("Email blocked by Render:", err));
-        }
+        if (!wasAlreadyPaid) {
+            const item = await itemModel.findById(escrow.itemId);
+            const { sendClaimNotification } = require('../utils/emailUtils');
+            const finder = await userModel.findById(escrow.finderId);
+            
+            if(finder){
+                // Do NOT await this, let it fail silently in the background if SMTP is blocked
+                sendClaimNotification(finder.email, item.shortTitle, escrow.amount).catch(err => console.error("Email blocked by Render:", err));
+            }
 
-        createNotification(
-            escrow.finderId,
-            "GENERAL",
-            "Reward Deposited! 💰",
-            `The owner has verified their claim and deposited a reward of ₹${escrow.amount} into escrow for your found item: ${item.shortTitle}. Meet them to complete the handover!`,
-            `/escrow`
-        ).catch(err => console.error("Notification error:", err));
+            createNotification(
+                escrow.finderId,
+                "GENERAL",
+                "Reward Deposited! 💰",
+                `The owner has verified their claim and deposited a reward of ₹${escrow.amount} into escrow for your found item: ${item.shortTitle}. Meet them to complete the handover!`,
+                `/escrow`
+            ).catch(err => console.error("Notification error:", err));
+        }
 
     } catch (error) {
         console.error("Error verifying payment:", error);

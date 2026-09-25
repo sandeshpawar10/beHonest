@@ -9,6 +9,7 @@ const escrowRoute = require("./routes/escrowRoutes")
 const chatRoute = require("./routes/chatRoutes")
 const adminRoute = require('./routes/adminRoutes')
 const notificationRoute = require('./routes/notificationRoutes')
+const webhookRoute = require('./routes/webhookRoutes')
 const cookieParser = require("cookie-parser")
 const { requireCustomHeaderCSRF } = require("./middlewares/csrfMiddleware");
 const https = require('https');
@@ -37,6 +38,10 @@ app.use(
     credentials: true
   })
 );
+
+// Mount webhooks BEFORE body parsers and CSRF so we get the raw body for signature verification
+app.use('/', webhookRoute);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
