@@ -717,12 +717,7 @@ function EscrowPage() {
                   {/* ── Released message ── */}
                   {escrow.status === 'released' && (
                     <div className={styles.finderReleased} style={{ marginTop: '16px' }}>
-                      {escrow.ownerConfirmed && escrow.finderConfirmed 
-                        ? ' Both parties confirmed the exchange. Reward released!'
-                        : activeTab === 'finder' 
-                          ? ` Congratulations! ₹${escrow.amount} has been released to you for honestly returning the item. Thank you for being honest!`
-                          : ` Reward of ₹${escrow.amount} was successfully released to the finder.`}
-                    </div>
+                      {escrow.payoutStatus === 'completed' ? (activeTab === 'finder' ? `? Your reward of ?${escrow.amount} has been transferred to your UPI ID. Check your bank app!` : `? Reward of ?${escrow.amount} was successfully sent to the finder.`) : escrow.ownerConfirmed && escrow.finderConfirmed ? (activeTab === 'finder' ? `? Both parties confirmed! Your reward of ?${escrow.amount} will be transferred to your UPI within 2-3 business days. You'll be notified when the payment is sent.` : `? Both parties confirmed the exchange. The finder's reward of ?${escrow.amount} is being processed.`) : activeTab === 'finder' ? `? ?${escrow.amount} will be transferred to your UPI within 2-3 business days. Thank you for being honest!` : `? Reward of ?${escrow.amount} was released to the finder.`}
                   )}
                 </div>
 

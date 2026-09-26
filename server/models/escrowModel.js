@@ -62,7 +62,15 @@ const escrowSchema = new Schema({
     razorpayOrderId: { type: String, default: null },
     razorpayPaymentId: { type: String, default: null },
     razorpaySignature: { type: String, default: null },
-    finderUpiId: { type: String, default: null }
+    finderUpiId: { type: String, default: null },
+
+    // Payout tracking (admin manually pays the finder)
+    payoutStatus: {
+        type: String,
+        enum: ["not_applicable", "pending", "completed"],
+        default: "not_applicable"
+    },
+    payoutCompletedAt: { type: Date, default: null }
 },
 {
     timestamps: true

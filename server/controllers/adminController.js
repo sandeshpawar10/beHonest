@@ -98,15 +98,16 @@ exports.resolveDispute = async (req, res) => {
 
         if (resolution === "release_to_finder") {
             escrow.status = "released";
+            escrow.payoutStatus = "pending"; // Admin needs to pay finder
             if (item && finder) {
                 const { sendRewardReleasedEmail } = require('../utils/emailUtils');
-                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount, escrow.finderUpiId).catch(console.error);
 
                 await createNotification(
                     finder._id,
                     'REWARD_RELEASED',
-                    'Reward Released by Admin',
-                    `The dispute for ${item.shortTitle} was resolved in your favor. ₹${escrow.amount} has been released to you.`,
+                    'Dispute Resolved in Your Favor! 🎉',
+                    `The dispute for ${item.shortTitle} was resolved in your favor. ₹${escrow.amount} will be transferred to your UPI within 2-3 business days.`,
                     escrow._id
                 );
             }
@@ -122,8 +123,8 @@ exports.resolveDispute = async (req, res) => {
                 await createNotification(
                     owner._id,
                     'REFUND',
-                    'Refund Issued by Admin',
-                    `The dispute for ${item.shortTitle} was resolved in your favor. ₹${escrow.amount} has been refunded to you.`,
+                    'Dispute Resolved — Refund Initiated',
+                    `The dispute for ${item.shortTitle} was resolved in your favor. Your refund of ₹${escrow.amount} has been initiated and may take 5-7 business days to reflect in your account.`,
                     escrow._id
                 );
             }
@@ -364,6 +365,97 @@ exports.getPendingClaims = async function(req, res) {
         return res.status(200).json({ claims });
     } catch (err) {
         console.error("Error fetching pending claims:", err);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
+// ── Payouts: Get all escrows that need manual payout ──
+exports.getPendingPayouts = async function(req, res) {
+    try {
+        const payouts = await escrowModel.find({ 
+            status: "released", 
+            payoutStatus: "pending" 
+        })
+            .populate("itemId", "shortTitle")
+            .populate("depositorId", "email username")
+            .populate("finderId", "email username")
+            .sort({ updatedAt: 1 }); // oldest first so admin pays in order
+
+        // Also get recently completed payouts for reference
+        const completedPayouts = await escrowModel.find({
+            payoutStatus: "completed"
+        })
+            .populate("itemId", "shortTitle")
+            .populate("finderId", "email username")
+            .sort({ payoutCompletedAt: -1 })
+            .limit(20);
+
+        return res.status(200).json({ 
+            status: "success", 
+            pendingPayouts: payouts,
+            completedPayouts 
+        });
+    } catch (err) {
+        console.error("Error fetching pending payouts:", err);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
+// ── Payouts: Mark a payout as completed ──
+exports.markPayoutComplete = async function(req, res) {
+    try {
+        const { escrowId } = req.params;
+
+        const escrow = await escrowModel.findById(escrowId)
+            .populate("itemId", "shortTitle")
+            .populate("finderId", "email username");
+
+        if (!escrow) {
+            return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        if (escrow.payoutStatus !== "pending") {
+            return res.status(400).json({ error: `Payout is not pending. Current status: ${escrow.payoutStatus}` });
+        }
+
+        escrow.payoutStatus = "completed";
+        escrow.payoutCompletedAt = new Date();
+        await escrow.save();
+
+        // Notify the finder that their reward has been sent
+        if (escrow.finderId) {
+            const finderName = escrow.finderId.username || "Finder";
+            const finderEmail = escrow.finderId.email;
+            const itemTitle = escrow.itemId?.shortTitle || "item";
+
+            // Send Email
+            if (finderEmail) {
+                const { sendPayoutCompleteEmail } = require('../utils/emailUtils');
+                sendPayoutCompleteEmail(finderEmail, itemTitle, escrow.amount, escrow.finderUpiId).catch(console.error);
+            }
+
+            await createNotification(
+                escrow.finderId._id,
+                "REWARD_RELEASED",
+                "Reward Sent to Your Account! 🎉",
+                `Your reward of ₹${escrow.amount} for returning "${itemTitle}" has been transferred to your UPI ID (${escrow.finderUpiId}). Thank you for being honest!`,
+                `/escrow`
+            ).catch(err => console.error("Notification error:", err));
+
+            // Real-time socket notification
+            const io = req.app.get('io');
+            if (io) {
+                io.to(escrow.finderId._id.toString()).emit('escrow_updated', { escrowId: escrow._id });
+                io.to(escrow.finderId._id.toString()).emit('new_notification');
+            }
+        }
+
+        return res.status(200).json({ 
+            status: "success", 
+            message: "Payout marked as completed. Finder has been notified." 
+        });
+    } catch (err) {
+        console.error("Error marking payout complete:", err);
         return res.status(500).json({ error: "Server error" });
     }
 };

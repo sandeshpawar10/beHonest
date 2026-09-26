@@ -182,18 +182,24 @@ exports.sendDisputeEmail = async function(email, itemTitle, disputeReason) {
 exports.sendRefundEmail = async function(email, itemTitle, amount) {
     return sendEmail({
         to: email,
-        subject: `💸 Refund Processed for ${itemTitle}`,
+        subject: `↩️ Refund Initiated for ${itemTitle}`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
                 <div style="text-align: center; margin-bottom: 10px;">
                     <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
                 </div>
                 
-                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Refund Successful</h2>
+                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Refund Initiated</h2>
                 <p style="font-size: 16px; color: #333;">Hello,</p>
-                <p style="font-size: 16px; color: #333;">Your escrow deposit of ₹${amount} for the item <b>${itemTitle}</b> has been successfully refunded.</p>
+                <p style="font-size: 16px; color: #333;">Your escrow deposit of <b>₹${amount}</b> for the item <b>${itemTitle}</b> has been initiated for refund.</p>
+                
+                <div style="background-color: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #1565c0; font-size: 14px;"><b>⏳ Refund Timeline:</b></p>
+                    <p style="margin: 5px 0 0 0; color: #1565c0; font-size: 15px;">The refund of <b>₹${amount}</b> may take <b>5-7 business days</b> to reflect in your account, depending on your bank and payment method.</p>
+                </div>
+
                 <p style="font-size: 14px; color: #666; text-align: center;">
-                    The amount should reflect in your account shortly depending on your payment provider. If you have any issues, please contact our support team.
+                    If you don't see the refund after 7 business days, please contact our support team.
                 </p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="font-size: 12px; color: #aaa; text-align: center;">
@@ -204,23 +210,31 @@ exports.sendRefundEmail = async function(email, itemTitle, amount) {
     });
 };
 
-// ── Reward Released Email ───────────────────────────────────
-exports.sendRewardReleasedEmail = async function(email, itemTitle, amount) {
+// ── Reward Released Email (handover confirmed — payout in 2-3 days) ─────
+exports.sendRewardReleasedEmail = async function(email, itemTitle, amount, upiId) {
     return sendEmail({
         to: email,
-        subject: `🎉 Reward Released! You've received ₹${amount}`,
+        subject: `🎉 Handover Confirmed! ₹${amount} will be transferred to you soon`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
                 <div style="text-align: center; margin-bottom: 10px;">
                     <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
                 </div>
                 
-                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Money Sent!</h2>
+                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Handover Confirmed!</h2>
                 <p style="font-size: 16px; color: #333;">Hello,</p>
-                <p style="font-size: 16px; color: #333;">Both you and the owner have confirmed the handover for <b>${itemTitle}</b>.</p>
-                <p style="font-size: 16px; color: #333;">The escrow reward of <b>₹${amount}</b> has been officially released to your account!</p>
-                <p style="font-size: 14px; color: #666; text-align: center;">
-                    Thank you for your honesty and for making the campus a better place. The money should reflect in your registered payment method shortly.
+                <p style="font-size: 16px; color: #333;">Both you and the owner have confirmed the handover for <b>${itemTitle}</b>. Thank you for being honest! 🙌</p>
+                
+                <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #856404; font-size: 14px;"><b>💰 Reward Details:</b></p>
+                    <p style="margin: 5px 0 0 0; color: #856404; font-size: 15px;">Amount: <b>₹${amount}</b></p>
+                    ${upiId ? `<p style="margin: 5px 0 0 0; color: #856404; font-size: 15px;">UPI ID: <b>${upiId}</b></p>` : ''}
+                    <p style="margin: 10px 0 0 0; color: #856404; font-size: 15px;">⏳ <b>Expected transfer: within 2-3 business days</b></p>
+                </div>
+
+                <p style="font-size: 16px; color: #333;">The payment is being processed through our payment gateway. Once the settlement is complete, the reward will be transferred directly to your UPI ID. You'll receive another email when the money is sent.</p>
+                <p style="font-size: 14px; color: #666; text-align: center; margin-top: 20px;">
+                    Keep being awesome! The world needs more honest people like you. 🏅
                 </p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="font-size: 12px; color: #aaa; text-align: center;">
@@ -325,6 +339,40 @@ exports.sendRejectionEmail = async function(email, type, itemTitle, adminFeedbac
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="font-size: 12px; color: #aaa; text-align: center;">
                     This is an automated notification.
+                </p>
+            </div>
+        `
+    });
+};
+
+// ── Payout Complete Email (to Finder) ────────────────────────
+exports.sendPayoutCompleteEmail = async function(email, itemTitle, amount, upiId) {
+    return sendEmail({
+        to: email,
+        subject: `💸 Your Reward of ₹${amount} Has Been Transferred!`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #f9f9f9;">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <img src="https://behonest-xi.vercel.app/logo.png" alt="beHonest Logo" style="height: 80px; width: auto;" />
+                </div>
+                
+                <h2 style="color: #110eb98f; text-align: center; margin-bottom: 20px;">Reward Transferred!</h2>
+                <p style="font-size: 16px; color: #333;">Hello,</p>
+                <p style="font-size: 16px; color: #333;">Great news! The admin has successfully processed your reward for returning <b>${itemTitle}</b>.</p>
+                
+                <div style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4caf50; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #2e7d32; font-size: 14px;"><b>Transfer Details:</b></p>
+                    <p style="margin: 5px 0 0 0; color: #2e7d32; font-size: 15px;">Amount: <b>₹${amount}</b></p>
+                    <p style="margin: 5px 0 0 0; color: #2e7d32; font-size: 15px;">Sent to UPI: <b>${upiId}</b></p>
+                </div>
+
+                <p style="font-size: 16px; color: #333;">Please check your bank account or UPI app to confirm receipt. It may take a few minutes for the SMS notification from your bank to arrive.</p>
+                <p style="font-size: 14px; color: #666; text-align: center; margin-top: 20px;">
+                    Thank you again for your honesty! 🏅
+                </p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="font-size: 12px; color: #aaa; text-align: center;">
+                    This is an automated notification. Please do not reply to this email.
                 </p>
             </div>
         `

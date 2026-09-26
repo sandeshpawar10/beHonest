@@ -28,4 +28,6 @@ router.put("/api/admin/item/:id/approve", verifyAdmin, adminController.approveIt
 router.put("/api/admin/item/:id/reject", verifyAdmin, adminController.rejectItem);
 router.put("/api/admin/claim/:id/approve", verifyAdmin, adminController.approveClaim);
 router.put("/api/admin/claim/:id/reject", verifyAdmin, adminController.rejectClaim);
+router.get("/api/admin/pending-payouts", verifyAdmin, adminController.getPendingPayouts);
+router.post("/api/admin/mark-payout-complete/:escrowId", verifyAdmin, adminController.markPayoutComplete);
 module.exports = router;

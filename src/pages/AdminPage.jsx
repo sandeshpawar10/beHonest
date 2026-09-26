@@ -11,6 +11,10 @@ function AdminPage() {
   const [disputes, setDisputes] = useState([]);
   const [pendingItems, setPendingItems] = useState([]);
   const [pendingClaims, setPendingClaims] = useState([]);
+  const [pendingPayouts, setPendingPayouts] = useState([]);
+  const [completedPayouts, setCompletedPayouts] = useState([]);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [markingPayoutId, setMarkingPayoutId] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Modal state
@@ -56,6 +60,13 @@ function AdminPage() {
       if (claimsRes.ok) {
         const d = await claimsRes.json();
         setPendingClaims(d.claims || []);
+      }
+
+      const payoutsRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/pending-payouts`, { method: 'GET', credentials: 'include' });
+      if (payoutsRes.ok) {
+        const d = await payoutsRes.json();
+        setPendingPayouts(d.pendingPayouts || []);
+        setCompletedPayouts(d.completedPayouts || []);
       }
     } catch (err) {
       console.error('Failed to fetch admin data:', err);
@@ -197,6 +208,31 @@ function AdminPage() {
     }
   };
 
+  const handleMarkPayout = async (escrowId) => {
+    if (!window.confirm('Have you sent the UPI payment to the finder? This will notify them that payment is complete.')) return;
+    setMarkingPayoutId(escrowId);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/mark-payout-complete/${escrowId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        fetchAdminData();
+      } else {
+        console.error('Failed to mark payout');
+      }
+    } catch (err) {
+      console.error('Error marking payout:', err);
+    } finally {
+      setMarkingPayoutId(null);
+    }
+  };
+
+  const generateUpiLink = (upiId, amount, finderName, itemTitle) => {
+    const note = `beHonest reward for ${itemTitle || 'item'}`;
+    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(finderName || 'Finder')}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+  };
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -244,8 +280,155 @@ function AdminPage() {
             <span className={styles.statValue}>{stats.totalDisputes}</span>
             <span className={styles.statLabel}>Active Disputes</span>
           </div>
+          <div className={styles.statCard} onClick={() => setActiveTab('payouts')} style={{ cursor: 'pointer', border: pendingPayouts.length > 0 ? '2px solid #ff6b6b' : undefined }}>
+            <span className={styles.statIcon}>💸</span>
+            <span className={styles.statValue}>{pendingPayouts.length}</span>
+            <span className={styles.statLabel}>Pending Payouts</span>
+          </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className={styles.tabNav}>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            📋 Overview
+          </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'payouts' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('payouts')}
+          >
+            💸 Payouts {pendingPayouts.length > 0 && <span className={styles.tabBadge}>{pendingPayouts.length}</span>}
+          </button>
+        </div>
+
+        {/* ═══════════ PAYOUTS TAB ═══════════ */}
+        {activeTab === 'payouts' && (
+          <div className={styles.disputesSection} style={{ marginTop: '2rem' }}>
+            <h2 className={styles.sectionTitle}>Pending Payouts</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+              These finders have completed their handovers and are waiting for their reward. Open this page on your <strong>phone</strong> and tap "Pay via UPI" to auto-fill GPay/PhonePe.
+            </p>
+
+            {pendingPayouts.length === 0 ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>✅</span>
+                <p>No pending payouts. All finders have been paid!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {pendingPayouts.map((payout) => {
+                  const finderName = payout.finderId?.username || 'Unknown';
+                  const finderEmail = payout.finderId?.email || '';
+                  const itemTitle = payout.itemId?.shortTitle || 'Unknown Item';
+                  const upiId = payout.finderUpiId || 'N/A';
+                  const amount = payout.amount || 0;
+                  const createdDate = new Date(payout.createdAt);
+                  const settlementDate = new Date(createdDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+                  const now = new Date();
+                  const isSettled = now >= settlementDate;
+
+                  return (
+                    <div key={payout._id} className={styles.disputeCard} style={{ padding: 0, overflow: 'hidden' }}>
+                      {/* Card Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '1.15rem' }}>{itemTitle}</h3>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Handover confirmed {new Date(payout.updatedAt).toLocaleDateString()}</span>
+                        </div>
+                        <span className={styles.rewardBadge} style={{ fontSize: '1.3rem', fontWeight: 800 }}>₹{amount}</span>
+                      </div>
+
+                      {/* Card Body */}
+                      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className={styles.infoBox}>
+                            <span className={styles.infoLabel}>Finder</span>
+                            <p className={styles.infoValue}>{finderName}</p>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{finderEmail}</span>
+                          </div>
+                          <div className={styles.infoBox}>
+                            <span className={styles.infoLabel}>UPI ID</span>
+                            <p className={styles.infoValue} style={{ wordBreak: 'break-all', fontSize: '1rem' }}>{upiId}</p>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(upiId); }}
+                              style={{ background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}
+                            >
+                              📋 Copy UPI ID
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Settlement Status */}
+                        <div style={{ 
+                          padding: '10px 14px', 
+                          borderRadius: '8px', 
+                          background: isSettled ? 'rgba(0, 255, 136, 0.08)' : 'rgba(255, 179, 71, 0.08)',
+                          border: `1px solid ${isSettled ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 179, 71, 0.3)'}`,
+                          fontSize: '0.9rem'
+                        }}>
+                          {isSettled ? (
+                            <span>✅ <strong>Razorpay has settled this payment.</strong> You can safely pay the finder now.</span>
+                          ) : (
+                            <span>⏳ <strong>Settlement expected:</strong> {settlementDate.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} (T+2 from payment)</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Actions */}
+                      <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
+                        <a
+                          href={generateUpiLink(upiId, amount, finderName, itemTitle)}
+                          className={styles.resolveBtn}
+                          style={{ flex: 1, textDecoration: 'none', textAlign: 'center', padding: '12px' }}
+                        >
+                          📱 Pay via UPI
+                        </a>
+                        <button
+                          className={styles.refundBtn}
+                          style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                          onClick={() => handleMarkPayout(payout._id)}
+                          disabled={markingPayoutId === payout._id}
+                        >
+                          {markingPayoutId === payout._id ? <><div className={styles.buttonSpinner}></div> Saving...</> : '✅ Mark as Paid'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Completed Payouts History */}
+            {completedPayouts.length > 0 && (
+              <div style={{ marginTop: '3rem' }}>
+                <h2 className={styles.sectionTitle}>Recently Completed Payouts</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {completedPayouts.map((p) => (
+                    <div key={p._id} style={{ 
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: '10px',
+                      border: '1px solid var(--border)', fontSize: '0.9rem'
+                    }}>
+                      <div>
+                        <strong>{p.itemId?.shortTitle || 'Item'}</strong>
+                        <span style={{ color: 'var(--text-secondary)', marginLeft: '8px' }}>→ {p.finderId?.username || 'Finder'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontWeight: 700 }}>₹{p.amount}</span>
+                        <span style={{ color: 'var(--color-success)', fontSize: '0.8rem' }}>✅ Paid {new Date(p.payoutCompletedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════ OVERVIEW TAB ═══════════ */}
+        {activeTab === 'overview' && (<>
         {/* Pending Items Section */}
         <div className={styles.disputesSection} style={{ marginTop: '2rem' }}>
           <h2 className={styles.sectionTitle}>Pending Items (Found Reports)</h2>
@@ -430,6 +613,7 @@ function AdminPage() {
             </div>
           )}
         </div>
+        </>)}
       </main>
 
       {/* Confirmation Modal */}

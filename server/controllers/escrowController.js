@@ -308,8 +308,9 @@ exports.confirmHandover = async function(req, res) {
             escrow.status = "released";
             bothConfirmed = true;
 
-            // Log payout details (manual payout for now — Razorpay RazorpayX requires separate KYC)
+            // Mark payout as pending so admin dashboard picks it up
             if (escrow.finderUpiId) {
+                escrow.payoutStatus = "pending";
                 console.log(`[PAYOUT] Reward of ₹${escrow.amount} should be sent to UPI: ${escrow.finderUpiId} (Finder: ${escrow.finderId})`);
             }
 
@@ -319,13 +320,13 @@ exports.confirmHandover = async function(req, res) {
             if (item && finder) {
                 const { sendRewardReleasedEmail } = require('../utils/emailUtils');
                 // send the email asynchronously so we don't block
-                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount).catch(console.error);
+                sendRewardReleasedEmail(finder.email, item.shortTitle, escrow.amount, escrow.finderUpiId).catch(console.error);
 
                 await createNotification(
                     finder._id,
                     'REWARD_RELEASED',
-                    'Reward Released!',
-                    `Both you and the owner confirmed the handover for ${item.shortTitle}. ₹${escrow.amount} has been released!`,
+                    'Handover Confirmed! 🎉',
+                    `Both you and the owner confirmed the handover for ${item.shortTitle}. Your reward of ₹${escrow.amount} will be transferred to your UPI within 2-3 business days.`,
                     escrow._id
                 );
             }
