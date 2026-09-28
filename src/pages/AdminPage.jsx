@@ -37,7 +37,7 @@ function AdminPage() {
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();
-        setStats(statsData);
+        setStats(statsData.stats || { totalUsers: 0, totalItems: 0, totalEscrows: 0, totalDisputes: 0 });
       }
 
       const disputesRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/disputes`, {
