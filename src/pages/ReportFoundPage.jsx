@@ -513,7 +513,7 @@ function ReportFoundPage() {
               disabled={loading}
             >
               {loading
-                ? <><ButtonSpinner /> Scanning item...</>
+                ? <><ButtonSpinner /> Submitting Report...</>
                 : '🚀 Submit Found Item Report'
               }
             </button>
