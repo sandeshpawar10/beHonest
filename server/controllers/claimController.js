@@ -32,19 +32,36 @@ exports.evaluateClaim = async function(req, res) {
         }
 
         // Verify the item exists
-        const item = await itemModel.findById(itemId);
+        const item = await itemModel.findById(itemId).populate("reportedBy", "email");
         if (!item) {
             return res.status(404).json({ error: "Item not found." });
         }
 
-        // Prevent claiming your own item
-        if (item.reportedBy.toString() === req.user._id.toString()) {
+        // ── Authorization Rule 1: Prevent self-claim ──
+        if (item.reportedBy._id.toString() === req.user._id.toString()) {
             return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
         }
 
-        // Prevent claiming an item that is already claimed
-        if (item.status === 'claimed') {
-            return res.status(400).json({ error: "This item has already been claimed and verified." });
+        // ── Authorization Rule 2: Same college check ──
+        const claimantDomain = (req.user.email || "").split("@")[1]?.toLowerCase();
+        const reporterDomain = (item.reportedBy.email || "").split("@")[1]?.toLowerCase();
+        if (!claimantDomain || !reporterDomain || claimantDomain !== reporterDomain) {
+            return res.status(403).json({ error: "You can only claim items from your own college." });
+        }
+
+        // ── Authorization Rule 3: Item must be in 'found' status ──
+        if (item.status !== 'found') {
+            return res.status(400).json({ error: `This item is not available for claiming (status: ${item.status}).` });
+        }
+
+        // ── Authorization Rule 4: Prevent duplicate active claims ──
+        const existingClaim = await claimModel.findOne({
+            itemId,
+            claimantId: req.user._id,
+            verdict: { $in: ["pending_admin_review", "needs_review", "verified"] }
+        });
+        if (existingClaim) {
+            return res.status(409).json({ error: "You already have an active claim on this item." });
         }
 
         // Upload proofImage to Cloudinary if it's a base64 string
@@ -120,13 +137,36 @@ exports.finalizeClaim = async function(req, res) {
             return res.status(401).json({ error: "Unauthorized. You must be logged in." });
         }
 
-        const item = await itemModel.findById(itemId);
+        const item = await itemModel.findById(itemId).populate("reportedBy", "email");
         if (!item) {
             return res.status(404).json({ error: "Item not found." });
         }
 
-        if (item.status === 'claimed') {
-            return res.status(400).json({ error: "This item has already been claimed and verified." });
+        // ── Authorization Rule 1: Prevent self-claim ──
+        if (item.reportedBy._id.toString() === req.user._id.toString()) {
+            return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
+        }
+
+        // ── Authorization Rule 2: Same college check ──
+        const claimantDomain = (req.user.email || "").split("@")[1]?.toLowerCase();
+        const reporterDomain = (item.reportedBy.email || "").split("@")[1]?.toLowerCase();
+        if (!claimantDomain || !reporterDomain || claimantDomain !== reporterDomain) {
+            return res.status(403).json({ error: "You can only claim items from your own college." });
+        }
+
+        // ── Authorization Rule 3: Item must be in 'found' status ──
+        if (item.status !== 'found') {
+            return res.status(400).json({ error: `This item is not available for claiming (status: ${item.status}).` });
+        }
+
+        // ── Authorization Rule 4: Prevent duplicate active claims ──
+        const existingClaim = await claimModel.findOne({
+            itemId,
+            claimantId: req.user._id,
+            verdict: { $in: ["pending_admin_review", "needs_review", "verified"] }
+        });
+        if (existingClaim) {
+            return res.status(409).json({ error: "You already have an active claim on this item." });
         }
 
         // Upload proofImage to Cloudinary if provided
