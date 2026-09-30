@@ -19,6 +19,7 @@ import BlurRegionSelector from '../components/ui/BlurRegionSelector';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 
 import { generateImageFingerprint } from '../utils/imageFingerprint';
+import { compressImage } from '../utils/imageCompressor';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './ReportFoundPage.module.css';
 
@@ -51,36 +52,35 @@ function ReportFoundPage() {
      Reads the file and converts it to a base64 string so we
      can store it easily in localStorage.
   */
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    // Reset input early so the user can re-capture if needed
+    e.target.value = '';
     if (!files.length) return;
     
     const remaining = 5 - images.length;
     const toProcess = files.slice(0, remaining);
     
-    toProcess.forEach(file => {
+    setError('');
+    for (const file of toProcess) {
       if (!file.type.startsWith('image/')) {
         setError('Please select an image file (JPG, PNG, etc.)');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image must be smaller than 5MB.');
-        return;
+        continue;
       }
       
-      const reader = new FileReader();
-      reader.onload = (event) => {
+      try {
+        // Automatically compress and resize camera/phone photos
+        // This solves phone camera failures caused by 10MB+ raw files
+        const compressedBase64 = await compressImage(file, 1600, 0.8);
         setImages(prev => {
           if (prev.length >= 5) return prev;
-          return [...prev, event.target.result];
+          return [...prev, compressedBase64];
         });
-      };
-      reader.readAsDataURL(file);
-    });
-    
-    setError('');
-    // Reset input so the same file can be re-selected
-    e.target.value = '';
+      } catch (err) {
+        console.error('Image compression failed:', err);
+        setError('Failed to process image. Please try again.');
+      }
+    }
   };
 
   const removeImage = (indexToRemove) => {
@@ -423,7 +423,6 @@ function ReportFoundPage() {
               type="file"
               accept="image/*"
               capture="environment"
-              multiple
               onChange={handleImageUpload}
               className={styles.hiddenInput}
             />

@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
+import { compressImage } from '../utils/imageCompressor';
 import styles from './ClaimItemPage.module.css';
 
 function ClaimItemPage() {
@@ -495,12 +496,17 @@ function ClaimItemPage() {
                   accept="image/*"
                   capture="environment"
                   className={styles.hiddenInput}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => setProofImageBase64(reader.result);
-                      reader.readAsDataURL(file);
+                      try {
+                        const compressed = await compressImage(file, 1600, 0.8);
+                        setProofImageBase64(compressed);
+                      } catch (err) {
+                        console.error('Failed to compress proof image:', err);
+                        setError('Failed to process image from camera. Please try again.');
+                      }
                     }
                   }}
                 />
@@ -509,12 +515,17 @@ function ClaimItemPage() {
                   type="file"
                   accept="image/*"
                   className={styles.hiddenInput}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => setProofImageBase64(reader.result);
-                      reader.readAsDataURL(file);
+                      try {
+                        const compressed = await compressImage(file, 1600, 0.8);
+                        setProofImageBase64(compressed);
+                      } catch (err) {
+                        console.error('Failed to compress proof image:', err);
+                        setError('Failed to process image. Please try again.');
+                      }
                     }
                   }}
                 />
