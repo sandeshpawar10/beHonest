@@ -3,6 +3,8 @@ const router = express.Router();
 const adminController = require("../controllers/adminController");
 const adminOriginalImagesController = require("../controllers/adminOriginalImagesController");
 const { verifyAdmin } = require("../middlewares/adminMiddleware");
+const { getLegacyItemsCount, getLegacyItemsBreakdown, getLegacyItemsList } = require("../utils/legacyImageChecker");
+const { getAllConnectedSockets, getSocketStats, testRoomAuthorization } = require("../utils/socketTestingUtils");
 const rateLimit = require("express-rate-limit");
 
 // ── Rate Limiter for Admin Login ──
@@ -48,5 +50,60 @@ router.post("/api/admin/mark-payout-complete/:escrowId", verifyAdmin, adminContr
 // View unredacted original images with audit logging
 router.get("/api/admin/item/:itemId/original-images", verifyAdmin, originalImagesLimiter, adminOriginalImagesController.getOriginalImages);
 router.get("/api/admin/item/:itemId/original-images/audit", verifyAdmin, adminOriginalImagesController.getOriginalImageAuditLog);
+
+// ── Legacy Items Management ──
+// Check legacy items for migration planning
+router.get("/api/admin/legacy-items/count", verifyAdmin, async (req, res) => {
+    try {
+        const count = await getLegacyItemsCount();
+        const breakdown = await getLegacyItemsBreakdown();
+        res.json({ count, breakdown });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch legacy items count" });
+    }
+});
+
+router.get("/api/admin/legacy-items/list", verifyAdmin, async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const items = await getLegacyItemsList(limit);
+        res.json({ items, count: items.length });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch legacy items list" });
+    }
+});
+
+// ── Socket.IO Testing & Monitoring ──
+// Admin tools to verify socket connections and authorization
+router.get("/api/admin/socket/stats", verifyAdmin, (req, res) => {
+    try {
+        const io = req.app.get('io');
+        const stats = getSocketStats(io);
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch socket stats" });
+    }
+});
+
+router.get("/api/admin/socket/connections", verifyAdmin, (req, res) => {
+    try {
+        const io = req.app.get('io');
+        const connections = getAllConnectedSockets(io);
+        res.json({ connections, count: connections.length });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch socket connections" });
+    }
+});
+
+router.post("/api/admin/socket/test-authorization", verifyAdmin, async (req, res) => {
+    try {
+        const { userId, roomType, roomId } = req.body;
+        const io = req.app.get('io');
+        const result = await testRoomAuthorization(io, userId, roomType, roomId);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to test authorization" });
+    }
+});
 
 module.exports = router;

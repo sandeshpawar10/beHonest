@@ -148,6 +148,33 @@ server.listen(port, async () => {
     await seedAdmin();
     console.log("server is started")
 
+    // --- Verify Cloudinary Configuration ---
+    const { verifyCloudinaryConfig, testAuthenticatedUpload } = require('./utils/cloudinaryVerification');
+
+    console.log("\n🔍 Verifying Cloudinary configuration...");
+    const cloudinaryCheck = await verifyCloudinaryConfig();
+
+    if (cloudinaryCheck.success) {
+        console.log("✅", cloudinaryCheck.message);
+        if (cloudinaryCheck.warnings.length > 0) {
+            cloudinaryCheck.warnings.forEach(warning => console.warn("⚠️", warning));
+        }
+
+        // Test authenticated upload
+        console.log("🔒 Testing authenticated upload capability...");
+        const authTest = await testAuthenticatedUpload();
+        if (authTest.success) {
+            console.log("✅", authTest.message);
+        } else {
+            console.error("❌", authTest.message);
+            console.error("   This may cause issues with image privacy features.");
+        }
+    } else {
+        console.error("❌", cloudinaryCheck.message);
+        cloudinaryCheck.errors.forEach(error => console.error("   -", error));
+        console.error("⚠️  Image upload features will not work until Cloudinary is configured properly.\n");
+    }
+
     // --- Self-Ping Cron Job for Render Free Tier ---
     // Render free tier spins down the server after 15 minutes of inactivity.
     // This internal interval pings the server's own public URL every 12 minutes to keep it awake.
