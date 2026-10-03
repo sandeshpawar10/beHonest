@@ -79,6 +79,12 @@ const seedAdmin = async () => {
 // --- Socket.io Setup ---
 const http = require('http');
 const { Server } = require('socket.io');
+const {
+    socketAuthMiddleware,
+    authorizeUserRoom,
+    authorizeEscrowRoom,
+    authorizeAdminRoom
+} = require('./middlewares/socketAuthMiddleware');
 
 const server = http.createServer(app);
 
@@ -91,29 +97,50 @@ const io = new Server(server, {
 
 app.set('io', io);
 
+// Apply authentication middleware to all Socket.IO connections
+io.use(socketAuthMiddleware);
+
 io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
+    console.log("Authenticated user connected:", socket.id, "User ID:", socket.user._id);
 
     // Join personal private room (for notifications)
     socket.on("join_user_room", (userId) => {
+        const auth = authorizeUserRoom(socket, userId);
+        if (!auth.authorized) {
+            socket.emit("error", { message: auth.error });
+            console.log(`[BLOCKED] User ${socket.user._id} attempted to join room ${userId}: ${auth.error}`);
+            return;
+        }
         socket.join(userId.toString());
-        console.log(`User ${userId} joined their private room`);
+        console.log(`[AUTHORIZED] User ${socket.user._id} joined their private room ${userId}`);
     });
 
     // Join escrow room (for live chat)
-    socket.on("join_escrow_room", (escrowId) => {
+    socket.on("join_escrow_room", async (escrowId) => {
+        const auth = await authorizeEscrowRoom(socket, escrowId);
+        if (!auth.authorized) {
+            socket.emit("error", { message: auth.error });
+            console.log(`[BLOCKED] User ${socket.user._id} attempted to join escrow ${escrowId}: ${auth.error}`);
+            return;
+        }
         socket.join(escrowId.toString());
-        console.log(`User joined escrow room ${escrowId}`);
+        console.log(`[AUTHORIZED] User ${socket.user._id} joined escrow room ${escrowId}`);
     });
 
     // Join admin room
     socket.on("join_admin_room", () => {
+        const auth = authorizeAdminRoom(socket);
+        if (!auth.authorized) {
+            socket.emit("error", { message: auth.error });
+            console.log(`[BLOCKED] User ${socket.user._id} attempted to join admin_room: ${auth.error}`);
+            return;
+        }
         socket.join("admin_room");
-        console.log("An admin joined the admin_room");
+        console.log(`[AUTHORIZED] Admin ${socket.user._id} joined admin_room`);
     });
 
     socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+        console.log("User disconnected:", socket.id, "User ID:", socket.user._id);
     });
 });
 
