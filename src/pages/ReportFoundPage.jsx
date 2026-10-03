@@ -7,11 +7,11 @@
    1. Select the item category (wallet, watch, phone, etc.)
    2. Write a title and description
    3. Upload a photo of the item
-   4. Use BlurRegionSelector to mark sensitive areas to blur
-   5. Submit → saves the item + blur zones to localStorage
+   4. Use BlurRegionSelector to mark sensitive areas to hide
+   5. Submit → the server permanently redacts photos before publication
    ============================================================ */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { PackageOpen, Camera, ImageIcon, Info, CheckCircle, EyeOff, MapPin, ArrowLeft, Trash2, Plus } from 'lucide-react';
@@ -20,6 +20,7 @@ import { CATEGORY_CONFIG } from '../utils/itemUtils';
 
 import { generateImageFingerprint } from '../utils/imageFingerprint';
 import { compressImage } from '../utils/imageCompressor';
+import { FOUND_IMAGE_TYPES, MAX_FOUND_IMAGES, MAX_ORIGINAL_IMAGE_BYTES, processedImageError, redactionZonesError, foundImagesError } from '../utils/foundImagePrivacy';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
 import styles from './ReportFoundPage.module.css';
 
@@ -38,52 +39,69 @@ function ReportFoundPage() {
   const [secretDetails, setSecretDetails] = useState('');   // hidden identifier
   const [images, setImages] = useState([]);              // array of base64 strings (max 5)
   const [allBlurZones, setAllBlurZones] = useState({});  // { 0: [...zones], 1: [...zones] }
-  const [activeImageIndex, setActiveImageIndex] = useState(0); // which image is being blur-edited
+  const [activeImageIndex, setActiveImageIndex] = useState(0); // which image is being redacted
 
   /* ── UI state ─────────────────────────────────────────── */
-  const [step,    setStep]    = useState(1);     // Current step: 1=Details, 2=Photo, 3=Blur
+  const [step,    setStep]    = useState(1);     // Current step: 1=Details, 2=Photo, 3=Redact
   const [loading, setLoading] = useState(false); // Submit loading spinner
+  const [processingPhotos, setProcessingPhotos] = useState(false);
+  const processingRef = useRef(false);
+  const submittingRef = useRef(false);
   const [error,   setError]   = useState('');    // Validation error message
   const [isSuccess, setIsSuccess] = useState(false); // Success state
 
   /* ──────────────────────────────────────────────────────────
      handleImageUpload()
      Called when the user selects a file from their device.
-     Reads the file and converts it to a base64 string so we
-     can store it easily in localStorage.
+     Processes a complete batch before allowing navigation or submission.
   */
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     // Reset input early so the user can re-capture if needed
     e.target.value = '';
-    if (!files.length) return;
-    
-    const remaining = 5 - images.length;
-    const toProcess = files.slice(0, remaining);
-    
+    if (!files.length || processingRef.current || submittingRef.current) return;
+
+    if (images.length + files.length > MAX_FOUND_IMAGES) {
+      setError(`You can upload at most ${MAX_FOUND_IMAGES} photos. Choose ${MAX_FOUND_IMAGES - images.length} or fewer, or remove an existing photo.`);
+      return;
+    }
+    for (const file of files) {
+      if (!FOUND_IMAGE_TYPES.includes(file.type)) {
+        setError(`${file.name}: Please choose a JPEG, PNG, or WebP photo.`);
+        return;
+      }
+      if (file.size === 0 || file.size > MAX_ORIGINAL_IMAGE_BYTES) {
+        setError(`${file.name}: Choose a non-empty photo no larger than 20 MiB before processing.`);
+        return;
+      }
+    }
+
+    processingRef.current = true;
+    setProcessingPhotos(true);
     setError('');
-    for (const file of toProcess) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file (JPG, PNG, etc.)');
-        continue;
+    try {
+      const processed = [];
+      for (const file of files) {
+        try {
+          const image = await compressImage(file, 1600, 0.8);
+          const validationError = processedImageError(image);
+          if (validationError) throw new Error(validationError);
+          processed.push(image);
+        } catch (err) {
+          throw new Error(`${file.name}: ${err.message || 'Failed to process photo. Please choose another photo.'}`, { cause: err });
+        }
       }
-      
-      try {
-        // Automatically compress and resize camera/phone photos
-        // This solves phone camera failures caused by 10MB+ raw files
-        const compressedBase64 = await compressImage(file, 1600, 0.8);
-        setImages(prev => {
-          if (prev.length >= 5) return prev;
-          return [...prev, compressedBase64];
-        });
-      } catch (err) {
-        console.error('Image compression failed:', err);
-        setError('Failed to process image. Please try again.');
-      }
+      setImages(prev => [...prev, ...processed]);
+    } catch (err) {
+      setError(`No photos from this selection were added. ${err.message}`);
+    } finally {
+      processingRef.current = false;
+      setProcessingPhotos(false);
     }
   };
 
   const removeImage = (indexToRemove) => {
+    if (processingRef.current || submittingRef.current) return;
     setImages(prev => prev.filter((_, i) => i !== indexToRemove));
     setAllBlurZones(prev => {
       const updated = {};
@@ -94,7 +112,15 @@ function ReportFoundPage() {
       });
       return updated;
     });
-    if (activeImageIndex >= images.length - 1) setActiveImageIndex(Math.max(0, images.length - 2));
+    setActiveImageIndex(index => Math.max(0, index > indexToRemove ? index - 1 : Math.min(index, images.length - 2)));
+  };
+
+  const updateZones = (zones) => {
+    if (submittingRef.current) return;
+    const validationError = redactionZonesError(zones);
+    if (validationError) return setError(validationError);
+    setError('');
+    setAllBlurZones(prev => ({ ...prev, [activeImageIndex]: zones }));
   };
 
   /* ──────────────────────────────────────────────────────────
@@ -113,7 +139,8 @@ function ReportFoundPage() {
     }
 
     if (step === 2) {
-      if (images.length === 0) return setError('Please upload a photo of the item.'), false;
+      const validationError = foundImagesError(images, allBlurZones);
+      if (validationError) return setError(validationError), false;
     }
 
     return true; // All good
@@ -123,7 +150,8 @@ function ReportFoundPage() {
      handleNext() / handleBack()
      Move between the 3 steps of the form.
   */
-  const handleNext = async () => {
+  const handleNext = () => {
+    if (processingRef.current || submittingRef.current) return;
     if (validateStep()) {
       setStep(s => s + 1); // Go to next step
       window.scrollTo(0, 0); // Scroll to top
@@ -131,6 +159,7 @@ function ReportFoundPage() {
   };
 
   const handleBack = () => {
+    if (processingRef.current || submittingRef.current) return;
     setStep(s => s - 1);
     setError('');
   };
@@ -138,16 +167,22 @@ function ReportFoundPage() {
   /* ──────────────────────────────────────────────────────────
      handleSubmit()
      Save the item when the user clicks "Submit" on step 3.
-     Now runs fraud detection BEFORE saving!
+     The server validates the photos and permanently redacts marked areas.
   */
   const handleSubmit = async () => {
+    if (processingRef.current || submittingRef.current) return;
+    if (!category || !title.trim() || !description.trim() || !location.trim()) {
+      setError('Please complete the required item details before submitting.');
+      setStep(1);
+      return;
+    }
+    const validationError = foundImagesError(images, allBlurZones);
+    if (validationError) return setError(validationError);
+    submittingRef.current = true;
     setLoading(true);
     setError('');
 
     try {
-      // (AI fraud scan was already completed successfully on Step 2)
-
-      // 4. If clean or low/medium risk, proceed to save the item
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/item/add`, {
         method: 'POST',
         credentials: 'include', // 🔥 CRITICAL: Sends your secure login cookie!
@@ -162,35 +197,34 @@ function ReportFoundPage() {
           exactLocation: exactLocation,
           secretIdentity: secretDetails, // Map React 'secretDetails' to Backend 'secretIdentity'
           secretDetails: secretDetails ? secretDetails.split(',').map(s => s.trim()).filter(Boolean) : [],
-          // We are temporarily sending the raw Base64 string to the DB.
-          // Later, you should upload this to Cloudinary and send the URL instead!
+          // Originals are sent only for server-side processing, never public display.
           images: images, 
           imageFingerprint: generateImageFingerprint(images[0]),
-          blurZones: Object.values(allBlurZones).flat(), // 🔥 CRITICAL: Actually send the blur zones to the DB!
+          allBlurZones: Object.fromEntries(images.map((_, index) => [index, allBlurZones[index] || []]))
         }) 
       });
 
       const data = await response.json();
       
       if (response.ok) {
-        setLoading(false);
         setIsSuccess(true);
       } else {
         let errorMsg = data.error || data.message || "An error occurred";
         setError(errorMsg);
-        setLoading(false);
       }
     } catch (err) {
       console.error(err);
       setError('An error occurred while communicating with the server. Please try again.');
+    } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
   /* ── Helper: get the blur hint for selected category ── */
   const blurHint = category
-    ? CATEGORY_CONFIG[category]?.blurHint
-    : 'Select a category first to get specific blur guidance.';
+    ? CATEGORY_CONFIG[category]?.blurHint?.replace(/^Blur:/, 'Hide:')
+    : 'Select a category first to get specific guidance on what to hide.';
 
   /* ── Render ──────────────────────────────────────────────── */
   if (isSuccess) {
@@ -216,7 +250,7 @@ function ReportFoundPage() {
 
       {/* ── Top bar with back button ── */}
       <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
+        <button className={styles.backBtn} onClick={() => navigate('/dashboard')} disabled={loading || processingPhotos}>
           <ArrowLeft size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Back to Dashboard
         </button>
         <h1 className={styles.pageTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -226,7 +260,7 @@ function ReportFoundPage() {
 
       {/* ── Step progress indicator ── */}
       <div className={styles.steps}>
-        {['Item Details', 'Upload Photo', 'Mark Blur Areas'].map((label, i) => (
+        {['Item Details', 'Upload Photo', 'Hide Private Areas'].map((label, i) => (
           <div key={i} className={styles.stepItem}>
             {/* Circle with step number */}
             <div className={`${styles.stepCircle} ${step > i + 1 ? styles.done : ''} ${step === i + 1 ? styles.active : ''}`}>
@@ -246,7 +280,7 @@ function ReportFoundPage() {
 
         {/* Error message */}
         {error && (
-          <div className={styles.errorAlert}>
+          <div className={styles.errorAlert} role="alert">
             ⚠️ {error}
           </div>
         )}
@@ -378,20 +412,20 @@ function ReportFoundPage() {
           <div className={styles.stepContent}>
             <h2 className={styles.stepHeading}>Upload photos of the item</h2>
             <p className={styles.stepSubtitle}>
-              Take a clear photo. In the next step you'll mark which parts to blur.
+              Take a clear photo. In the next step you'll mark which parts to hide.
             </p>
 
             <div className={styles.photoGrid}>
               {images.map((imgSrc, idx) => (
                 <div key={idx} className={styles.photoThumb}>
                   <img src={imgSrc} alt={`Uploaded ${idx + 1}`} />
-                  <button type="button" className={styles.photoRemoveBtn} onClick={() => removeImage(idx)}>
+                  <button type="button" className={styles.photoRemoveBtn} onClick={() => removeImage(idx)} disabled={processingPhotos || loading} aria-label={`Remove photo ${idx + 1}`}>
                     <Trash2 size={12} />
                   </button>
                 </div>
               ))}
               
-              {images.length < 5 && (
+              {images.length < MAX_FOUND_IMAGES && (
                 <label className={styles.addPhotoCard} htmlFor="gallery-upload">
                   <Plus size={24} />
                   <span style={{ fontSize: '0.8rem' }}>Add Photo</span>
@@ -399,7 +433,7 @@ function ReportFoundPage() {
               )}
             </div>
 
-            {images.length < 5 && (
+            {images.length < MAX_FOUND_IMAGES && (
               <div className={styles.uploadPlaceholder} style={{ padding: '24px', border: '2px dashed var(--border)', borderRadius: '16px' }}>
                 <div className={styles.uploadButtons}>
                   <label className={styles.cameraBtn} htmlFor="camera-upload">
@@ -409,19 +443,20 @@ function ReportFoundPage() {
                     <ImageIcon size={16} /> Choose from Gallery
                   </label>
                 </div>
-                <span className={styles.uploadHint}>JPG, PNG, WEBP — max 5MB</span>
+                <span className={styles.uploadHint}>JPEG, PNG, WebP — up to 5 photos; 20 MiB each before processing, 5 MiB each after processing</span>
               </div>
             )}
 
-            <div className={styles.photoCounter}>
-              {images.length} / 5 photos uploaded
+            <div className={styles.photoCounter} role="status">
+              {processingPhotos ? <><ButtonSpinner /> Processing photos...</> : `${images.length} / ${MAX_FOUND_IMAGES} photos ready`}
             </div>
 
             {/* Hidden file inputs */}
             <input
               id="camera-upload"
               type="file"
-              accept="image/*"
+              accept={FOUND_IMAGE_TYPES.join(',')}
+              disabled={processingPhotos || loading}
               capture="environment"
               onChange={handleImageUpload}
               className={styles.hiddenInput}
@@ -429,7 +464,8 @@ function ReportFoundPage() {
             <input
               id="gallery-upload"
               type="file"
-              accept="image/*"
+              accept={FOUND_IMAGE_TYPES.join(',')}
+              disabled={processingPhotos || loading}
               multiple
               onChange={handleImageUpload}
               className={styles.hiddenInput}
@@ -441,16 +477,16 @@ function ReportFoundPage() {
               <div>
                 <strong>Tip:</strong> Take a photo that shows the item clearly.
                 In the next step, you will mark private areas (like IDs, engravings)
-                to blur them out before the image goes public.
+                for the server to permanently redact before the image goes public.
               </div>
             </div>
           </div>
         )}
 
-        {/* ══════════════ STEP 3: Mark Blur Areas ══════════════ */}
+        {/* ══════════════ STEP 3: Hide Private Areas ══════════════ */}
         {step === 3 && (
           <div className={styles.stepContent}>
-            <h2 className={styles.stepHeading}>Blur sensitive areas</h2>
+            <h2 className={styles.stepHeading}>Hide sensitive areas</h2>
             <p className={styles.stepSubtitle}>
               Publicly hiding private details ensures only the real owner can identify the item.
             </p>
@@ -458,22 +494,27 @@ function ReportFoundPage() {
             {images.length > 1 && (
               <div className={styles.blurTabs}>
                 {images.map((imgSrc, idx) => (
-                  <div 
+                  <button
                     key={idx} 
+                    type="button"
+                    disabled={loading}
+                    aria-label={`Edit hidden areas for photo ${idx + 1}`}
                     className={`${styles.blurTab} ${activeImageIndex === idx ? styles.blurTabActive : ''}`}
                     onClick={() => setActiveImageIndex(idx)}
                   >
                     <img src={imgSrc} alt={`Tab ${idx + 1}`} />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
 
-            {/* The blur region drawing tool */}
+            {/* Local redaction preview; public assets are produced by the server. */}
             <BlurRegionSelector
+              key={activeImageIndex}
               imageSrc={images[activeImageIndex]}
               blurZones={allBlurZones[activeImageIndex] || []}
-              onChange={(zones) => setAllBlurZones(prev => ({...prev, [activeImageIndex]: zones}))}   /* When zones change, update our state */
+              onChange={updateZones}
+              disabled={loading}
               hint={blurHint}           /* Category-specific guidance */
             />
 
@@ -482,7 +523,7 @@ function ReportFoundPage() {
               <CheckCircle size={20} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-cyan, #00d2ff)' }} />
               <div>
                 <strong>What happens next:</strong> Your item will be submitted to the admin team for manual review. 
-                Once approved, it will be listed publicly with the blurred image. 
+                The server permanently redacts the marked areas before the photos can be listed publicly.
                 When someone claims ownership, admins will manually verify them.
                 Your identity stays hidden until the process is complete.
               </div>
@@ -494,22 +535,22 @@ function ReportFoundPage() {
         <div className={styles.navBtns}>
           {/* Back button (hidden on step 1) */}
           {step > 1 && (
-            <button className={styles.backStepBtn} onClick={handleBack} type="button">
+            <button className={styles.backStepBtn} onClick={handleBack} type="button" disabled={loading || processingPhotos}>
               ← Back
             </button>
           )}
 
           {/* Next or Submit button */}
           {step < 3 ? (
-            <button className={styles.nextBtn} onClick={handleNext} type="button" disabled={loading}>
-              {loading ? <><ButtonSpinner /> Loading...</> : 'Next →'}
+            <button className={styles.nextBtn} onClick={handleNext} type="button" disabled={loading || processingPhotos}>
+              {processingPhotos ? <><ButtonSpinner /> Processing photos...</> : 'Next →'}
             </button>
           ) : (
             <button
               className={styles.submitBtn}
               onClick={handleSubmit}
               type="button"
-              disabled={loading}
+              disabled={loading || processingPhotos}
             >
               {loading
                 ? <><ButtonSpinner /> Submitting Report...</>

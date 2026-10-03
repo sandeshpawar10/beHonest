@@ -5,7 +5,7 @@
 
 /* 
   The outer wrapper.
-  position: relative is REQUIRED — it makes the blur overlay
+   position: relative is REQUIRED — it makes the preview mask
   divs position themselves INSIDE this box (not the whole page).
   display: inline-block makes the wrapper only as wide as the image.
 */
@@ -14,7 +14,7 @@
   display: block;
   width: 100%;
   border-radius: 16px;
-  overflow: hidden;     /* Clips blur zones that go slightly outside */
+  overflow: hidden;
   background: #0a0f1e;  /* Dark background shows if image has transparency */
   line-height: 0;       /* Removes ghost space below the image */
 }
@@ -22,46 +22,27 @@
 /* The image itself — fills the full wrapper width */
 .image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;     /* Crop to fill, no stretching */
+  height: auto;          /* Preserve image geometry for percentage preview masks */
   display: block;
 }
 
-/* 
-  Each blur zone overlay.
-  position: absolute + left/top/width/height (set inline as %)
-  places each zone exactly over the right part of the image.
-  
-  backdrop-filter is set inline (not here) because it uses
-  a dynamic blurStrength prop value.
-*/
+/* Opaque local preview only. Public images are redacted by the server. */
 .blurOverlay {
-  position: absolute;   /* Positioned relative to .wrapper */
+  position: absolute;
+  background: #000;
+  pointer-events: none;
+}
+
+.placeholder {
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 
-    A semi-transparent dark tint ON TOP of the backdrop blur.
-    This makes the blurred area clearly visible as "hidden".
-  */
-  background: rgba(10, 15, 30, 0.35);
-  border: 2px solid rgba(0, 212, 255, 0.4);  /* Subtle cyan border */
-  border-radius: 6px;
-  transition: opacity 0.2s ease;
-  cursor: default;
-  
-  /* GPU Acceleration for smooth scrolling with backdrop-filter */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  will-change: transform, backdrop-filter;
-}
-
-/* The lock icon shown in the center of each blur zone */
-.lockIcon {
-  font-size: 1.1rem;
-  user-select: none;   /* Can't be selected/copied */
-  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.6));
-  opacity: 0.9;
+  padding: 24px;
+  color: #8b9fc7;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 /* 
@@ -78,6 +59,7 @@
   color: #8b9fc7;
   font-size: 0.72rem;
   font-weight: 500;
+  line-height: 1.4;
   padding: 4px 12px;
   border-radius: 999px;   /* Pill shape */
   white-space: nowrap;    /* Don't wrap to two lines */

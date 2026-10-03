@@ -1,5 +1,10 @@
 const claimModel = require("../models/claimModel");
 const itemModel = require("../models/foundItemModel");
+const {
+    ACTIVE_CLAIM_EXISTS,
+    authorizeClaim,
+    hasInterviewContent
+} = require("../utils/claimAuthorization");
 
 const { runInteractiveInterrogation } = require("../utils/geminiUtils");
 const z = require("zod");
@@ -31,38 +36,11 @@ exports.evaluateClaim = async function(req, res) {
             return res.status(401).json({ error: "Unauthorized. You must be logged in." });
         }
 
-        // Verify the item exists
-        const item = await itemModel.findById(itemId).populate("reportedBy", "email");
-        if (!item) {
-            return res.status(404).json({ error: "Item not found." });
+        const authorization = await authorizeClaim({ itemId, user: req.user });
+        if (!authorization.ok) {
+            return res.status(authorization.status).json({ error: authorization.error });
         }
-
-        // ── Authorization Rule 1: Prevent self-claim ──
-        if (item.reportedBy._id.toString() === req.user._id.toString()) {
-            return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
-        }
-
-        // ── Authorization Rule 2: Same college check ──
-        const claimantDomain = (req.user.email || "").split("@")[1]?.toLowerCase();
-        const reporterDomain = (item.reportedBy.email || "").split("@")[1]?.toLowerCase();
-        if (!claimantDomain || !reporterDomain || claimantDomain !== reporterDomain) {
-            return res.status(403).json({ error: "You can only claim items from your own college." });
-        }
-
-        // ── Authorization Rule 3: Item must be in 'found' status ──
-        if (item.status !== 'found') {
-            return res.status(400).json({ error: `This item is not available for claiming (status: ${item.status}).` });
-        }
-
-        // ── Authorization Rule 4: Prevent duplicate active claims ──
-        const existingClaim = await claimModel.findOne({
-            itemId,
-            claimantId: req.user._id,
-            verdict: { $in: ["pending_admin_review", "needs_review", "verified"] }
-        });
-        if (existingClaim) {
-            return res.status(409).json({ error: "You already have an active claim on this item." });
-        }
+        const { item } = authorization;
 
         // Upload proofImage to Cloudinary if it's a base64 string
         if (proofImage && proofImage.startsWith('data:image')) {
@@ -78,7 +56,6 @@ exports.evaluateClaim = async function(req, res) {
         // Run the AI interrogation securely on the server
         const aiResponse = await runInteractiveInterrogation(item, chatHistory || [], proofImage);
 
-        let claim = null;
         // Hybrid rules-based logic: If AI verified them, but they failed the secret string match, downgrade to manual review
         let finalStatus = aiResponse.status;
         if (finalStatus === 'verified' && item.secretIdentity) {
@@ -114,11 +91,9 @@ const finalizeClaimSchema = z.object({
         text: z.string().max(2000)
     })).optional(),
     secretGuess: z.string().max(200).optional(),
-    tentativeVerdict: z.object({
-        status: z.enum(["verified", "needs_review", "rejected", "continue"]),
-        message: z.string(),
-        score: z.number().optional()
-    }),
+    // Retained for backwards compatibility with older clients, but it is
+    // intentionally opaque and is never used as an authority for the claim.
+    tentativeVerdict: z.unknown().optional(),
     proofImage: z.string().optional()
 });
 
@@ -131,42 +106,20 @@ exports.finalizeClaim = async function(req, res) {
             return res.status(400).json({ error: issues.map(e => e.message).join(", ") || validation.error?.message || "Invalid request payload" });
         }
         
-        let { itemId, chatHistory, secretGuess, tentativeVerdict, proofImage } = validation.data;
+        let { itemId, chatHistory, secretGuess, proofImage } = validation.data;
 
         if (!req.user || !req.user._id) {
             return res.status(401).json({ error: "Unauthorized. You must be logged in." });
         }
 
-        const item = await itemModel.findById(itemId).populate("reportedBy", "email");
-        if (!item) {
-            return res.status(404).json({ error: "Item not found." });
+        const authorization = await authorizeClaim({ itemId, user: req.user });
+        if (!authorization.ok) {
+            return res.status(authorization.status).json({ error: authorization.error });
         }
-
-        // ── Authorization Rule 1: Prevent self-claim ──
-        if (item.reportedBy._id.toString() === req.user._id.toString()) {
-            return res.status(403).json({ error: "You cannot claim an item you reported yourself." });
-        }
-
-        // ── Authorization Rule 2: Same college check ──
-        const claimantDomain = (req.user.email || "").split("@")[1]?.toLowerCase();
-        const reporterDomain = (item.reportedBy.email || "").split("@")[1]?.toLowerCase();
-        if (!claimantDomain || !reporterDomain || claimantDomain !== reporterDomain) {
-            return res.status(403).json({ error: "You can only claim items from your own college." });
-        }
-
-        // ── Authorization Rule 3: Item must be in 'found' status ──
-        if (item.status !== 'found') {
-            return res.status(400).json({ error: `This item is not available for claiming (status: ${item.status}).` });
-        }
-
-        // ── Authorization Rule 4: Prevent duplicate active claims ──
-        const existingClaim = await claimModel.findOne({
-            itemId,
-            claimantId: req.user._id,
-            verdict: { $in: ["pending_admin_review", "needs_review", "verified"] }
-        });
-        if (existingClaim) {
-            return res.status(409).json({ error: "You already have an active claim on this item." });
+        // Check transcript shape, not authenticity. This remains manual review;
+        // neither browser transcript nor tentative verdict proves ownership.
+        if (!hasInterviewContent(chatHistory)) {
+            return res.status(400).json({ error: "Interview questions and answers are required." });
         }
 
         // Upload proofImage to Cloudinary if provided
@@ -180,21 +133,31 @@ exports.finalizeClaim = async function(req, res) {
             }
         }
 
-        const claim = await claimModel.create({
-            itemId,
-            claimantId: req.user._id,
-            answers: chatHistory || [],
-            verdict: "pending_admin_review",
-            score: 0, 
-            verdictMessage: "Submitted for manual admin review.",
-            reviewerNotes: "",
-            evidenceFor: [],
-            evidenceAgainst: [],
-            aiModelUsed: "none",
-            aiVersion: "manual",
-            secretGuess: secretGuess || "",
-            proofImage: proofImage || ""
-        });
+        let claim;
+        try {
+            // The partial unique index is the final guard against two requests
+            // passing the lookup above at the same time.
+            claim = await claimModel.create({
+                itemId,
+                claimantId: req.user._id,
+                answers: chatHistory || [],
+                verdict: "pending_admin_review",
+                score: 0,
+                verdictMessage: "Submitted for manual admin review.",
+                reviewerNotes: "",
+                evidenceFor: [],
+                evidenceAgainst: [],
+                aiModelUsed: "none",
+                aiVersion: "manual",
+                secretGuess: secretGuess || "",
+                proofImage: proofImage || ""
+            });
+        } catch (error) {
+            if (error?.code === 11000) {
+                return res.status(409).json({ error: ACTIVE_CLAIM_EXISTS });
+            }
+            throw error;
+        }
 
         // Alert the admin
         const { sendAdminReviewAlert } = require('../utils/emailUtils');
@@ -266,7 +229,7 @@ exports.getClaimsForItem = async function(req, res) {
 exports.getMyClaims = async function(req, res) {
     try {
         const claims = await claimModel.find({ claimantId: req.user._id })
-            .populate("itemId", "shortTitle category images status")
+            .populate("itemId", "shortTitle category images imagePrivacyVersion status")
             .sort({ createdAt: -1 });
 
         return res.status(200).json({

@@ -12,7 +12,8 @@ import { useNavigate } from 'react-router-dom';
 
 import BlurableImage   from '../components/ui/BlurableImage';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
-import { Search, MapPin, Calendar, ArrowLeft, Shield, Lock, AlertTriangle } from 'lucide-react';
+import { publicFoundImages } from '../utils/foundImagePrivacy';
+import { Search, MapPin, Calendar, ArrowLeft, Shield, Lock } from 'lucide-react';
 import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {
@@ -270,33 +271,25 @@ function StackCard({ item, formatDate, onDelete }) {
   const isSameCollege = Boolean(item.isSameCollege);
   const isClaimed = item.status === 'claimed';
 
-  const [showFull, setShowFull] = useState(false);
   const [imgIndex, setImgIndex] = useState(0);
+  const images = publicFoundImages(item);
+  const visibleIndex = imgIndex < images.length ? imgIndex : 0;
+  const hiddenAreaCount = Array.isArray(item.allBlurZones?.[visibleIndex])
+    ? item.allBlurZones[visibleIndex].length : 0;
 
   return (
     <div className={styles.cardInner}>
       {/* Left: Image */}
       <div className={styles.cardImage} style={{ position: 'relative' }}>
-            {showFull ? (
-              <img
-                src={item.images && item.images.length > 0 ? item.images[imgIndex] : ''}
-                alt={item.shortTitle}
-                className={styles.fullImage}
-              />
-            ) : (
-              <BlurableImage
-                imageSrc={item.images && item.images.length > 0 ? item.images[imgIndex] : ''}
-                blurZones={item.blurZones || []}
-                alt={item.shortTitle}
-                blurStrength={14}
-              />
-            )}
+            {/* Public pixels have already been redacted on the server. */}
+            <BlurableImage imageSrc={images[visibleIndex]} alt={item.shortTitle} />
 
             {/* Navigation arrows for multiple images */}
-            {item.images && item.images.length > 1 && (
+            {images.length > 1 && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i === 0 ? item.images.length - 1 : i - 1)); }}
+                  aria-label="Previous photo"
+                  onClick={(e) => { e.stopPropagation(); setImgIndex((visibleIndex + images.length - 1) % images.length); }}
                   style={{
                     position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                     background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
@@ -306,7 +299,8 @@ function StackCard({ item, formatDate, onDelete }) {
                   ◀
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i === item.images.length - 1 ? 0 : i + 1)); }}
+                  aria-label="Next photo"
+                  onClick={(e) => { e.stopPropagation(); setImgIndex((visibleIndex + 1) % images.length); }}
                   style={{
                     position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                     background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
@@ -319,20 +313,11 @@ function StackCard({ item, formatDate, onDelete }) {
                   position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
                   background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', zIndex: 10
                 }}>
-                  {imgIndex + 1} / {item.images.length}
+                  {visibleIndex + 1} / {images.length}
                 </div>
               </>
             )}
 
-            {/* Demo toggle — only for the finder */}
-            {item.blurZones && item.blurZones.length > 0 && isFinder && (
-              <button
-                className={styles.toggleBtn}
-                onClick={() => setShowFull(f => !f)}
-              >
-                {showFull ? '' : '👁️'}
-              </button>
-            )}
           </div>
 
           {/* Right: Info */}
@@ -356,14 +341,10 @@ function StackCard({ item, formatDate, onDelete }) {
               <span><Calendar size={16} /> {formatDate(item.dateFound)}</span>
             </div>
 
-            {/* Blur info */}
-            {item.blurZones && item.blurZones.length > 0 ? (
+            {/* Metadata for this photo only; no additional client-side masking. */}
+            {images.length > 0 && hiddenAreaCount > 0 && (
               <div className={styles.blurInfo}>
-                <Lock size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> {item.blurZones.length} sensitive area{item.blurZones.length > 1 ? 's' : ''} hidden
-              </div>
-            ) : (
-              <div className={styles.noBlurInfo}>
-                <AlertTriangle size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> No blur zones — full image visible
+                <Lock size={16} style={{ display: "inline", verticalAlign: "text-bottom" }} /> {hiddenAreaCount} sensitive area{hiddenAreaCount > 1 ? 's' : ''} permanently hidden in this photo
               </div>
             )}
 

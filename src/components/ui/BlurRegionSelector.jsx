@@ -3,8 +3,8 @@
    
    PURPOSE:
    Let the finder DRAW rectangles on their uploaded image.
-   Each drawn rectangle becomes a "blur zone" — a region
-   that will be blurred on the public listing.
+   Each drawn rectangle becomes a region that the server
+   will permanently redact on the public listing.
    
    HOW IT WORKS (simple explanation):
    1. User sees their uploaded image in a container
@@ -22,10 +22,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 import BlurableImage from './BlurableImage';  // Reuse to show live preview
+import { MAX_REDACTION_ZONES } from '../../utils/foundImagePrivacy';
 import { Pencil, MousePointer2, Eye, Trash2, AlertTriangle } from 'lucide-react';
 import styles from './BlurRegionSelector.module.css';
 
-function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
+function BlurRegionSelector({ imageSrc, blurZones = [], onChange, hint, disabled = false }) {
 
   /*
     isDrawing: true when the user is holding mouse button down
@@ -82,6 +83,8 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
   /* ── Mouse Down: User starts drawing a rectangle ── */
   const handleMouseDown = (e) => {
+    if (disabled || blurZones.length >= MAX_REDACTION_ZONES || e.target.closest('button')) return;
+    if (e.type === 'mousedown' && e.button !== 0) return;
     e.preventDefault(); // Prevents text selection while dragging
     const pos = getPercentPosition(e);
     setIsDrawing(true);
@@ -91,7 +94,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
   /* ── Mouse Move: Update the live preview rectangle ── */
   const handleMouseMove = (e) => {
-    if (!isDrawing || !startPoint) return; // Only update when dragging
+    if (disabled || !isDrawing || !startPoint) return; // Only update when dragging
 
     const pos = getPercentPosition(e);
 
@@ -117,13 +120,18 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
     // Only save the rectangle if it's big enough to be meaningful
     // (ignore tiny accidental clicks — smaller than 3% in any direction)
-    if (currentRect && currentRect.w > 3 && currentRect.h > 3) {
-      // Round all values to 1 decimal place for cleaner storage
+    if (!disabled && blurZones.length < MAX_REDACTION_ZONES && currentRect && currentRect.w > 3 && currentRect.h > 3) {
+      // Round the outer edges outwards, keeping the rectangle inside 0–100%.
+      // Rounding origin and size separately can otherwise exceed the image bounds.
+      const left = Math.floor(currentRect.x * 10);
+      const top = Math.floor(currentRect.y * 10);
+      const right = Math.min(1000, Math.ceil((currentRect.x + currentRect.w) * 10));
+      const bottom = Math.min(1000, Math.ceil((currentRect.y + currentRect.h) * 10));
       const newZone = {
-        x: parseFloat(currentRect.x.toFixed(1)),
-        y: parseFloat(currentRect.y.toFixed(1)),
-        w: parseFloat(currentRect.w.toFixed(1)),
-        h: parseFloat(currentRect.h.toFixed(1))
+        x: left / 10,
+        y: top / 10,
+        w: Math.min((right - left) / 10, 100 - left / 10),
+        h: Math.min((bottom - top) / 10, 100 - top / 10)
       };
 
       // Tell the parent component about the new list of zones
@@ -137,6 +145,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
   /* ── Delete a blur zone by its index ── */
   const deleteZone = (indexToDelete) => {
+    if (disabled) return;
     // Filter out the zone at the given index and pass the new list up
     const updated = blurZones.filter((_, index) => index !== indexToDelete);
     onChange(updated);
@@ -144,6 +153,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
   /* ── Clear ALL blur zones ── */
   const clearAll = () => {
+    if (disabled) return;
     onChange([]); // Pass an empty array to parent
   };
 
@@ -152,9 +162,9 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
 
       {/* Section heading */}
       <div className={styles.header}>
-        <h3 className={styles.title}><Pencil size={18} /> Mark Sensitive Areas to Blur</h3>
+        <h3 className={styles.title}><Pencil size={18} /> Mark Sensitive Areas to Hide</h3>
         {/* Hint text tells the finder WHAT they should be hiding */}
-        <p className={styles.hint}>{hint || 'Click and drag on the image to select areas to blur.'}</p>
+        <p className={styles.hint}>{hint || 'Click and drag on the image to select areas to hide.'}</p>
       </div>
 
       {/* ── Two-column layout: Left = draw | Right = preview ── */}
@@ -202,12 +212,17 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
               >
                 {/* Delete button for this zone */}
                 <button
+                  type="button"
+                  disabled={disabled}
                   className={styles.deleteBtn}
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation(); // Don't start a new rectangle
                     deleteZone(i);
                   }}
-                  title="Remove this blur zone"
+                  title="Remove this hidden area"
+                  aria-label={`Remove hidden area ${i + 1}`}
                 >
                   ✕
                 </button>
@@ -233,7 +248,7 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
             {/* Instruction shown in the centre when no zones exist yet */}
             {blurZones.length === 0 && !isDrawing && (
               <div className={styles.placeholder}>
-                <span><MousePointer2 size={14} style={{display:'inline'}} /> Click &amp; drag to blur a region</span>
+                <span><MousePointer2 size={14} style={{display:'inline'}} /> Click &amp; drag to hide an area</span>
               </div>
             )}
           </div>
@@ -242,8 +257,8 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
           <div className={styles.zoneInfo}>
             <span className={styles.zoneCount}>
               {blurZones.length === 0
-                ? 'No blur zones added yet'
-                : `${blurZones.length} blur zone${blurZones.length > 1 ? 's' : ''} added`
+                ? `No areas marked (up to ${MAX_REDACTION_ZONES} per photo)`
+                : `${blurZones.length} / ${MAX_REDACTION_ZONES} areas marked`
               }
             </span>
             {blurZones.length > 0 && (
@@ -251,36 +266,39 @@ function BlurRegionSelector({ imageSrc, blurZones, onChange, hint }) {
                 className={styles.clearBtn}
                 onClick={clearAll}
                 type="button"
+                disabled={disabled}
               >
                 <Trash2 size={14} /> Clear All
               </button>
             )}
           </div>
+          {blurZones.length >= MAX_REDACTION_ZONES && (
+            <p className={styles.hint} role="status">Limit reached. Remove an area before drawing another.</p>
+          )}
         </div>
 
-        {/* ── RIGHT: Live Blur Preview ── */}
+        {/* ── RIGHT: Local redaction preview ── */}
         <div className={styles.column}>
           <p className={styles.colLabel}><Eye size={14} /> Public view preview</p>
           <p className={styles.previewNote}>
-            This is exactly how the public will see your image.
+            Local preview only. Actual public redaction happens on the server, which permanently covers marked areas with opaque masks.
           </p>
 
           {/*
             Reuse the BlurableImage component to show the preview.
-            This is the SAME component used on the public listing page.
+            Local masks illustrate your selection; they do not secure the source image.
           */}
           <BlurableImage
             imageSrc={imageSrc}
             blurZones={blurZones}
-            alt="Preview of blurred image"
-            blurStrength={14}
+            alt="Local preview with marked areas hidden"
           />
 
           {/* Warning if no zones have been added */}
           {blurZones.length === 0 && (
             <div className={styles.noBlurWarning}>
-              <AlertTriangle size={14} /> No areas blurred — the full image will be public.
-              Add blur zones to protect sensitive details.
+              <AlertTriangle size={14} /> No areas hidden — the full image will be public.
+              Mark any sensitive details you want to hide.
             </div>
           )}
         </div>

@@ -64,6 +64,17 @@ const escrowSchema = new Schema({
     razorpaySignature: { type: String, default: null },
     finderUpiId: { type: String, default: null },
 
+    // Refund tracking
+    refundId: { type: String, default: null },
+    refundStatus: {
+        type: String,
+        enum: ["not_requested", "requested", "processing", "completed", "failed"],
+        default: "not_requested"
+    },
+    refundRequestedAt: { type: Date, default: null },
+    refundCompletedAt: { type: Date, default: null },
+    refundFailedReason: { type: String, default: null },
+
     // Payout tracking (admin manually pays the finder)
     payoutStatus: {
         type: String,

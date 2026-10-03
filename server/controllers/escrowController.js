@@ -144,9 +144,23 @@ exports.verifyPayment = async function(req, res) {
             return res.status(400).json({ error: "Missing required payment details." });
         }
 
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ error: "Unauthorized." });
+        }
+
         const escrow = await escrowModel.findById(escrowId);
         if (!escrow) {
             return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        // SECURITY: Verify the escrow belongs to the logged-in user (depositor)
+        if (escrow.depositorId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Forbidden. This escrow does not belong to you." });
+        }
+
+        // SECURITY: Verify the Razorpay order ID matches the escrow's order
+        if (escrow.razorpayOrderId !== razorpay_order_id) {
+            return res.status(400).json({ error: "Payment verification failed. Order ID mismatch." });
         }
 
         // Verify Razorpay signature using HMAC SHA256
@@ -221,7 +235,7 @@ exports.getMyEscrows = async function(req, res) {
                 { finderId: userId }
             ]
         })
-        .populate("itemId", "shortTitle category images location")
+        .populate("itemId", "shortTitle category images imagePrivacyVersion location")
         .populate("claimId", "verdict score")
         .populate("depositorId", "email username")
         .populate("finderId", "email username")
@@ -509,40 +523,188 @@ exports.refundEscrow = async function(req, res) {
             return res.status(403).json({ error: "Finder has already confirmed handover. You must raise a dispute instead." });
         }
 
-        // Refund the escrow
-        escrow.status = "refunded";
+        // Check if payment was actually captured
+        if (!escrow.razorpayPaymentId) {
+            return res.status(400).json({ error: "No payment found to refund." });
+        }
+
+        // Check if refund is already in progress
+        if (escrow.refundStatus === "requested" || escrow.refundStatus === "processing") {
+            return res.status(400).json({ error: "Refund is already being processed." });
+        }
+
+        if (escrow.refundStatus === "completed") {
+            return res.status(400).json({ error: "Refund has already been completed." });
+        }
+
+        // Mark refund as requested
+        escrow.refundStatus = "requested";
+        escrow.refundRequestedAt = new Date();
         await escrow.save();
 
-        // Reset the item so it can be claimed again
-        const item = await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
-        await claimModel.deleteMany({ itemId: escrow.itemId });
-        
-        // Send refund email to the owner
-        const user = await userModel.findById(req.user._id);
-        if (user && item) {
-            const { sendRefundEmail } = require('../utils/emailUtils');
-            await sendRefundEmail(user.email, item.shortTitle, escrow.amount);
-        }
+        try {
+            // Process real Razorpay refund
+            escrow.refundStatus = "processing";
+            await escrow.save();
 
-        const io = req.app.get('io');
-        if (io) {
-            io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
-            io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
-            io.emit('item_updated', { itemId: escrow.itemId });
-        }
+            const refund = await razorpay.payments.refund(escrow.razorpayPaymentId, {
+                amount: escrow.amount * 100, // Amount in paise
+                speed: "normal", // Can be 'normal' or 'optimum'
+                notes: {
+                    escrowId: escrow._id.toString(),
+                    itemId: escrow.itemId.toString(),
+                    reason: "Owner requested refund"
+                },
+                receipt: `refund_${escrow._id}`
+            });
 
-        return res.status(200).json({
-            status: "success",
-            message: "Escrow refunded successfully.",
-            escrow: {
-                _id: escrow._id,
-                status: escrow.status,
-                amount: escrow.amount
+            // Update escrow with refund details
+            escrow.refundId = refund.id;
+            escrow.refundStatus = "completed";
+            escrow.refundCompletedAt = new Date();
+            escrow.status = "refunded";
+            escrow.refundFailedReason = null;
+            await escrow.save();
+
+            // Reset the item so it can be claimed again
+            const item = await itemModel.findByIdAndUpdate(escrow.itemId, { status: "found" });
+            await claimModel.deleteMany({ itemId: escrow.itemId });
+
+            // Send refund email to the owner
+            const user = await userModel.findById(req.user._id);
+            if (user && item) {
+                const { sendRefundEmail } = require('../utils/emailUtils');
+                sendRefundEmail(user.email, item.shortTitle, escrow.amount).catch(err =>
+                    console.error("Refund email failed:", err)
+                );
             }
-        });
+
+            const io = req.app.get('io');
+            if (io) {
+                io.to(escrow.depositorId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+                io.to(escrow.finderId.toString()).emit('escrow_updated', { escrowId: escrow._id });
+                io.emit('item_updated', { itemId: escrow.itemId });
+            }
+
+            return res.status(200).json({
+                status: "success",
+                message: "Refund processed successfully. Money will be credited to your account within 5-7 business days.",
+                escrow: {
+                    _id: escrow._id,
+                    status: escrow.status,
+                    amount: escrow.amount,
+                    refundId: escrow.refundId,
+                    refundStatus: escrow.refundStatus,
+                    refundCompletedAt: escrow.refundCompletedAt
+                }
+            });
+
+        } catch (razorpayError) {
+            // Razorpay refund failed - update status and store error
+            escrow.refundStatus = "failed";
+            escrow.refundFailedReason = razorpayError.error?.description || razorpayError.message || "Razorpay refund failed";
+            await escrow.save();
+
+            console.error("Razorpay refund failed:", razorpayError);
+            return res.status(500).json({
+                error: "Refund failed. Please contact support.",
+                details: escrow.refundFailedReason
+            });
+        }
 
     } catch (error) {
         console.error("Error refunding escrow:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+};
+
+// ── Check Refund Status (query Razorpay for current refund status) ──────────
+exports.getRefundStatus = async function(req, res) {
+    try {
+        const { escrowId } = req.params;
+
+        const escrow = await escrowModel.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: "Escrow not found." });
+        }
+
+        // Only the depositor (owner) can check refund status
+        if (escrow.depositorId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Forbidden. You can only check your own refund status." });
+        }
+
+        // If no refund was initiated, return current status
+        if (escrow.refundStatus === "not_requested") {
+            return res.status(200).json({
+                status: "success",
+                refundStatus: "not_requested",
+                message: "No refund has been requested for this escrow."
+            });
+        }
+
+        // If refund is completed or failed, return stored status
+        if (escrow.refundStatus === "completed" || escrow.refundStatus === "failed") {
+            return res.status(200).json({
+                status: "success",
+                refundStatus: escrow.refundStatus,
+                refundId: escrow.refundId,
+                refundRequestedAt: escrow.refundRequestedAt,
+                refundCompletedAt: escrow.refundCompletedAt,
+                refundFailedReason: escrow.refundFailedReason,
+                message: escrow.refundStatus === "completed"
+                    ? "Refund has been processed successfully."
+                    : "Refund failed. Please contact support."
+            });
+        }
+
+        // If refund is processing, query Razorpay for latest status
+        if (escrow.refundId) {
+            try {
+                const refund = await razorpay.refunds.fetch(escrow.refundId);
+
+                // Update escrow with latest status from Razorpay
+                if (refund.status === "processed") {
+                    escrow.refundStatus = "completed";
+                    escrow.refundCompletedAt = new Date();
+                    await escrow.save();
+                } else if (refund.status === "failed") {
+                    escrow.refundStatus = "failed";
+                    escrow.refundFailedReason = refund.error_description || "Refund failed";
+                    await escrow.save();
+                }
+
+                return res.status(200).json({
+                    status: "success",
+                    refundStatus: escrow.refundStatus,
+                    razorpayStatus: refund.status,
+                    refundId: escrow.refundId,
+                    refundRequestedAt: escrow.refundRequestedAt,
+                    refundCompletedAt: escrow.refundCompletedAt,
+                    message: `Refund is ${refund.status}.`
+                });
+
+            } catch (razorpayError) {
+                console.error("Error fetching refund from Razorpay:", razorpayError);
+                // Return stored status if Razorpay query fails
+                return res.status(200).json({
+                    status: "success",
+                    refundStatus: escrow.refundStatus,
+                    refundId: escrow.refundId,
+                    message: "Refund is being processed. Please check back later."
+                });
+            }
+        }
+
+        // Fallback
+        return res.status(200).json({
+            status: "success",
+            refundStatus: escrow.refundStatus,
+            refundRequestedAt: escrow.refundRequestedAt,
+            message: "Refund is being processed."
+        });
+
+    } catch (error) {
+        console.error("Error checking refund status:", error);
         return res.status(500).json({ error: "Internal server error." });
     }
 };

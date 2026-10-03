@@ -21,6 +21,9 @@ router.post('/api/escrow/dispute/:escrowId', verifyJWT, controller.raiseDispute)
 // Refund escrow (owner requests refund)
 router.post('/api/escrow/refund/:escrowId', verifyJWT, controller.refundEscrow);
 
+// Check refund status (query Razorpay for current refund status)
+router.get('/api/escrow/refund-status/:escrowId', verifyJWT, controller.getRefundStatus);
+
 // Save finder UPI ID
 router.post('/api/escrow/save-upi/:escrowId', verifyJWT, controller.saveFinderUpi);
 

@@ -361,7 +361,7 @@ exports.getPendingClaims = async function(req, res) {
     try {
         const claims = await claimModel.find({ verdict: "pending_admin_review" })
             .populate("claimantId", "email username")
-            .populate("itemId", "shortTitle images");
+            .populate("itemId", "shortTitle images imagePrivacyVersion");
         return res.status(200).json({ claims });
     } catch (err) {
         console.error("Error fetching pending claims:", err);

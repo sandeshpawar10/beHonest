@@ -138,7 +138,12 @@ function DashboardPage() {
         .then(r => r.json())
         .then(data => {
           if (data.asOwner) {
-            const fundedClaimIds = new Set(data.asOwner.map(e => e.claimId?.toString() || e.claimId?._id?.toString()));
+            const fundedClaimIds = new Set(data.asOwner.map(e => {
+              // Handle both populated and unpopulated claimId
+              if (typeof e.claimId === 'string') return e.claimId;
+              if (e.claimId && typeof e.claimId === 'object') return e.claimId._id?.toString() || e.claimId.toString();
+              return null;
+            }).filter(Boolean));
             setMyEscrowIds(fundedClaimIds);
           }
         })

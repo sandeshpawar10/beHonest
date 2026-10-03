@@ -570,6 +570,7 @@
 .blurTab {
   width: 64px;
   height: 64px;
+  padding: 0;
   border-radius: 8px;
   overflow: hidden;
   border: 2px solid var(--border);

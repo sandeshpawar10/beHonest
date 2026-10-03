@@ -10,7 +10,7 @@ const notificationSchema = new Schema({
     },
     type: {
         type: String,
-        enum: ['CLAIM_VERDICT', 'DISPUTE_RAISED', 'REWARD_RELEASED', 'REFUND', 'CHAT_MESSAGE', 'GENERAL'],
+        enum: ['CLAIM_VERDICT', 'DISPUTE_RAISED', 'REWARD_RELEASED', 'REFUND', 'CHAT_MESSAGE', 'GENERAL', 'SYSTEM'],
         required: true
     },
     title: {

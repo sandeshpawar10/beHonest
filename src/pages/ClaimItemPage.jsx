@@ -10,13 +10,43 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Bot, Lock, Camera, ImageIcon, BarChart3, Coins, RefreshCw, AlertTriangle, CheckCircle, ArrowLeft, Send, Upload, Trash2, Clock } from 'lucide-react';
+import { Bot, Lock, Camera, ImageIcon, BarChart3, RefreshCw, AlertTriangle, CheckCircle, ArrowLeft, Send, Upload, Trash2, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BlurableImage from '../components/ui/BlurableImage';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { compressImage } from '../utils/imageCompressor';
+import { publicFoundImages } from '../utils/foundImagePrivacy';
 import styles from './ClaimItemPage.module.css';
+
+const normalizeVerdict = (status) => status === 'reject' ? 'rejected' : status;
+
+const getClaimErrorMessage = (status, action) => {
+  if (status === 403) {
+    return 'You are not authorized to claim this item. Please return to Found Items.';
+  }
+
+  if (status === 409) {
+    return 'This item is no longer available for a new claim. Please return to Found Items.';
+  }
+
+  if (status === 400) {
+    return action === 'finalize'
+      ? 'We could not submit your claim. Please check your proof and try again.'
+      : 'We could not process your answers. Please review them and try again.';
+  }
+
+  return action === 'finalize'
+    ? 'We could not submit your claim for review right now. Please try again later.'
+    : 'We could not start the verification interview right now. Please try again later.';
+};
+
+const getClaimRequestError = (status, action) => {
+  const error = new Error('Claim request failed');
+  error.status = status;
+  error.userMessage = getClaimErrorMessage(status, action);
+  return error;
+};
 
 function ClaimItemPage() {
   const { itemId }  = useParams();
@@ -29,8 +59,8 @@ function ClaimItemPage() {
   const [step, setStep]       = useState('quiz'); // 'quiz' (chat) | 'result'
   const [error, setError]     = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errorCount, setErrorCount] = useState(0);
-  const [activeImgIndex, setActiveImgIndex] = useState(0); // Track consecutive API errors
+  const [claimBlocked, setClaimBlocked] = useState(false);
+  const [activeImgIndex, setActiveImgIndex] = useState(0); // Currently displayed public image
 
   // Chat State
   const [chatHistory, setChatHistory] = useState([]);
@@ -133,29 +163,40 @@ function ClaimItemPage() {
         credentials: 'include',
         body: JSON.stringify({ itemId: item._id, chatHistory: [] })
       });
+      if (!res.ok) throw getClaimRequestError(res.status, 'evaluate');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to start interview');
       
       const response = data.aiResponse;
       setChatHistory([{ role: 'ai', text: response.message }]);
       
       if (response.status !== 'continue') {
+        const verdict = normalizeVerdict(response.status);
         setTimeout(() => {
           setTentativeVerdict({
-            status: response.status,
+            status: verdict,
             message: response.message,
             score: response.score || 0
           });
-          setStep('proof');
+          if (verdict === 'rejected') {
+            setResult({
+              verdict,
+              overallScore: response.score || 0,
+              feedback: response.message
+            });
+            setStep('result');
+          } else {
+            setStep('proof');
+          }
           setVerifying(false);
         }, 2000);
       } else {
-        setErrorCount(0);
         setVerifying(false);
       }
     } catch (err) {
-      console.error(err);
-      setError(`Sorry for the inconvenience. The AI is currently experiencing heavy traffic. Please try again. (Error: ${err.message})`);
+      setError(err.userMessage || getClaimErrorMessage(undefined, 'evaluate'));
+      if (err.status === 403 || err.status === 409) {
+        setClaimBlocked(true);
+      }
       setStarted(false);
       setVerifying(false);
     }
@@ -171,6 +212,7 @@ function ClaimItemPage() {
     setChatHistory(newHistory);
     setInputText('');
     setVerifying(true);
+    setError('');
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/claim/evaluate`, {
@@ -183,8 +225,8 @@ function ClaimItemPage() {
           secretGuess: secretGuess
         })
       });
+      if (!res.ok) throw getClaimRequestError(res.status, 'evaluate');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to verify answer');
       
       const response = data.aiResponse;
       const finalHistory = [...newHistory, { role: 'ai', text: response.message }];
@@ -192,15 +234,16 @@ function ClaimItemPage() {
 
       if (response.status !== 'continue') {
         // AI has finished the chat portion.
+        const verdict = normalizeVerdict(response.status);
         setTimeout(() => {
           setTentativeVerdict({
-            status: response.status,
+            status: verdict,
             message: response.message,
             score: response.score || 0
           });
-          if (response.status === 'reject') {
+          if (verdict === 'rejected') {
             setResult({
-              verdict: response.status,
+              verdict,
               overallScore: response.score || 0,
               feedback: response.message
             });
@@ -211,20 +254,12 @@ function ClaimItemPage() {
           setVerifying(false);
         }, 2000); // Wait 2 seconds so user can read the final message before switching screens
       } else {
-        setErrorCount(0); // Reset on success
         setVerifying(false);
       }
     } catch (err) {
-      console.error(err);
-      if (errorCount >= 1) {
-        // This is the second consecutive error -> Restart the test
-        setError(`The AI servers are severely overloaded right now. We have restarted your interview to clear the session. Please try again.`);
-        setStarted(false);
-        setChatHistory([]);
-        setErrorCount(0);
-      } else {
-        setChatHistory(prev => [...prev, { role: 'ai', text: `Sorry for the inconvenience, but the AI is currently experiencing heavy traffic. Please try sending your last answer again.` }]);
-        setErrorCount(prev => prev + 1);
+      setError(err.userMessage || getClaimErrorMessage(undefined, 'evaluate'));
+      if (err.status === 403 || err.status === 409) {
+        setClaimBlocked(true);
       }
       setVerifying(false);
     }
@@ -248,13 +283,14 @@ function ClaimItemPage() {
           proofImage: skipPhoto ? '' : proofImageBase64
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to finalize claim');
+      if (!res.ok) throw getClaimRequestError(res.status, 'finalize');
       
       setIsSuccess(true);
     } catch (err) {
-      console.error(err);
-      setError(`Failed to finalize proof. ${err.message}`);
+      setError(err.userMessage || getClaimErrorMessage(undefined, 'finalize'));
+      if (err.status === 403 || err.status === 409) {
+        setClaimBlocked(true);
+      }
     } finally {
       setVerifying(false);
     }
@@ -282,6 +318,8 @@ function ClaimItemPage() {
   }
 
   const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
+  const images = publicFoundImages(item);
+  const visibleImageIndex = activeImgIndex < images.length ? activeImgIndex : 0;
 
   if (isSuccess) {
     return (
@@ -319,16 +357,15 @@ function ClaimItemPage() {
             <div className={styles.itemPreview}>
               <div className={styles.previewCard} style={{ position: 'relative' }}>
                 <BlurableImage
-                  imageSrc={item.images && item.images.length > 0 ? item.images[activeImgIndex || 0] : ''}
-                  blurZones={item.blurZones}
+                  imageSrc={images[visibleImageIndex]}
                   alt={item.shortTitle}
-                  blurStrength={14}
                 />
                 
-                {item.images && item.images.length > 1 && (
+                {images.length > 1 && (
                   <>
                     <button
-                      onClick={(e) => { e.preventDefault(); setActiveImgIndex(i => (i === 0 ? item.images.length - 1 : i - 1)); }}
+                      aria-label="Previous photo"
+                      onClick={(e) => { e.preventDefault(); setActiveImgIndex((visibleImageIndex + images.length - 1) % images.length); }}
                       style={{
                         position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                         background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
@@ -338,7 +375,8 @@ function ClaimItemPage() {
                       ◀
                     </button>
                     <button
-                      onClick={(e) => { e.preventDefault(); setActiveImgIndex(i => (i === item.images.length - 1 ? 0 : i + 1)); }}
+                      aria-label="Next photo"
+                      onClick={(e) => { e.preventDefault(); setActiveImgIndex((visibleImageIndex + 1) % images.length); }}
                       style={{
                         position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                         background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
@@ -354,7 +392,7 @@ function ClaimItemPage() {
                   <h3 className={styles.previewTitle}>{item.shortTitle}</h3>
                 </div>
                 <div className={styles.reminderBox}>
-                  <Lock size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Sensitive areas are blurred. If this is really your item,
+                  <Lock size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Any marked private areas are permanently hidden in public photos. If this is really your item,
                   you should be able to answer the AI's questions.
                 </div>
               </div>
@@ -367,9 +405,9 @@ function ClaimItemPage() {
                 {!started ? (
                   <div className={styles.startBtnBox}>
                     <div className={styles.introRules}>
-                      <p><strong>1.</strong> You will chat with our AI to prove ownership.</p>
+                      <p><strong>1.</strong> You will chat with our AI to provide details about the item.</p>
                       <p><strong>2.</strong> You must answer specific questions about the item.</p>
-                      <p><strong>3.</strong> The AI decides if you pass, fail, or need manual review.</p>
+                      <p><strong>3.</strong> The AI provides an initial assessment; ownership is confirmed only after manual review.</p>
                     </div>
                     
                     <div style={{ marginBottom: '20px', textAlign: 'left', width: '100%', maxWidth: '300px' }}>
@@ -389,7 +427,7 @@ function ClaimItemPage() {
                       </p>
                     </div>
 
-                    <button className={styles.startBtn} onClick={startInterrogation} disabled={verifying}>
+                    <button className={styles.startBtn} onClick={startInterrogation} disabled={verifying || claimBlocked}>
                       {verifying ? <><ButtonSpinner /> Starting AI session...</> : 'Start Verification Interview'}
                     </button>
                   </div>
@@ -430,13 +468,13 @@ function ClaimItemPage() {
                           placeholder="Type your answer..."
                           value={inputText}
                           onChange={(e) => setInputText(e.target.value)}
-                          disabled={verifying}
+                          disabled={verifying || claimBlocked}
                           autoFocus
                         />
                         <button 
                           type="submit" 
                           className={styles.sendBtn}
-                          disabled={verifying || !inputText.trim()}
+                          disabled={verifying || claimBlocked || !inputText.trim()}
                         >
                           {verifying ? <ButtonSpinner /> : <><Send size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Send</>}
                         </button>
@@ -462,13 +500,16 @@ function ClaimItemPage() {
       {step === 'proof' && (
         <>
           <div className={styles.topBar}>
+            <button className={styles.backBtn} onClick={() => navigate('/found-items')}>
+              <ArrowLeft size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Back
+            </button>
             <h1 className={styles.pageTitle}><Camera size={24} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Final Proof</h1>
           </div>
           <div className={styles.proofContainer}>
             <div className={styles.proofCard}>
               <h2 className={styles.proofHeading}>You completed the interview!</h2>
               <p className={styles.proofSubtext}>
-                Your chat performance was recorded. To boost your final score, upload supporting proof.
+                Your interview is complete. Upload supporting proof so our admin team can manually review your claim.
               </p>
 
               <div className={styles.proofUploadSection}>
@@ -551,7 +592,7 @@ function ClaimItemPage() {
                   <button 
                     className={styles.proofSkipBtn}
                     onClick={() => handleFinalizeProof(true)}
-                    disabled={verifying}
+                    disabled={verifying || claimBlocked}
                   >
                     Skip Photo
                   </button>
@@ -559,9 +600,9 @@ function ClaimItemPage() {
                 <button 
                   className={styles.proofSubmitBtn}
                   onClick={() => handleFinalizeProof(false)}
-                  disabled={verifying || !proofImageBase64}
+                  disabled={verifying || claimBlocked || !proofImageBase64}
                 >
-                  {verifying ? <><ButtonSpinner /> Verifying...</> : <><CheckCircle size={16} /> Submit Final Proof</>}
+                  {verifying ? <><ButtonSpinner /> Submitting...</> : <><CheckCircle size={16} /> Submit for Manual Review</>}
                 </button>
               </div>
             </div>
@@ -595,7 +636,7 @@ function ClaimItemPage() {
    per-question breakdown, and the final verdict.
    ============================================================ */
 function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
-  const navigate = useNavigate();
+  const verdict = normalizeVerdict(result.verdict);
 
   // ── Animated score counter (counts up from 0 to the score) ──
   const [displayScore, setDisplayScore] = useState(0);
@@ -622,7 +663,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
     verified:     '#00ff88',
     needs_review: '#ffb347',
     rejected:     '#ff4d6d',
-  }[result.verdict];
+  }[verdict];
 
   const radius      = 80;
   const circumference = 2 * Math.PI * radius;
@@ -630,7 +671,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
 
   return (
     <div className={styles.resultPage}>
-      <h1 className={styles.resultTitle}><Bot size={28} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Verification Result</h1>
+      <h1 className={styles.resultTitle}><Bot size={28} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Assessment Result</h1>
 
       <div className={styles.resultItemRef}>
         <span>{catConfig.icon}</span>
@@ -683,29 +724,28 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
       </div> */}
 
       <div className={styles.breakdownSection}>
-        <h3 className={styles.breakdownTitle}><BarChart3 size={20} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> AI Analysis Complete</h3>
+        <h3 className={styles.breakdownTitle}><BarChart3 size={20} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Initial AI Assessment Complete</h3>
         <p className={styles.breakdownSubtitle}>
-          The AI has processed your interview answers against the hidden item identifiers.
+          The AI has processed your interview answers against the hidden item identifiers. Ownership is confirmed only after manual review.
         </p>
       </div>
 
       <div className={styles.resultActions}>
-        {result.verdict === 'verified' && (
-          <button
-            className={styles.rewardBtn}
-            onClick={() => navigate(`/reward/${item._id}`, { state: { claimId: result.claimId } })}
-          >
-            <Coins size={18} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Proceed to Escrow
-          </button>
+        {verdict === 'verified' && (
+          <div className={styles.breakdownSection}>
+            <p className={styles.breakdownSubtitle}>
+              This is an initial AI assessment, not confirmation of ownership. Any claim must be submitted for manual review before next steps are available.
+            </p>
+          </div>
         )}
 
-        {result.verdict === 'rejected' && (
+        {verdict === 'rejected' && (
           <button className={styles.retryBtn} onClick={onTryAgain}>
             <RefreshCw size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Try Interview Again
           </button>
         )}
 
-        {result.verdict === 'needs_review' && (
+        {verdict === 'needs_review' && (
           <>
             <div style={{ 
               background: 'rgba(255, 179, 71, 0.1)', 
@@ -721,7 +761,7 @@ function VerificationResult({ result, item, catConfig, onTryAgain, onGoBack }) {
                 <Clock size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Your claim is under review
               </p>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-                Your answers were not sufficient for automatic verification. You can try the interview again with better answers, or wait for a manual review.
+                Your answers need additional review. Ownership is not confirmed by this AI assessment; you can try the interview again or wait for manual review.
               </p>
             </div>
             <button className={styles.retryBtn} onClick={onTryAgain}>

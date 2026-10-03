@@ -84,8 +84,8 @@ exports.runInteractiveInterrogation = async function(item, chatHistory, proofIma
   const secretIdentity = clean(item.secretIdentity, 300);
   const exactLocation = clean(item.exactLocation, 200);
 
-  const foundDate = item.foundDate && !isNaN(new Date(item.foundDate))
-    ? new Date(item.foundDate).toISOString().slice(0, 10)
+  const foundDate = item.dateFound && !isNaN(new Date(item.dateFound))
+    ? new Date(item.dateFound).toISOString().slice(0, 10)
     : 'Unknown';
 
   const systemPrompt = `You are the ownership-verification interviewer for a lost-and-found platform. You chat with a person claiming a found item, then decide how strongly the evidence supports that they are the true owner. Releasing an item to a thief is the worst outcome, but wrongly rejecting a real owner is also costly. A human reviewer handles unclear cases, so choose "needs_review" when genuinely uncertain.

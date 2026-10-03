@@ -1,6 +1,10 @@
 const itemModel = require("../models/foundItemModel")
 const { analyzeImageForFraud } = require("../utils/geminiUtils");
-const { uploadImage } = require("../utils/cloudinary");
+const { uploadRedactedImage, cleanupUploadedImages } = require("../utils/cloudinary");
+const {
+    MAX_IMAGES, ImageValidationError, imageDataUriSchema, blurZonesSchema,
+    validateImageZoneMapping, normalizeImageZones
+} = require("../validation/foundItemImages");
 const z = require("zod");
 
 const addItemSchema = z.object({
@@ -12,22 +16,23 @@ const addItemSchema = z.object({
     dateFound: z.string().optional(),
     secretIdentity: z.string().max(200).optional(),
     secretDetails: z.array(z.string()).optional(),
-    images: z.array(z.string()).max(3),
-    blurZones: z.array(z.object({
-        x: z.number().min(0).max(100),
-        y: z.number().min(0).max(100),
-        w: z.number().min(0).max(100),
-        h: z.number().min(0).max(100)
-    })).optional(),
+    images: z.array(imageDataUriSchema).min(1).max(MAX_IMAGES),
+    allBlurZones: z.record(z.string(), blurZonesSchema).optional(),
+    blurZones: blurZonesSchema.optional(),
     imageFingerprint: z.string().optional()
-});
+}).superRefine(validateImageZoneMapping);
 
 const escapeRegExp = (string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
 };
 
 exports.addItem = async function(req,res){
+    const uploadedAssets = [];
+    let itemSaved = false;
     try {
+        if(!req.user || !req.user._id){
+            return res.status(401).json({ error: "Unauthorized. You must be logged in to report an item." });
+        }
         const validation = addItemSchema.safeParse(req.body);
         if (!validation.success) {
             const issues = validation.error?.issues || validation.error?.errors || [];
@@ -36,33 +41,16 @@ exports.addItem = async function(req,res){
             });
         }
         
-        const {category, shortTitle, description, location, exactLocation, secretIdentity, secretDetails, images, blurZones, dateFound} = validation.data;
-        if(!req.user || !req.user._id){
-            return res.status(401).json({
-                error: "Unauthorized. You must be logged in to report an item."
-            });
-        }
+        const {category, shortTitle, description, location, exactLocation, secretIdentity, secretDetails, images, blurZones, allBlurZones, dateFound} = validation.data;
+        const publicRedactedUrls = [];
+        const originalImageAssets = [];
+        const normalizedZones = normalizeImageZones(images, allBlurZones, blurZones);
 
-        let uploadedImageUrls = [];
-        if (images && Array.isArray(images) && images.length > 0) {
-            // AI Fraud check is skipped for manual review
-
-            for (let i = 0; i < images.length; i++) {
-                const imgData = images[i];
-                // Check if it looks like a base64 string
-                if (imgData && imgData.startsWith('data:image')) {
-                    try {
-                        const url = await uploadImage(imgData);
-                        if (url) uploadedImageUrls.push(url);
-                    } catch (uploadErr) {
-                        console.error("Cloudinary upload failed for an image:", uploadErr);
-                        return res.status(500).json({ error: "Failed to upload image to secure storage." });
-                    }
-                } else {
-                    // It might already be a URL or something else, just keep it
-                    uploadedImageUrls.push(imgData);
-                }
-            }
+        for (let i = 0; i < images.length; i++) {
+            const result = await uploadRedactedImage(images[i], normalizedZones[String(i)]);
+            uploadedAssets.push(...result.assets);
+            publicRedactedUrls.push(result.publicUrl);
+            originalImageAssets.push(result.originalAsset);
         }
 
         const newItem = await itemModel.create({
@@ -75,23 +63,31 @@ exports.addItem = async function(req,res){
             secretIdentity: secretIdentity || "",
             secretDetails: secretDetails || [],
             status: "pending_admin_review",
-            images: uploadedImageUrls, 
-            blurZones: blurZones || [],
+            images: publicRedactedUrls,
+            originalImageAssets,
+            allBlurZones: normalizedZones,
+            imagePrivacyVersion: 1,
             dateFound: dateFound || Date.now(), 
             imageFingerprint: ""
         })
+        itemSaved = true;
 
         // Alert the admin
         const { sendAdminReviewAlert } = require('../utils/emailUtils');
-        await sendAdminReviewAlert("Item", newItem._id).catch(console.error);
+        sendAdminReviewAlert("Item", newItem._id).catch(() => console.error("Admin review alert failed."));
 
         return res.status(201).json({
             status: "success",
             message: "Successfully added",
-            item: newItem
+            item: newItem.toJSON()
         })
     } catch (error) {
-        console.error("Error saving item:", error);
+        if (!itemSaved) await cleanupUploadedImages(uploadedAssets);
+        if (error instanceof ImageValidationError) {
+            return res.status(400).json({ error: error.message });
+        }
+        // DB/upload errors can contain private asset refs or raw image data.
+        console.error("Error securely saving item.");
         return res.status(500).json({
             error: "Internal server error while saving the item."
         });

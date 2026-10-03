@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
+const { ACTIVE_CLAIM_STATUSES } = require("../constants/claimStatuses");
 
 const claimSchema = new Schema({
     // Which item is being claimed
@@ -85,6 +86,19 @@ const claimSchema = new Schema({
 {
     timestamps: true
 });
+
+// Rejected claims remain resubmittable, while concurrent active submissions
+// for the same item and claimant are prevented at the database boundary.
+claimSchema.index(
+    { itemId: 1, claimantId: 1 },
+    {
+        name: "one_active_claim_per_item_claimant",
+        unique: true,
+        partialFilterExpression: {
+            verdict: { $in: ACTIVE_CLAIM_STATUSES }
+        }
+    }
+);
 
 const claimModel = mongoose.model("claim", claimSchema);
 module.exports = claimModel;

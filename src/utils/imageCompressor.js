@@ -16,36 +16,42 @@ export async function compressImage(file, maxDimension = 1600, quality = 0.8) {
       const img = new Image();
       img.onerror = () => reject(new Error('Failed to load image for compression.'));
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+        try {
+          let width = img.width;
+          let height = img.height;
+          if (!width || !height) throw new Error('The photo has invalid dimensions.');
 
-        // Calculate aspect-ratio preserving dimensions
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
+          // Calculate aspect-ratio preserving dimensions
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.max(1, Math.round((height * maxDimension) / width));
+              width = maxDimension;
+            } else {
+              width = Math.max(1, Math.round((width * maxDimension) / height));
+              height = maxDimension;
+            }
           }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            // The caller still validates the original's type and decoded size.
+            return resolve(event.target.result);
+          }
+
+          // Draw scaled image onto canvas
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to optimized JPEG data URL
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedBase64);
+        } catch {
+          // Exceptions inside onload must reject rather than leave uploads pending.
+          reject(new Error('Could not process this photo. Please choose a smaller photo or a different file.'));
         }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          // Fallback to original if canvas context is unavailable
-          return resolve(event.target.result);
-        }
-
-        // Draw scaled image onto canvas
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert to optimized JPEG data URL
-        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedBase64);
       };
       img.src = event.target.result;
     };
