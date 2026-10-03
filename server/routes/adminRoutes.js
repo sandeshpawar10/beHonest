@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
+const adminOriginalImagesController = require("../controllers/adminOriginalImagesController");
 const { verifyAdmin } = require("../middlewares/adminMiddleware");
 const rateLimit = require("express-rate-limit");
 
@@ -11,6 +12,18 @@ const adminLoginLimiter = rateLimit({
     max: 5, // Limit each IP to 5 requests per windowMs
     message: {
         error: "Too many login attempts. Please try again after 15 minutes."
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// ── Rate Limiter for Original Image Access ──
+// Limits access to original images to prevent abuse
+const originalImagesLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 20, // Max 20 requests per 5 minutes per IP
+    message: {
+        error: "Too many requests for original images. Please try again later."
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -30,4 +43,10 @@ router.put("/api/admin/claim/:id/approve", verifyAdmin, adminController.approveC
 router.put("/api/admin/claim/:id/reject", verifyAdmin, adminController.rejectClaim);
 router.get("/api/admin/pending-payouts", verifyAdmin, adminController.getPendingPayouts);
 router.post("/api/admin/mark-payout-complete/:escrowId", verifyAdmin, adminController.markPayoutComplete);
+
+// ── Original Images Access (Admin Only) ──
+// View unredacted original images with audit logging
+router.get("/api/admin/item/:itemId/original-images", verifyAdmin, originalImagesLimiter, adminOriginalImagesController.getOriginalImages);
+router.get("/api/admin/item/:itemId/original-images/audit", verifyAdmin, adminOriginalImagesController.getOriginalImageAuditLog);
+
 module.exports = router;
