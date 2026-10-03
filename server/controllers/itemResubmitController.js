@@ -22,7 +22,7 @@ const editItemSchema = z.object({
 }).superRefine(validateImageZoneMapping);
 
 // ── Resubmit a rejected item ──────────────────────────────────
-exports.resubmitItem = async function(req, res) {
+const resubmitItem = async function(req, res) {
     const uploadedAssets = [];
     let itemSaved = false;
     try {
