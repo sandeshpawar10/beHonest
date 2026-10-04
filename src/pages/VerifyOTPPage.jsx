@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
+import { Mail, CheckCircle, Bell, AlertTriangle, Shield } from 'lucide-react';
 
 import {
   maskEmail,        // Masks email for privacy display
@@ -263,7 +264,10 @@ function VerifyOTPPage() {
         <p className={styles.stepLabel}>Step 2 of 3 — Email Verification</p>
 
         {/* Heading */}
-        <h1 className={styles.heading}>Check your inbox 📬</h1>
+        <h1 className={styles.heading}>
+          <Mail size={24} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+          Check your inbox
+        </h1>
         <p className={styles.subtitle}>
           We sent a 6-digit OTP to your college email. Enter it below to verify your identity.
         </p>
@@ -344,10 +348,8 @@ function VerifyOTPPage() {
             role="alert"
             aria-live="polite"
           >
-            <span>
-              {alert.type === 'success' ? '✅' : alert.type === 'warning' ? '🔔' : '⚠️'}
-            </span>
-            {alert.msg}
+            {alert.type === 'success' ? <CheckCircle size={18} /> : alert.type === 'warning' ? <Bell size={18} /> : <AlertTriangle size={18} />}
+            <span style={{ marginLeft: '8px' }}>{alert.msg}</span>
           </div>
         )}
 
@@ -419,7 +421,8 @@ function VerifyOTPPage() {
 
         {/* Security note */}
         <p className={styles.securityNote}>
-          🔐 OTP is valid for 5 minutes and can only be used once.
+          <Shield size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+          OTP is valid for 5 minutes and can only be used once.
         </p>
 
       </div>

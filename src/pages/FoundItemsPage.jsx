@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import BlurableImage   from '../components/ui/BlurableImage';
 import { CATEGORY_CONFIG } from '../utils/itemUtils';
 import { publicFoundImages } from '../utils/foundImagePrivacy';
-import { Search, MapPin, Calendar, ArrowLeft, Shield, Lock } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowLeft, Shield, Lock, FolderOpen, Hand, XCircle, Trash2 } from 'lucide-react';
 import styles from './FoundItemsPage.module.css';
 
 function FoundItemsPage() {
@@ -178,7 +178,8 @@ function FoundItemsPage() {
           className={`${styles.filterTab} ${activeFilter === '' ? styles.activeTab : ''}`}
           onClick={() => setActiveFilter('')}
         >
-          🗂️ All
+          <FolderOpen size={16} style={{ marginRight: '6px', display: 'inline-block', verticalAlign: 'middle' }} />
+          All
         </button>
 
         {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
@@ -371,8 +372,8 @@ function StackCard({ item, formatDate, onDelete }) {
                 : isFinder
                   ? ' You reported this'
                   : isSameCollege
-                    ? '🙋 This is Mine — Claim It'
-                    : '🚫 Not from your college'}
+                    ? <><Hand size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} /> This is Mine — Claim It</>
+                    : <><XCircle size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} /> Not from your college</>}
               {!isClaimed && !isFinder && isSameCollege && <span className={styles.claimNote}>AI will verify your ownership</span>}
             </button>
             
@@ -398,7 +399,8 @@ function StackCard({ item, formatDate, onDelete }) {
                 onMouseOver={(e) => e.target.style.opacity = '0.7'}
                 onMouseOut={(e) => e.target.style.opacity = '1'}
               >
-                🗑️ Delete Post
+                <Trash2 size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+                Delete Post
               </button>
             )}
           </div>

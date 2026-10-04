@@ -11,7 +11,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // For navigating to other pages on click
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Search, Eye, Landmark, PackageOpen, LogOut, ChevronDown } from 'lucide-react';
+import { Search, Eye, Landmark, PackageOpen, LogOut, ChevronDown, CreditCard, Wallet } from 'lucide-react';
 
 import NotificationDropdown from '../components/ui/NotificationDropdown';
 import ButtonSpinner from '../components/ui/ButtonSpinner';
@@ -318,32 +318,34 @@ function DashboardPage() {
                             )}
                             
                             {claim.verdict === 'verified' && claim.itemId?._id && !isFunded && (
-                              <button 
+                              <button
                                 onClick={() => {
                                   setMenuOpen(false);
                                   navigate(`/reward/${claim.itemId._id}`, { state: { claimId: claim._id } });
                                 }}
-                                style={{ 
-                                  width: '100%', padding: '6px', background: '#0d6efd', color: 'white', 
-                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' 
+                                style={{
+                                  width: '100%', padding: '6px', background: '#0d6efd', color: 'white',
+                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                                 }}
                               >
-                                💳 Pay Escrow Reward
+                                <CreditCard size={14} /> Pay Escrow Reward
                               </button>
                             )}
                             
                             {claim.verdict === 'verified' && isFunded && (
-                              <button 
+                              <button
                                 onClick={() => {
                                   setMenuOpen(false);
                                   navigate('/escrow');
                                 }}
-                                style={{ 
-                                  width: '100%', padding: '6px', background: '#198754', color: 'white', 
-                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' 
+                                style={{
+                                  width: '100%', padding: '6px', background: '#198754', color: 'white',
+                                  border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                                 }}
                               >
-                                💸 View Escrow
+                                <Wallet size={14} /> View Escrow
                               </button>
                             )}
                           </li>
@@ -386,13 +388,11 @@ function DashboardPage() {
         {/* ── Hero / Welcome section ── */}
         <div className={styles.hero}>
           <h1 className={styles.heroTitle}>
-            Welcome to beHonest,{' '}
-            {/* Gradient text for the user's first name */}
+            Welcome back,{' '}
             <span className="gradient-text" id="hero-greeting">{session.username}</span>
           </h1>
           <p className={styles.heroSubtitle}>
-            Lost something? Found something? Use the platform to report it securely.
-            Our AI will handle the rest.
+            Manage your items, claims, and rewards all in one place.
           </p>
 
           {/* CTA buttons */}
@@ -420,6 +420,107 @@ function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Quick Status Overview ── */}
+        {(myItems.length > 0 || myClaims.length > 0) && (
+          <div className={styles.statusOverview}>
+            <h2 className={styles.sectionTitle}>Your Activity</h2>
+            <div className={styles.statusGrid}>
+
+              {/* My Reported Items Summary */}
+              {myItems.length > 0 && (
+                <div className={styles.statusCard}>
+                  <div className={styles.statusHeader}>
+                    <PackageOpen size={20} className={styles.statusIcon} />
+                    <h3>Reported Items</h3>
+                  </div>
+                  <div className={styles.statusContent}>
+                    {myItems.slice(0, 3).map(item => (
+                      <div key={item._id} className={styles.statusItem}>
+                        <div className={styles.statusItemInfo}>
+                          <span className={styles.statusItemTitle}>{item.shortTitle}</span>
+                          <span className={`${styles.statusBadge} ${styles[`status_${item.status}`]}`}>
+                            {item.status === 'pending_admin_review' ? 'In Review' :
+                             item.status === 'rejected' ? 'Rejected' : 'Live'}
+                          </span>
+                        </div>
+                        {item.status === 'rejected' && item.adminFeedback && (
+                          <div className={styles.statusItemFeedback}>
+                            {item.adminFeedback}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {myItems.length > 3 && (
+                      <button
+                        className={styles.viewMoreBtn}
+                        onClick={() => setMenuOpen(true)}
+                      >
+                        View all {myItems.length} items
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* My Claims Summary */}
+              {myClaims.length > 0 && (
+                <div className={styles.statusCard}>
+                  <div className={styles.statusHeader}>
+                    <Search size={20} className={styles.statusIcon} />
+                    <h3>My Claims</h3>
+                  </div>
+                  <div className={styles.statusContent}>
+                    {myClaims.slice(0, 3).map(claim => {
+                      const isFunded = myEscrowIds.has(claim._id);
+                      return (
+                        <div key={claim._id} className={styles.statusItem}>
+                          <div className={styles.statusItemInfo}>
+                            <span className={styles.statusItemTitle}>{claim.itemId?.shortTitle || 'Item'}</span>
+                            <span className={`${styles.statusBadge} ${styles[`status_${claim.verdict}`]}`}>
+                              {claim.verdict === 'pending_admin_review' ? 'In Review' :
+                               claim.verdict === 'rejected' ? 'Rejected' :
+                               claim.verdict === 'verified' ? (isFunded ? 'Escrow Funded' : 'Payment Pending') : 'Processed'}
+                            </span>
+                          </div>
+                          {claim.verdict === 'rejected' && claim.adminFeedback && (
+                            <div className={styles.statusItemFeedback}>
+                              {claim.adminFeedback}
+                            </div>
+                          )}
+                          {claim.verdict === 'verified' && claim.itemId?._id && !isFunded && (
+                            <button
+                              className={styles.actionBtn}
+                              onClick={() => navigate(`/reward/${claim.itemId._id}`, { state: { claimId: claim._id } })}
+                            >
+                              Pay Escrow Reward
+                            </button>
+                          )}
+                          {claim.verdict === 'verified' && isFunded && (
+                            <button
+                              className={styles.actionBtnSuccess}
+                              onClick={() => navigate('/escrow')}
+                            >
+                              View Escrow
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {myClaims.length > 3 && (
+                      <button
+                        className={styles.viewMoreBtn}
+                        onClick={() => setMenuOpen(true)}
+                      >
+                        View all {myClaims.length} claims
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Stats Row ── */}
 

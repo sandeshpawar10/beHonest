@@ -101,7 +101,7 @@
   background: var(--gradient-main);
   border: none;
   border-radius: 12px;
-  color: #0a0f1e;           /* Dark text on bright gradient */
+  color: #ffffff;           /* White text for better contrast on blue gradient */
   font-family: var(--font-base);
   font-size: 0.96rem;
   font-weight: 700;
@@ -111,13 +111,13 @@
   justify-content: center;
   gap: 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 15px rgba(0,212,255,0.25);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   margin-top: 4px;
 }
 
 .submitBtn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0,212,255,0.4);
+  box-shadow: 0 0 30px rgba(37, 99, 235, 0.4);
 }
 
 .submitBtn:active:not(:disabled) {
@@ -134,8 +134,8 @@
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: #0a0f1e;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;

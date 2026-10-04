@@ -10,13 +10,14 @@
      placeholder  - Placeholder text
      error        - Error message string (shows error state)
      success      - Boolean for success state styling
-     icon         - Left-side icon (emoji or string)
+     icon         - Left-side icon component (React element)
      hint         - Small hint text below the input
      showToggle   - If true, adds a password visibility toggle button
      ...rest      - Any additional props forwarded to <input>
    ============================================================ */
 
 import { useState } from 'react';
+import { Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
 import styles from './InputField.module.css';
 
 function InputField({
@@ -97,7 +98,7 @@ function InputField({
             aria-label={isVisible ? 'Hide password' : 'Show password'}
             title={isVisible ? 'Hide password' : 'Show password'}
           >
-            {isVisible ? '🙈' : '👁️'}
+            {isVisible ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
 
@@ -106,14 +107,16 @@ function InputField({
       {/* Error message (shown when error prop is provided) */}
       {error && (
         <p id={`${id}-error`} className={styles.errorText} role="alert">
-          ⚠️ {error}
+          <AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+          {error}
         </p>
       )}
 
       {/* Hint text (shown only when no error) */}
       {hint && !error && (
         <p id={`${id}-hint`} className={styles.hint}>
-          ℹ️ {hint}
+          <Info size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+          {hint}
         </p>
       )}
 

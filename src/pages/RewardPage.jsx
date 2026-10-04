@@ -17,6 +17,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { DollarSign, PackageOpen, MapPin, Search, Bot, Brain, Lock, FileText, Shield } from 'lucide-react';
 import {
   REWARD_CATEGORIES,     // All item type reward ranges
   calculateReward,       // AI recommendation function
@@ -263,15 +264,18 @@ function RewardPage() {
         <button className={styles.backBtn} onClick={() => navigate('/found-items')}>
           ← Back
         </button>
-        <h1 className={styles.pageTitle}>💰 AI Reward Recommendation</h1>
+        <h1 className={styles.pageTitle}>
+          <DollarSign size={28} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+          AI Reward Recommendation
+        </h1>
       </div>
 
       {/* Item summary strip */}
       <div className={styles.itemStrip}>
-        <span className={styles.stripIcon}>📦</span>
+        <span className={styles.stripIcon}><PackageOpen size={18} /></span>
         <div>
           <strong>{item.shortTitle}</strong>
-          <span className={styles.stripMeta}> · 📍 {item.location}</span>
+          <span className={styles.stripMeta}> · <MapPin size={14} style={{ display: 'inline-block', verticalAlign: 'middle' }} /> {item.location}</span>
         </div>
       </div>
 
@@ -290,7 +294,7 @@ function RewardPage() {
 
           {/* Search bar */}
           <div className={styles.catSearch}>
-            <span>🔍</span>
+            <Search size={16} />
             <input
               type="text"
               placeholder="Search categories..."
@@ -343,7 +347,8 @@ function RewardPage() {
             onClick={handleGetRecommendation}
             disabled={!selectedCategory}
           >
-            🤖 Get AI Recommendation →
+            <Bot size={18} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+            Get AI Recommendation →
           </button>
         </div>
       )}
@@ -368,7 +373,7 @@ function RewardPage() {
           {/* AI / User label */}
           <p className={styles.amountLabel}>
             {chosenReward === recommendation.recommendedReward
-              ? '🤖 AI Recommended Amount'
+              ? <><Bot size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} /> AI Recommended Amount</>
               : '✏️ Your Adjusted Amount'
             }
           </p>
@@ -377,7 +382,8 @@ function RewardPage() {
           <div className={styles.rangeLabels}>
             <span>Min: ₹{recommendation.minReward}</span>
             <span className={styles.aiMark}>
-              🤖 AI: ₹{recommendation.recommendedReward}
+              <Bot size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+              AI: ₹{recommendation.recommendedReward}
             </span>
             <span>Max: ₹{recommendation.maxReward}</span>
           </div>
@@ -430,13 +436,17 @@ function RewardPage() {
               className={styles.resetBtn}
               onClick={() => setChosenReward(recommendation.recommendedReward)}
             >
-              🤖 Reset to AI Recommendation (₹{recommendation.recommendedReward})
+              <Bot size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+              Reset to AI Recommendation (₹{recommendation.recommendedReward})
             </button>
           )}
 
           {/* AI Reasoning — how the AI arrived at the number */}
           <div className={styles.reasoningBox}>
-            <h4 className={styles.reasoningTitle}>🧠 How AI decided this amount:</h4>
+            <h4 className={styles.reasoningTitle}>
+              <Brain size={18} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+              How AI decided this amount:
+            </h4>
             <ul className={styles.reasoningList}>
               {recommendation.reasoning.map((reason, i) => (
                 <li key={i}>{reason}</li>
@@ -489,7 +499,10 @@ function RewardPage() {
 
           {/* Escrow explanation */}
           <div className={styles.escrowNote}>
-            <strong>🔐 What is Escrow?</strong>
+            <strong>
+              <Lock size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+              What is Escrow?
+            </strong>
             <p>
               The reward amount (₹{chosenReward}) will be held securely by beHonest.
               It will be released to the finder ONLY after the item is physically
@@ -511,7 +524,10 @@ function RewardPage() {
 
           {/* Escrow receipt card */}
           <div className={styles.receiptCard}>
-            <h3 className={styles.receiptTitle}>📋 Escrow Receipt</h3>
+            <h3 className={styles.receiptTitle}>
+              <FileText size={18} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+              Escrow Receipt
+            </h3>
 
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Item</span>
@@ -534,7 +550,8 @@ function RewardPage() {
             <div className={styles.receiptRow}>
               <span className={styles.receiptLabel}>Status</span>
               <span className={`${styles.receiptValue} ${styles.statusHeld}`}>
-                🔒 Held in Escrow
+                <Shield size={16} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+                Held in Escrow
               </span>
             </div>
             <div className={styles.receiptRow}>

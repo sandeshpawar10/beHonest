@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, LogIn, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
@@ -156,7 +157,7 @@ function LoginPage() {
         {/* Global error alert (for auth errors like wrong password) */}
         {error && (
           <div className={styles.alert} role="alert" aria-live="polite">
-            <span>⚠️</span> {error}
+            <AlertTriangle size={18} /> {error}
           </div>
         )}
 
@@ -171,7 +172,7 @@ function LoginPage() {
             value={email}
             onChange={handleEmailChange}
             placeholder="you@college.edu"
-            icon="✉️"
+            icon={<Mail size={18} />}
             error={emailErr}
             hint="Must be a college email (.edu, .ac.in, etc.)"
             autoComplete="email"
@@ -187,8 +188,8 @@ function LoginPage() {
               value={password}
               onChange={handlePasswordChange}
               placeholder="Enter your password"
-              icon="🔑"
-              showToggle={true}  /* Adds the 👁️ toggle button */
+              icon={<Lock size={18} />}
+              showToggle={true}
               autoComplete="current-password"
               required
             />

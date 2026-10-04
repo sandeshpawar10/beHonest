@@ -77,7 +77,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px 4px 4px;
+  padding: 6px 12px 6px 6px;  /* Increased padding for better touch targets */
+  min-height: 44px;  /* WCAG minimum touch target size */
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -96,8 +97,8 @@
 }
 
 .avatarInitial {
-  width: 32px;
-  height: 32px;
+  width: 36px;  /* Increased from 32px for better touch target */
+  height: 36px;
   border-radius: 50%;
   background: var(--gradient-main);
   color: #fff;
@@ -258,17 +259,18 @@
 
 /* Primary CTA button */
 .ctaPrimary {
-  padding: 12px 28px;
+  padding: 14px 32px;  /* Increased padding for better touch */
+  min-height: 44px;  /* WCAG minimum touch target */
   background: var(--gradient-main);
   border: none;
   border-radius: 12px;
-  color: #0a0f1e;
+  color: #ffffff;
   font-family: var(--font-base);
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 15px rgba(0,212,255,0.25);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
 .ctaPrimary:hover {
@@ -282,7 +284,8 @@
 
 /* Ghost CTA button */
 .ctaGhost {
-  padding: 12px 28px;
+  padding: 14px 32px;  /* Increased padding for better touch */
+  min-height: 44px;  /* WCAG minimum touch target */
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -452,6 +455,204 @@
   box-shadow: 0 0 32px rgba(0, 212, 255, 0.25) !important;
 }
 
+/* ── Status Overview Section ── */
+.statusOverview {
+  margin-bottom: 44px;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.statusCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statusCard:hover {
+  border-color: var(--border-active);
+  box-shadow: var(--shadow-glow);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.statusHeader h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.statusIcon {
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+.statusContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statusItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(241, 245, 249, 0.6);
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.statusItem:hover {
+  background: rgba(226, 232, 240, 0.6);
+}
+
+.statusItemInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.statusItemTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusBadge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status_pending_admin_review {
+  background: rgba(217, 119, 6, 0.1);
+  color: #92400E;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.status_rejected {
+  background: rgba(220, 38, 38, 0.08);
+  color: #991B1B;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.status_verified {
+  background: rgba(5, 150, 105, 0.08);
+  color: #065F46;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.status_live {
+  background: rgba(5, 150, 105, 0.08);
+  color: #065F46;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.statusItemFeedback {
+  font-size: 0.8rem;
+  color: #991B1B;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.actionBtn {
+  padding: 8px 14px;
+  min-height: 36px;
+  background: var(--gradient-main);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-base);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.actionBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.actionBtnSuccess {
+  padding: 8px 14px;
+  min-height: 36px;
+  background: var(--color-success);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-base);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.actionBtnSuccess:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.viewMoreBtn {
+  padding: 8px;
+  min-height: 36px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent-cyan);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-base);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.viewMoreBtn:hover {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: var(--border-active);
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .navbar { padding: 14px 20px; }
@@ -469,5 +670,72 @@
 
   .userPill span:not(.verifiedBadge):not(.avatar) {
     display: none; /* Hide name on small screens to save space */
+  }
+
+  /* Improved mobile dropdown */
+  .dropdown {
+    position: fixed; /* Use fixed positioning on mobile */
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 100vw;
+    min-width: 100vw;
+    max-height: 70vh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 20px rgba(30, 58, 95, 0.2);
+    animation: slideUpMobile 0.3s ease;
+  }
+
+  @keyframes slideUpMobile {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* Larger touch targets on mobile */
+  .ctaPrimary, .ctaGhost {
+    padding: 16px 32px;
+    font-size: 1rem;
+    width: 100%;
+    max-width: none;
+  }
+
+  .ctaRow {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  /* Better mobile card spacing */
+  .actionCard {
+    padding: 24px 20px;
+  }
+
+  .cardTitle {
+    font-size: 1.1rem;
+  }
+
+  .cardDesc {
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* Status overview responsive */
+  .statusGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statusCard {
+    padding: 20px;
+  }
+
+  .actionBtn,
+  .actionBtnSuccess {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+
+  .viewMoreBtn {
+    min-height: 44px;
   }
 }

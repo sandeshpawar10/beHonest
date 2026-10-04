@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { User, GraduationCap, Lock, CheckCircle, AlertCircle, AlertTriangle, Mail } from 'lucide-react';
 
 import AuthLayout from '../components/ui/AuthLayout';
 import InputField from '../components/ui/InputField';
@@ -150,7 +151,7 @@ function RegisterPage() {
   const strengthBarProps = {
     weak:   { width: '33%', color: 'var(--color-error)',   label: 'Weak' },
     medium: { width: '66%', color: 'var(--color-warning)', label: 'Medium' },
-    strong: { width: '100%', color: 'var(--color-success)', label: 'Strong 💪' },
+    strong: { width: '100%', color: 'var(--color-success)', label: 'Strong' },
   }[pwStrength] || { width: '0%', color: 'transparent', label: '' };
 
   // ── Render ────────────────────────────────────────────────
@@ -168,8 +169,8 @@ function RegisterPage() {
         {/* Global alert (error or success) */}
         {alert.msg && (
           <div className={`${styles.alert} ${styles[`alert_${alert.type}`]}`} role="alert">
-            <span>{alert.type === 'success' ? '✅' : alert.type === 'warning' ? '🔔' : '⚠️'}</span>
-            {alert.msg}
+            {alert.type === 'success' ? <CheckCircle size={18} /> : alert.type === 'warning' ? <AlertTriangle size={18} /> : <AlertCircle size={18} />}
+            <span style={{ marginLeft: '8px' }}>{alert.msg}</span>
           </div>
         )}
 
@@ -183,7 +184,7 @@ function RegisterPage() {
             value={fullName}
             onChange={e => { setFullName(e.target.value); setNameErr(''); }}
             placeholder="John Doe"
-            icon="👤"
+            icon={<User size={18} />}
             error={nameErr}
             autoComplete="name"
             maxLength={80}
@@ -199,17 +200,18 @@ function RegisterPage() {
               value={email}
               onChange={handleEmailChange}
               placeholder="you@college.edu"
-              icon="🎓"
+              icon={<GraduationCap size={18} />}
               error={emailErr}
               success={emailOk}
               hint="Accepted: .edu · .ac.in · .edu.in · .ac.uk and more"
               autoComplete="email"
               required
             />
-            {/* ✅ Badge shown when email is a valid college email */}
+            {/* Badge shown when email is a valid college email */}
             {emailOk && (
               <div className={styles.collegeBadge} aria-live="polite">
-                ✅ College email verified
+                <CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                College email verified
               </div>
             )}
           </div>
@@ -223,7 +225,7 @@ function RegisterPage() {
               value={password}
               onChange={handlePasswordChange}
               placeholder="Min. 8 characters"
-              icon="🔒"
+              icon={<Lock size={18} />}
               showToggle={true}
               error={pwErr}
               autoComplete="new-password"
@@ -254,7 +256,7 @@ function RegisterPage() {
             value={confirmPw}
             onChange={handleConfirmChange}
             placeholder="Re-enter your password"
-            icon="🔒"
+            icon={<Lock size={18} />}
             showToggle={true}
             error={confirmErr}
             success={confirmPw.length > 0 && !confirmErr}
@@ -289,7 +291,7 @@ function RegisterPage() {
           >
             {loading
               ? <><ButtonSpinner /> Sending OTP...</>
-              : 'Send OTP to College Email 📧'
+              : <><Mail size={18} /> Send OTP to College Email</>
             }
           </button>
 

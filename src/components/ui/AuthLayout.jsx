@@ -4,16 +4,17 @@
    Used by: LoginPage, RegisterPage
    ============================================================ */
 
+import { GraduationCap, Bot, Lock, DollarSign, Shield } from 'lucide-react';
 import styles from './AuthLayout.module.css';
 import Footer from './Footer';
 
 // Feature pills shown on the left branding panel
 const FEATURES = [
-  { icon: '🎓', text: 'College email verified — students only' },
-  { icon: '🤖', text: 'AI-powered ownership verification' },
-  { icon: '🔒', text: 'Anonymous until verification completes' },
-  { icon: '💰', text: 'Fair reward recommendations via AI' },
-  { icon: '🛡️', text: 'Secure escrow payment system' },
+  { icon: <GraduationCap size={20} />, text: 'College email verified — students only' },
+  { icon: <Bot size={20} />, text: 'AI-powered ownership verification' },
+  { icon: <Lock size={20} />, text: 'Anonymous until verification completes' },
+  { icon: <DollarSign size={20} />, text: 'Fair reward recommendations via AI' },
+  { icon: <Shield size={20} />, text: 'Secure escrow payment system' },
 ];
 
 // AuthLayout wraps an auth page and provides the two-column structure
