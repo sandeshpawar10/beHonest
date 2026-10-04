@@ -178,21 +178,26 @@
 
 /* Disputes List */
 .disputesList {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 24px;
 }
 
 .disputeCard {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 24px;
-  transition: border-color 0.2s ease;
+  padding: 28px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
 }
 
 .disputeCard:hover {
   border-color: var(--border-active);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .disputeHeader {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import ImageLightbox from '../components/ui/ImageLightbox';
 import styles from './AdminPage.module.css';
 
 function AdminPage() {
@@ -16,12 +17,23 @@ function AdminPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [markingPayoutId, setMarkingPayoutId] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
+  // Image lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [resolveAction, setResolveAction] = useState(''); // 'release_to_finder' or 'refund_to_owner'
   const [resolving, setResolving] = useState(false);
+
+  const openLightbox = (images, index = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
 
   const fetchAdminData = useCallback(async () => {
     try {
@@ -444,7 +456,15 @@ function AdminPage() {
                   <div style={{ padding: '1rem', flexGrow: 1 }}>
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px' }}>
                       {item.images?.map((img, i) => (
-                        <img key={i} src={img} alt="Item proof" style={{ height: '120px', width: 'auto', borderRadius: '8px', objectFit: 'cover', border: '1px solid #eee' }} />
+                        <img
+                          key={i}
+                          src={img}
+                          alt="Item proof"
+                          style={{ height: '120px', width: 'auto', borderRadius: '8px', objectFit: 'cover', border: '1px solid #eee', cursor: 'pointer', transition: 'transform 0.2s' }}
+                          onClick={() => openLightbox(item.images, i)}
+                          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                        />
                       ))}
                     </div>
                     
@@ -502,7 +522,14 @@ function AdminPage() {
                     {claim.proofImage && (
                       <div style={{ marginTop: '8px' }}>
                         <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', fontWeight: 'bold', color: '#555' }}>📸 Proof Photo:</p>
-                        <img src={claim.proofImage} alt="Owner Proof" style={{ height: '150px', width: '100%', borderRadius: '8px', objectFit: 'contain', backgroundColor: '#f5f5f5', border: '1px solid #eee' }} />
+                        <img
+                          src={claim.proofImage}
+                          alt="Owner Proof"
+                          style={{ height: '150px', width: '100%', borderRadius: '8px', objectFit: 'contain', backgroundColor: '#f5f5f5', border: '1px solid #eee', cursor: 'pointer', transition: 'transform 0.2s' }}
+                          onClick={() => openLightbox([claim.proofImage], 0)}
+                          onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
+                          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                        />
                       </div>
                     )}
                     
@@ -676,6 +703,15 @@ function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Lightbox */}
+      {lightboxOpen && (
+        <ImageLightbox
+          images={lightboxImages}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
     </div>
   );

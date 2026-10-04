@@ -322,11 +322,11 @@ function EscrowPage() {
           <span className={styles.statLabel}><CheckCircle size={14} style={{ marginRight: '6px' }} /> Completed</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>â‚¹{totalAmount}</span>
+          <span className={styles.statValue}>₹{totalAmount.toLocaleString('en-IN')}</span>
           <span className={styles.statLabel}><DollarSign size={14} style={{ marginRight: '6px' }} /> Total Deposited</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>â‚¹{earnedAmount}</span>
+          <span className={styles.statValue}>₹{earnedAmount.toLocaleString('en-IN')}</span>
           <span className={styles.statLabel}><PartyPopper size={14} style={{ marginRight: '6px' }} /> Total Earned</span>
         </div>
       </div>
@@ -401,7 +401,7 @@ function EscrowPage() {
                     <div className={styles.ecDetail}>
                       <span className={styles.ecDetailLabel}>Reward</span>
                       <span className={styles.ecDetailValue} style={{ color: 'var(--color-success)' }}>
-                        â‚¹{escrow.amount}
+                        ₹{escrow.amount.toLocaleString('en-IN')}
                       </span>
                     </div>
                     <div className={styles.ecDetail}>
@@ -626,7 +626,7 @@ function EscrowPage() {
                           </div>
                         )}
                         <p style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          When both parties confirm handover, â‚¹{escrow.amount} will be instantly sent to this UPI ID.
+                          When both parties confirm handover, ₹{escrow.amount.toLocaleString('en-IN')} will be instantly sent to this UPI ID.
                         </p>
                       </div>
 
@@ -749,7 +749,7 @@ function EscrowPage() {
               <div className={styles.modalHighlight}>
                 <span>Amount to be refunded:</span>
                 <strong style={{ color: '#ffb347', fontSize: '1.4rem' }}>
-                  â‚¹{confirmModal.amount}
+                  ₹{confirmModal.amount.toLocaleString('en-IN')}
                 </strong>
               </div>
               <p className={styles.modalCaption}>
