@@ -173,8 +173,6 @@ function DashboardPage() {
 
   useEffect(() => {
     if (menuOpen) {
-      // eslint-disable-next-line
-      // eslint-disable-next-line
       setHasUpdates(false);
     }
   }, [menuOpen]);

@@ -76,8 +76,6 @@ function AdminPage() {
   }, [navigate]);
 
   useEffect(() => {
-    // eslint-disable-next-line
-    // eslint-disable-next-line
     fetchAdminData();
     
     if (socket) {
@@ -86,8 +84,7 @@ function AdminPage() {
       socket.emit('join_admin_room');
 
       const handleUpdate = () => {
-        // eslint-disable-next-line
-    fetchAdminData();
+        fetchAdminData();
       };
 
       socket.on('admin_new_item', handleUpdate);
@@ -133,8 +130,7 @@ function AdminPage() {
       if (response.ok) {
         setModalOpen(false);
         setSelectedDispute(null);
-        // eslint-disable-next-line
-    fetchAdminData(); // refresh lists
+        fetchAdminData(); // refresh lists
       } else {
         console.error('Failed to resolve dispute');
       }
@@ -199,8 +195,7 @@ function AdminPage() {
         body: JSON.stringify({ feedback: rejectReason })
       });
       setRejectModalOpen(false);
-      // eslint-disable-next-line
-    fetchAdminData();
+      fetchAdminData();
     } catch (err) {
       console.error(err);
     } finally {
